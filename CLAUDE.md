@@ -1,8 +1,8 @@
 # CLAUDE.md - Markdown Repository
 
-**Centralized Markdown Management for DVWDesign Organization**
+## Centralized Markdown Management for DVWDesign Organization
 
-**Version:** 1.0.0
+**Version:** 1.1.0
 **Created:** 2025-11-06
 **Last Updated:** 2025-11-06
 
@@ -13,6 +13,7 @@
 This repository provides centralized markdown file management, linting, indexing, and automation for all DVWDesign repositories.
 
 **Key Functions:**
+
 - Scan all repositories for markdown files
 - Generate searchable indexes
 - Validate timestamps and versions
@@ -95,15 +96,35 @@ This system scans the following DVWDesign repositories:
 
 ## 🛠️ Scripts
 
+### Core Commands
+
+| Command | Purpose | Output |
+|---------|---------|--------|
+| `npm run scan` | Scan all repositories | `index/all-markdown-files.json` |
+| `npm run scan:report` | Generate detailed scan report | `index/scan-report.md` |
+| `npm run index` | Create organized index | `index/organized-index.md` |
+| `npm run index:update` | Update existing index | Updates `organized-index.md` |
+| `npm run validate` | Validate timestamps/versions | `index/validation-report.md` |
+| `npm run validate:fix` | Auto-fix validation issues | Updates markdown files |
+| `npm run watch` | Watch for changes | Auto-updates on file changes |
+| `npm run lint` | Lint markdown files | Console output |
+| `npm run lint:fix` | Auto-fix markdown issues | Updates files in-place |
+| `npm run fix` | Fix systematic errors | Updates current directory |
+| `npm run fix:all` | Fix all repositories | Updates all repo markdown |
+| `npm run cron:setup` | Setup automated cron jobs | Cron configuration |
+| `npm run cron:stop` | Stop cron jobs | Stops automation |
+
 ### scan-all-repos.mjs
 
 Scans all DVWDesign repositories for markdown files and generates comprehensive index.
 
 **Output:**
+
 - `index/all-markdown-files.json` - Complete scan data
 - `index/scan-report.md` - Human-readable report
 
 **Features:**
+
 - Extracts frontmatter metadata
 - Analyzes file structure (headings, lines, size)
 - Detects timestamps, versions, Claude markers
@@ -121,10 +142,12 @@ npm run scan:report       # Scan + generate report
 Creates organized searchable index from scan results.
 
 **Output:**
+
 - `index/organized-index.md` - Organized by category
 - `index/categories.json` - JSON categories
 
 **Categories:**
+
 - AI Agents
 - Documentation
 - Guides
@@ -147,9 +170,11 @@ npm run index             # Requires scan first
 Validates markdown files for missing timestamps, versions, and metadata.
 
 **Output:**
+
 - `index/validation-report.md` - Validation report
 
 **Checks:**
+
 - Missing timestamp
 - Missing version
 - Missing Claude marker
@@ -166,6 +191,7 @@ npm run validate          # Requires scan first
 Watches for markdown file changes and auto-updates index.
 
 **Features:**
+
 - Watches all DVWDesign repositories
 - Debounces updates (5 seconds)
 - Auto-runs scan + index on changes
@@ -181,6 +207,7 @@ npm run watch             # Press Ctrl+C to stop
 Automatically fixes systematic markdown linting errors.
 
 **Fixes:**
+
 - Line breaks around block elements
 - Empty code block language identifiers
 - Bold/italic text that should be headings
@@ -200,6 +227,7 @@ node scripts/fix-markdown.mjs --dry-run   # Preview
 Configuration: `config/.markdownlint.json`
 
 **Enforced Rules:**
+
 - MD001: Heading levels increment by one
 - MD003: ATX-style headings (`#` not underline)
 - MD022: Blank lines around headings
@@ -208,6 +236,7 @@ Configuration: `config/.markdownlint.json`
 - MD040: **GLOBAL POLICY** - ALL code blocks MUST have type
 
 **Relaxed Rules:**
+
 - MD013: Line length (disabled for links)
 - MD033: Inline HTML (allows specific tags)
 
@@ -229,11 +258,13 @@ Location: `.claude/agents/markdown-fixer.md`
 **Purpose:** Automatically fixes systematic markdown linting errors across all repositories.
 
 **Triggers:**
+
 - `@markdown-fixer`
 - Markdown lint errors
 - Markdown validation
 
 **Capabilities:**
+
 - Cross-repository analysis
 - Systematic error auto-fix
 - Context-aware fixes

@@ -97,10 +97,14 @@ Fix repetitive errors that occur across multiple repositories and files:
 npm run scan                    # Scan all repositories
 npm run scan:report             # Generate detailed report
 npm run index                   # Create markdown index
+npm run index:update            # Update existing index
 npm run fix                     # Fix markdown in current repo
 npm run fix:all                 # Fix markdown in all repos
 npm run validate                # Validate timestamps/versions
+npm run validate:fix            # Auto-fix validation issues
 npm run watch                   # Watch for changes
+npm run cron:setup              # Setup automated tasks
+npm run cron:stop               # Stop automated tasks
 ```
 
 ### Advanced Commands
@@ -109,6 +113,7 @@ npm run watch                   # Watch for changes
 npm run lint                    # Lint all markdown
 npm run lint:fix                # Auto-fix markdown issues
 node scripts/fix-markdown.mjs --all --dry-run  # Preview fixes
+node scripts/validate-timestamps.mjs --fix     # Fix timestamps
 ```
 
 ---
