@@ -1,0 +1,44 @@
+{
+  "name": "@dvwdesign/markdown-tools",
+  "version": "1.0.0",
+  "description": "Centralized markdown management, linting, and indexing for DVWDesign organization",
+  "type": "module",
+  "main": "scripts/index-markdown.mjs",
+  "scripts": {
+    "scan": "node scripts/scan-all-repos.mjs",
+    "scan:report": "node scripts/scan-all-repos.mjs --report",
+    "index": "node scripts/index-markdown.mjs",
+    "index:update": "node scripts/index-markdown.mjs --update",
+    "lint": "markdownlint-cli2 '**/*.md' --config config/.markdownlint.json",
+    "lint:fix": "markdownlint-cli2 '**/*.md' --config config/.markdownlint.json --fix",
+    "fix": "node scripts/fix-markdown.mjs",
+    "fix:all": "node scripts/fix-markdown.mjs --all",
+    "validate": "node scripts/validate-timestamps.mjs",
+    "validate:fix": "node scripts/validate-timestamps.mjs --fix",
+    "watch": "node scripts/watch-and-index.mjs",
+    "cron:setup": "node scripts/setup-cron.mjs",
+    "cron:stop": "node scripts/setup-cron.mjs --stop"
+  },
+  "keywords": [
+    "markdown",
+    "linting",
+    "documentation",
+    "indexing",
+    "registry",
+    "automation"
+  ],
+  "author": "DVWDesign",
+  "license": "MIT",
+  "dependencies": {
+    "chokidar": "^4.0.3",
+    "glob": "^11.0.0",
+    "gray-matter": "^4.0.3",
+    "node-cron": "^3.0.3"
+  },
+  "devDependencies": {
+    "markdownlint-cli2": "^0.15.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
