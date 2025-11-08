@@ -28,6 +28,7 @@ const REPOS = [
   { name: 'FigmaAPI/@figma-core', priority: 'high', active: true },
   { name: 'FigmaAPI/@figma-docs', priority: 'high', active: true },
   { name: 'Figma-Plug-ins', priority: 'high', active: true },
+  { name: 'mjml-dev-mode-proposal', priority: 'high', active: true }, // MJML Dev Mode Proposal - added 2025-11-08
   { name: 'GlossiaApp', priority: 'medium', active: true },
   { name: 'Contentful', priority: 'medium', active: true },
   { name: 'IconJar', priority: 'low', active: true },
