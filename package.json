@@ -26,7 +26,11 @@
     "analyze:deviations": "node scripts/analysis/detect-deviations.mjs",
     "analyze:all": "npm run analyze:similarities && npm run analyze:deviations",
     "report:dashboard": "node scripts/reports/deviation-dashboard.mjs",
-    "report:canonical": "node scripts/reports/canonical-report.mjs"
+    "report:canonical": "node scripts/reports/canonical-report.mjs",
+    "tree:visual": "tree -I 'node_modules|.git|dist|build|coverage|.next|.cache' -L 3 --dirsfirst",
+    "tree:structure": "tree -I 'node_modules|.git|dist|build|coverage|.next|.cache' -L 4 > docs/REPOSITORY-STRUCTURE.txt",
+    "tree:schema": "node scripts/generate-tree-schema.mjs",
+    "tree:update": "npm run tree:structure && npm run tree:schema"
   },
   "keywords": [
     "markdown",
@@ -57,7 +61,8 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "markdownlint-cli2": "^0.15.0"
+    "markdownlint-cli2": "^0.15.0",
+    "tree-cli": "^0.6.7"
   },
   "engines": {
     "node": ">=20.0.0"

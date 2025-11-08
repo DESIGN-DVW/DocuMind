@@ -1,0 +1,22 @@
+
+/Users/Shared/htdocs/github/DVWDesign/DocuMind
+├── AGENTS.md
+├── CLAUDE.md
+├── README.md
+├── SETUP-COMPLETE.md
+├── config
+├── data
+├── docs
+├── index
+├── markdown.bbprojectd
+├── markdown.code-workspace
+├── node_modules
+├── package-lock.json
+├── package.json
+└── scripts
+
+directory: 7 file: 7
+
+
+
+[2K[1G

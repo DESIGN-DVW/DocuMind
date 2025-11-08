@@ -1,0 +1,49 @@
+{
+  "repository": {
+    "name": "documind",
+    "type": "unknown",
+    "path": "/Users/Shared/htdocs/github/DVWDesign/DocuMind",
+    "generatedAt": "2025-11-08T15:33:09.355Z",
+    "version": "1.0.0"
+  },
+  "structure": {
+    "directories": {
+      "docs": {
+        "type": "directory",
+        "fileCount": 6,
+        "totalSize": "59.52 KB",
+        "totalSizeBytes": 60947,
+        "keySubdirectories": []
+      },
+      "scripts": {
+        "type": "directory",
+        "fileCount": 11,
+        "totalSize": "94.17 KB",
+        "totalSizeBytes": 96433,
+        "keySubdirectories": [
+          "db",
+          "scan"
+        ]
+      }
+    },
+    "rootFiles": {
+      "package.json": "Root configuration file",
+      "README.md": "Root configuration file",
+      "CLAUDE.md": "Root configuration file",
+      ".gitignore": "Root configuration file"
+    }
+  },
+  "technologies": {
+    "frontend": [],
+    "backend": [],
+    "testing": [],
+    "tools": []
+  },
+  "metrics": {
+    "totalFiles": 17,
+    "totalSize": "153.69 KB",
+    "totalSizeBytes": 157380,
+    "maxDepth": 2,
+    "documentationCoverage": "high"
+  }
+}
