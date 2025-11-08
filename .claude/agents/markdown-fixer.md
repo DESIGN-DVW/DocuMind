@@ -28,14 +28,14 @@ triggers:
 
 Fix repetitive errors that occur across multiple repositories and files:
 
-**A. Line Break Issues (MD031, MD032, MD022)**
+#### A. Line Break Issues (MD031, MD032, MD022)
 
 - Ensure single blank line before/after lists
 - Ensure single blank line before/after fenced code blocks
 - Ensure single blank line before/after headings
 - **NEVER** double blank lines before block elements
 
-**B. Empty Code Block Language (MD040)**
+#### B. Empty Code Block Language (MD040)
 
 - All fenced code blocks MUST have a language specified
 - Default to `text` if language cannot be determined
@@ -46,7 +46,7 @@ Fix repetitive errors that occur across multiple repositories and files:
   - JavaScript → `javascript` or `js`
   - Plain text → `text`
 
-**C. Bold/Italic as Titles (MD036)**
+#### C. Bold/Italic as Titles (MD036)
 
 - Detect bold/italic text that should be proper headings
 - Convert to appropriate heading level based on context
@@ -54,19 +54,19 @@ Fix repetitive errors that occur across multiple repositories and files:
 
 ### 2. Complex Context-Dependent Fixes
 
-**Heading Hierarchy (MD001, MD003)**
+#### Heading Hierarchy (MD001, MD003)
 
 - Ensure headings increment properly (h1 → h2 → h3, no skipping)
 - Fix heading styles (ATX preferred: `#` not underline style)
 - Ensure first line is h1 (MD041)
 
-**Link Validation (MD034)**
+#### Link Validation (MD034)
 
 - Convert bare URLs to proper markdown links
 - Validate internal links point to existing files
 - Fix broken anchor links
 
-**List Formatting (MD004, MD005, MD007, MD030)**
+#### List Formatting (MD004, MD005, MD007, MD030)
 
 - Consistent list marker style
 - Proper indentation
@@ -74,14 +74,14 @@ Fix repetitive errors that occur across multiple repositories and files:
 
 ### 3. Advanced Operations
 
-**Cross-Repository Analysis**
+#### Cross-Repository Analysis
 
 - Scan all DVWDesign repositories for markdown files
 - Generate organization-wide markdown index
 - Detect duplicate documentation across repos
 - Validate cross-references between repositories
 
-**Intelligent Code Block Detection**
+#### Intelligent Code Block Detection
 
 - Analyze code block content to determine language
 - Add language identifiers automatically
@@ -127,6 +127,7 @@ npm run scan
 ```
 
 This will:
+
 - Scan `/Users/Shared/htdocs/github/DVWDesign/*` for markdown files
 - Collect metadata (size, modified date, line count)
 - Generate index with cross-repository references
@@ -138,6 +139,7 @@ npm run lint
 ```
 
 This will:
+
 - Run markdownlint on all repositories
 - Group errors by type and repository
 - Identify systematic vs. one-off issues
@@ -151,6 +153,7 @@ npm run fix:all              # Execute
 ```
 
 This handles:
+
 - ✅ Line break normalization
 - ✅ Code block language detection
 - ✅ Bold/italic to heading conversion
@@ -163,6 +166,7 @@ npm run validate
 ```
 
 Create detailed reports of:
+
 - Files fixed
 - Error types resolved
 - Repositories analyzed

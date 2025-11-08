@@ -1,7 +1,7 @@
 {
-  "name": "@dvwdesign/markdown-tools",
+  "name": "@dvwdesign/documind",
   "version": "1.0.0",
-  "description": "Centralized markdown management, linting, and indexing for DVWDesign organization",
+  "description": "DocuMind - Documentation Intelligence & Management System for DVWDesign organization",
   "type": "module",
   "main": "scripts/index-markdown.mjs",
   "scripts": {
@@ -9,15 +9,24 @@
     "scan:report": "node scripts/scan-all-repos.mjs --report",
     "index": "node scripts/index-markdown.mjs",
     "index:update": "node scripts/index-markdown.mjs --update",
-    "lint": "markdownlint-cli2 '**/*.md' --config config/.markdownlint.json",
-    "lint:fix": "markdownlint-cli2 '**/*.md' --config config/.markdownlint.json --fix",
+    "lint": "markdownlint-cli2 '**/*.md' '#node_modules' '#index' --config config/.markdownlint.json",
+    "lint:fix": "markdownlint-cli2 '**/*.md' '#node_modules' '#index' --config config/.markdownlint.json --fix",
     "fix": "node scripts/fix-markdown.mjs",
     "fix:all": "node scripts/fix-markdown.mjs --all",
     "validate": "node scripts/validate-timestamps.mjs",
     "validate:fix": "node scripts/validate-timestamps.mjs --fix",
     "watch": "node scripts/watch-and-index.mjs",
     "cron:setup": "node scripts/setup-cron.mjs",
-    "cron:stop": "node scripts/setup-cron.mjs --stop"
+    "cron:stop": "node scripts/setup-cron.mjs --stop",
+    "cron:list": "node scripts/setup-cron.mjs --list",
+    "db:init": "node scripts/db/init-database.mjs",
+    "db:reset": "rm -f data/documind.db && npm run db:init",
+    "scan:enhanced": "node scripts/scan/enhanced-scanner.mjs",
+    "analyze:similarities": "node scripts/analysis/detect-similarities.mjs",
+    "analyze:deviations": "node scripts/analysis/detect-deviations.mjs",
+    "analyze:all": "npm run analyze:similarities && npm run analyze:deviations",
+    "report:dashboard": "node scripts/reports/deviation-dashboard.mjs",
+    "report:canonical": "node scripts/reports/canonical-report.mjs"
   },
   "keywords": [
     "markdown",
@@ -30,10 +39,22 @@
   "author": "DVWDesign",
   "license": "MIT",
   "dependencies": {
+    "better-sqlite3": "^9.2.2",
+    "chalk": "^5.3.0",
     "chokidar": "^4.0.3",
+    "date-fns": "^3.0.6",
+    "diff": "^5.1.0",
+    "fast-glob": "^3.3.2",
+    "fast-levenshtein": "^3.0.0",
     "glob": "^11.0.0",
     "gray-matter": "^4.0.3",
-    "node-cron": "^3.0.3"
+    "ignore": "^5.3.0",
+    "markdown-it": "^14.0.0",
+    "node-cron": "^3.0.3",
+    "ora": "^8.0.1",
+    "string-similarity": "^4.0.4",
+    "table": "^6.8.1",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "markdownlint-cli2": "^0.15.0"

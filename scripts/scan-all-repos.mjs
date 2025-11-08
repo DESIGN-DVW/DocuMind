@@ -33,7 +33,7 @@ const REPOS = [
   { name: 'Contentful', priority: 'medium', active: true },
   { name: 'IconJar', priority: 'low', active: true },
   { name: 'AdobePlugIns', priority: 'low', active: true },
-  { name: 'Markdown', priority: 'high', active: true },
+  { name: 'DocuMind', priority: 'high', active: true }, // Renamed from Markdown on 2025-11-08
 ];
 
 const EXCLUDE_PATTERNS = [

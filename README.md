@@ -1,19 +1,39 @@
-# Markdown Repository
+# DocuMind
 
-**Centralized Markdown Management for DVWDesign Organization**
+## Documentation Intelligence & Management System for DVWDesign Organization
 
-Automated system for scanning, linting, indexing, and managing markdown files across all DVWDesign repositories.
+Automated system for scanning, linting, indexing, and managing markdown files across all DVWDesign repositories with intelligent analysis and cross-repository insights.
 
 ---
 
 ## ✨ Features
 
+### Phase 1 (Complete) ✅
+- 🗄️ **SQLite Database** - 8,173+ documents indexed with content hashing
 - 🔍 **Cross-Repository Scanner** - Scans all DVWDesign repos for .md/.mdx files
+- 🔎 **Full-Text Search** - FTS5 search across all documentation (sub-second)
+- 📊 **Query Utilities** - 20+ query functions for analysis
 - 📑 **Organized Index** - Generates categorized, searchable indexes
 - ✅ **Validation** - Checks for missing timestamps, versions, metadata
 - 🔧 **Auto-Fix** - Systematically fixes linting errors
 - 👁️ **File Watcher** - Auto-updates index on file changes
 - 🤖 **Agent Integration** - Works with Claude Code markdown-fixer agent
+
+### Phase 2 (In Development) 🚧
+- 🔬 **Similarity Detection** - Find duplicate and similar documents
+- 📉 **Deviation Tracking** - Detect inconsistencies across repositories
+- 📈 **Reporting Dashboard** - Visual dashboard for documentation health
+- 🎯 **Canonical Documents** - Determine source of truth for each subject
+
+### Phase 3 (Planned) 📋
+- 🧠 **AI Learning** - Learn from manual fixes and suggest best practices
+- 📚 **Practice Examples** - Auto-generate examples from common patterns
+- 🏆 **Quality Scoring** - Repository documentation health scores
+
+### Phase 4 (Planned) 🚀
+- 🔌 **MCP Server** - Model Context Protocol for fast queries
+- ⚡ **Performance Optimization** - Query caching and batch operations
+- 🎨 **Claude Code Integration** - Deep integration with AI workflows
 
 ---
 
@@ -60,6 +80,7 @@ npm run scan:report       # Scan + generate report
 ```
 
 **Outputs:**
+
 - `index/all-markdown-files.json` - Complete scan data
 - `index/scan-report.md` - Human-readable report
 
@@ -70,6 +91,7 @@ npm run index             # Create organized index
 ```
 
 **Outputs:**
+
 - `index/organized-index.md` - Categorized file list
 - `index/categories.json` - JSON categories
 
@@ -82,9 +104,11 @@ npm run validate          # Check timestamps/versions
 ```
 
 **Outputs:**
+
 - `index/validation-report.md` - Validation issues
 
 **Checks:**
+
 - Missing "Last Updated" timestamps
 - Missing version numbers
 - Missing Claude Code markers
@@ -99,6 +123,7 @@ npm run fix               # Fix specific directory
 ```
 
 **Auto-Fixes:**
+
 - Line breaks around headings, lists, code blocks
 - Empty code block language identifiers (defaults to `text`)
 - Bold/italic text that should be headings
@@ -110,9 +135,29 @@ npm run watch             # Watch for changes (Ctrl+C to stop)
 ```
 
 **Features:**
+
 - Watches all DVWDesign repositories
 - Debounces updates (5 seconds after last change)
 - Auto-runs scan + index on markdown file changes
+
+### Cron Automation
+
+```bash
+npm run cron:setup        # Install cron jobs
+npm run cron:list         # List installed jobs
+npm run cron:stop         # Remove cron jobs
+```
+
+**Scheduled Jobs:**
+
+- **Scan:** Every hour at :00 (`npm run scan:report`)
+- **Index:** Every hour at :05 (`npm run index`)
+- **Validate:** Daily at 9:00 AM (`npm run validate`)
+- **Lint:** Daily at 10:00 AM (`npm run lint`)
+
+**Logs:** All cron output goes to `logs/cron-*.log`
+
+See [docs/CRON-SETUP.md](docs/CRON-SETUP.md) for complete guide.
 
 ---
 
@@ -211,9 +256,16 @@ Edit `config/.markdownlint.json`:
 
 ## 📚 Documentation
 
+### Core Documentation
 - **[CLAUDE.md](CLAUDE.md)** - Comprehensive usage guide for Claude Code
 - **[config/.markdownlint.json](config/.markdownlint.json)** - Linting rules
 - **[.claude/agents/markdown-fixer.md](.claude/agents/markdown-fixer.md)** - Agent documentation
+
+### DocuMind System
+- **[docs/CONVERSATION-2025-11-07-DOCUMIND-DESIGN.md](docs/CONVERSATION-2025-11-07-DOCUMIND-DESIGN.md)** - Complete design conversation and architecture
+- **[docs/PHASE-1-COMPLETION-REPORT.md](docs/PHASE-1-COMPLETION-REPORT.md)** - Phase 1 implementation details and status
+- **[docs/AGENT-QUICK-REFERENCE.md](docs/AGENT-QUICK-REFERENCE.md)** - Quick reference for AI agents
+- **[scripts/db/query-utils.mjs](scripts/db/query-utils.mjs)** - Query API documentation (JSDoc)
 
 ---
 
