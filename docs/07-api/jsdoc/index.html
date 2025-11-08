@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <meta charset="utf-8">
+    <title>Home - Documentation</title>
+    
+    
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+    <script src="scripts/nav.js" defer></script>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav >
+    
+    
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#analyzeDirectory">analyzeDirectory</a></li><li><a href="global.html#calculateMaxDepth">calculateMaxDepth</a></li><li><a href="global.html#countFiles">countFiles</a></li><li><a href="global.html#detectTechnologies">detectTechnologies</a></li><li><a href="global.html#findDuplicates">findDuplicates</a></li><li><a href="global.html#findSimilarDocuments">findSimilarDocuments</a></li><li><a href="global.html#formatBytes">formatBytes</a></li><li><a href="global.html#generateSchema">generateSchema</a></li><li><a href="global.html#getCanonicalDocument">getCanonicalDocument</a></li><li><a href="global.html#getCategoryStats">getCategoryStats</a></li><li><a href="global.html#getDeviationStats">getDeviationStats</a></li><li><a href="global.html#getDirectorySize">getDirectorySize</a></li><li><a href="global.html#getGlobalStats">getGlobalStats</a></li><li><a href="global.html#getLearningPatterns">getLearningPatterns</a></li><li><a href="global.html#getLintingIssues">getLintingIssues</a></li><li><a href="global.html#getLintingStats">getLintingStats</a></li><li><a href="global.html#getRecentlyModified">getRecentlyModified</a></li><li><a href="global.html#getRepoName">getRepoName</a></li><li><a href="global.html#getRepoType">getRepoType</a></li><li><a href="global.html#getRepositoryStats">getRepositoryStats</a></li><li><a href="global.html#getScanHistory">getScanHistory</a></li><li><a href="global.html#getUnresolvedDeviations">getUnresolvedDeviations</a></li><li><a href="global.html#listCanonicalDocuments">listCanonicalDocuments</a></li><li><a href="global.html#searchByFilename">searchByFilename</a></li><li><a href="global.html#searchDocuments">searchDocuments</a></li></ul>
+    
+</nav>
+
+<div id="main">
+    
+
+    
+
+
+
+    
+
+
+    <section class="package">
+        <h3> </h3>		
+    </section>
+
+
+
+
+
+
+
+
+
+    
+
+
+
+    <section class="readme usertext">
+        <article><h1 id="documind">DocuMind</h1>
+<h2 id="documentation-intelligence-%26-management-system-for-dvwdesign-organization">Documentation Intelligence &amp; Management System for DVWDesign Organization</h2>
+<p>Automated system for scanning, linting, indexing, and managing markdown files across all DVWDesign repositories with intelligent analysis and cross-repository insights.</p>
+<hr>
+<h2 id="%E2%9C%A8-features">✨ Features</h2>
+<h3 id="phase-1-(complete)-%E2%9C%85">Phase 1 (Complete) ✅</h3>
+<ul>
+<li>🗄️ <strong>SQLite Database</strong> - 8,173+ documents indexed with content hashing</li>
+<li>🔍 <strong>Cross-Repository Scanner</strong> - Scans all DVWDesign repos for .md/.mdx files</li>
+<li>🔎 <strong>Full-Text Search</strong> - FTS5 search across all documentation (sub-second)</li>
+<li>📊 <strong>Query Utilities</strong> - 20+ query functions for analysis</li>
+<li>📑 <strong>Organized Index</strong> - Generates categorized, searchable indexes</li>
+<li>✅ <strong>Validation</strong> - Checks for missing timestamps, versions, metadata</li>
+<li>🔧 <strong>Auto-Fix</strong> - Systematically fixes linting errors</li>
+<li>👁️ <strong>File Watcher</strong> - Auto-updates index on file changes</li>
+<li>🤖 <strong>Agent Integration</strong> - Works with Claude Code markdown-fixer agent</li>
+</ul>
+<h3 id="phase-2-(in-development)-%F0%9F%9A%A7">Phase 2 (In Development) 🚧</h3>
+<ul>
+<li>🔬 <strong>Similarity Detection</strong> - Find duplicate and similar documents</li>
+<li>📉 <strong>Deviation Tracking</strong> - Detect inconsistencies across repositories</li>
+<li>📈 <strong>Reporting Dashboard</strong> - Visual dashboard for documentation health</li>
+<li>🎯 <strong>Canonical Documents</strong> - Determine source of truth for each subject</li>
+</ul>
+<h3 id="phase-3-(planned)-%F0%9F%93%8B">Phase 3 (Planned) 📋</h3>
+<ul>
+<li>🧠 <strong>AI Learning</strong> - Learn from manual fixes and suggest best practices</li>
+<li>📚 <strong>Practice Examples</strong> - Auto-generate examples from common patterns</li>
+<li>🏆 <strong>Quality Scoring</strong> - Repository documentation health scores</li>
+</ul>
+<h3 id="phase-4-(planned)-%F0%9F%9A%80">Phase 4 (Planned) 🚀</h3>
+<ul>
+<li>🔌 <strong>MCP Server</strong> - Model Context Protocol for fast queries</li>
+<li>⚡ <strong>Performance Optimization</strong> - Query caching and batch operations</li>
+<li>🎨 <strong>Claude Code Integration</strong> - Deep integration with AI workflows</li>
+</ul>
+<hr>
+<h2 id="%F0%9F%9A%80-quick-start">🚀 Quick Start</h2>
+<pre class="prettyprint source lang-bash"><code># Install
+npm install
+
+# Scan all repositories
+npm run scan:report
+
+# Create organized index
+npm run index
+
+# Validate timestamps
+npm run validate
+
+# Watch for changes
+npm run watch
+</code></pre>
+<hr>
+<h2 id="%F0%9F%93%8A-what-gets-scanned">📊 What Gets Scanned</h2>
+<p>This system monitors 10 DVWDesign repositories:</p>
+<ul>
+<li><strong>High Priority</strong>: FigmailAPP, FigmaDSController, @figma-core, @figma-docs, Figma-Plug-ins, Markdown</li>
+<li><strong>Medium Priority</strong>: GlossiaApp, Contentful</li>
+<li><strong>Low Priority</strong>: IconJar, AdobePlugIns</li>
+</ul>
+<p>Total markdown files scanned: <strong>500+</strong> (varies by project state)</p>
+<hr>
+<h2 id="%F0%9F%9B%A0%EF%B8%8F-available-commands">🛠️ Available Commands</h2>
+<h3 id="scanning">Scanning</h3>
+<pre class="prettyprint source lang-bash"><code>npm run scan              # Scan all repositories
+npm run scan:report       # Scan + generate report
+</code></pre>
+<p><strong>Outputs:</strong></p>
+<ul>
+<li><code>index/all-markdown-files.json</code> - Complete scan data</li>
+<li><code>index/scan-report.md</code> - Human-readable report</li>
+</ul>
+<h3 id="indexing">Indexing</h3>
+<pre class="prettyprint source lang-bash"><code>npm run index             # Create organized index
+</code></pre>
+<p><strong>Outputs:</strong></p>
+<ul>
+<li><code>index/organized-index.md</code> - Categorized file list</li>
+<li><code>index/categories.json</code> - JSON categories</li>
+</ul>
+<p><strong>Categories:</strong> Agents, Documentation, Guides, Architecture, Backend, Frontend, Shared, README, Claude Instructions, Other</p>
+<h3 id="validation">Validation</h3>
+<pre class="prettyprint source lang-bash"><code>npm run validate          # Check timestamps/versions
+</code></pre>
+<p><strong>Outputs:</strong></p>
+<ul>
+<li><code>index/validation-report.md</code> - Validation issues</li>
+</ul>
+<p><strong>Checks:</strong></p>
+<ul>
+<li>Missing &quot;Last Updated&quot; timestamps</li>
+<li>Missing version numbers</li>
+<li>Missing Claude Code markers</li>
+<li>Recently modified files (30 days) without timestamps</li>
+</ul>
+<h3 id="linting">Linting</h3>
+<pre class="prettyprint source lang-bash"><code>npm run lint              # Check markdown errors
+npm run lint:fix          # Auto-fix errors
+npm run fix               # Fix specific directory
+</code></pre>
+<p><strong>Auto-Fixes:</strong></p>
+<ul>
+<li>Line breaks around headings, lists, code blocks</li>
+<li>Empty code block language identifiers (defaults to <code>text</code>)</li>
+<li>Bold/italic text that should be headings</li>
+</ul>
+<h3 id="watching">Watching</h3>
+<pre class="prettyprint source lang-bash"><code>npm run watch             # Watch for changes (Ctrl+C to stop)
+</code></pre>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Watches all DVWDesign repositories</li>
+<li>Debounces updates (5 seconds after last change)</li>
+<li>Auto-runs scan + index on markdown file changes</li>
+</ul>
+<h3 id="cron-automation">Cron Automation</h3>
+<pre class="prettyprint source lang-bash"><code>npm run cron:setup        # Install cron jobs
+npm run cron:list         # List installed jobs
+npm run cron:stop         # Remove cron jobs
+</code></pre>
+<p><strong>Scheduled Jobs:</strong></p>
+<ul>
+<li><strong>Scan:</strong> Every hour at :00 (<code>npm run scan:report</code>)</li>
+<li><strong>Index:</strong> Every hour at :05 (<code>npm run index</code>)</li>
+<li><strong>Validate:</strong> Daily at 9:00 AM (<code>npm run validate</code>)</li>
+<li><strong>Lint:</strong> Daily at 10:00 AM (<code>npm run lint</code>)</li>
+</ul>
+<p><strong>Logs:</strong> All cron output goes to <code>logs/cron-*.log</code></p>
+<p>See <a href="docs/CRON-SETUP.md">docs/CRON-SETUP.md</a> for complete guide.</p>
+<hr>
+<h2 id="%F0%9F%93%8B-workflow-examples">📋 Workflow Examples</h2>
+<h3 id="daily-use">Daily Use</h3>
+<pre class="prettyprint source lang-bash"><code># Start watcher in background
+npm run watch
+</code></pre>
+<p>Leave running - it will auto-update indexes when you edit markdown files.</p>
+<h3 id="weekly-maintenance">Weekly Maintenance</h3>
+<pre class="prettyprint source lang-bash"><code># Full scan + validation
+npm run scan:report
+npm run index
+npm run validate
+
+# Review reports
+cat index/scan-report.md
+cat index/validation-report.md
+</code></pre>
+<h3 id="before-git-commit">Before Git Commit</h3>
+<pre class="prettyprint source lang-bash"><code># Check for linting errors
+npm run lint
+
+# Auto-fix if needed
+npm run lint:fix
+
+# Verify
+npm run lint
+</code></pre>
+<hr>
+<h2 id="%F0%9F%93%81-generated-files">📁 Generated Files</h2>
+<p>All outputs are in <code>index/</code> (gitignored):</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>all-markdown-files.json</code></td>
+<td>Complete scan data with metadata</td>
+</tr>
+<tr>
+<td><code>scan-report.md</code></td>
+<td>Repository breakdown, largest files, statistics</td>
+</tr>
+<tr>
+<td><code>organized-index.md</code></td>
+<td>Categorized file list with links</td>
+</tr>
+<tr>
+<td><code>categories.json</code></td>
+<td>JSON categories for programmatic access</td>
+</tr>
+<tr>
+<td><code>validation-report.md</code></td>
+<td>Missing timestamps/versions report</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="%F0%9F%A4%96-claude-code-integration">🤖 Claude Code Integration</h2>
+<p>This repository includes a <code>markdown-fixer</code> agent for Claude Code:</p>
+<pre class="prettyprint source lang-text"><code>@markdown-fixer fix all repositories
+@markdown-fixer validate timestamps
+@markdown-fixer generate report
+</code></pre>
+<p>Agent location: <code>.claude/agents/markdown-fixer.md</code></p>
+<hr>
+<h2 id="%F0%9F%94%A7-configuration">🔧 Configuration</h2>
+<h3 id="add-repository">Add Repository</h3>
+<p>Edit <code>scripts/scan-all-repos.mjs</code>:</p>
+<pre class="prettyprint source lang-javascript"><code>const REPOS = [
+  // ... existing
+  { name: 'NewRepo', priority: 'medium', active: true },
+];
+</code></pre>
+<h3 id="customize-linting">Customize Linting</h3>
+<p>Edit <code>config/.markdownlint.json</code>:</p>
+<pre class="prettyprint source lang-json"><code>{
+  &quot;MD040&quot;: true,  // Enforce code block types (GLOBAL POLICY)
+  &quot;MD013&quot;: false  // Disable line length (too strict for links)
+}
+</code></pre>
+<hr>
+<h2 id="%F0%9F%93%9A-documentation">📚 Documentation</h2>
+<h3 id="core-documentation">Core Documentation</h3>
+<ul>
+<li><strong><a href="CLAUDE.md">CLAUDE.md</a></strong> - Comprehensive usage guide for Claude Code</li>
+<li><strong><a href="config/.markdownlint.json">config/.markdownlint.json</a></strong> - Linting rules</li>
+<li><strong><a href=".claude/agents/markdown-fixer.md">.claude/agents/markdown-fixer.md</a></strong> - Agent documentation</li>
+</ul>
+<h3 id="documind-system">DocuMind System</h3>
+<ul>
+<li><strong><a href="docs/CONVERSATION-2025-11-07-DOCUMIND-DESIGN.md">docs/CONVERSATION-2025-11-07-DOCUMIND-DESIGN.md</a></strong> - Complete design conversation and architecture</li>
+<li><strong><a href="docs/PHASE-1-COMPLETION-REPORT.md">docs/PHASE-1-COMPLETION-REPORT.md</a></strong> - Phase 1 implementation details and status</li>
+<li><strong><a href="docs/AGENT-QUICK-REFERENCE.md">docs/AGENT-QUICK-REFERENCE.md</a></strong> - Quick reference for AI agents</li>
+<li><strong><a href="scripts/db/query-utils.mjs">scripts/db/query-utils.mjs</a></strong> - Query API documentation (JSDoc)</li>
+</ul>
+<hr>
+<h2 id="%F0%9F%94%97-related-projects">🔗 Related Projects</h2>
+<ul>
+<li><strong><a href="https://github.com/DVWDesign/FigmaAPI/@figma-docs">@figma-docs</a></strong> - Documentation sync system</li>
+<li><strong><a href="https://github.com/DVWDesign/FigmaAPI/FigmailAPP">FigmailAPP</a></strong> - Origin of markdown infrastructure</li>
+</ul>
+<hr>
+<h2 id="%F0%9F%93%84-license">📄 License</h2>
+<p>MIT</p>
+<hr>
+<p><strong>Version:</strong> 1.0.0
+<strong>Last Updated:</strong> 2025-11-06
+<strong>Status:</strong> ✅ Production Ready</p></article>
+    </section>
+
+
+
+
+
+
+    
+    
+</div>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Sat Nov 08 2025 23:11:46 GMT+0100 (Central European Standard Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/polyfill.js"></script>
+<script src="scripts/linenumber.js"></script>
+
+
+
+</body>
+</html>

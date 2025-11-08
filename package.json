@@ -30,7 +30,11 @@
     "tree:visual": "tree -I 'node_modules|.git|dist|build|coverage|.next|.cache' -L 3 --dirsfirst",
     "tree:structure": "tree -I 'node_modules|.git|dist|build|coverage|.next|.cache' -L 4 > docs/REPOSITORY-STRUCTURE.txt",
     "tree:schema": "node scripts/generate-tree-schema.mjs",
-    "tree:update": "npm run tree:structure && npm run tree:schema"
+    "tree:update": "npm run tree:structure && npm run tree:schema",
+    "docs:jsdoc": "jsdoc -c jsdoc.config.json",
+    "docs:jsdoc:serve": "npx serve docs/07-api/jsdoc",
+    "docs:generate": "npm run docs:jsdoc",
+    "docs:generate:all": "npm run docs:jsdoc"
   },
   "keywords": [
     "markdown",
@@ -62,7 +66,10 @@
   },
   "devDependencies": {
     "markdownlint-cli2": "^0.15.0",
-    "tree-cli": "^0.6.7"
+    "tree-cli": "^0.6.7",
+    "jsdoc": "^4.0.5",
+    "better-docs": "^2.7.3",
+    "docdash": "^2.0.2"
   },
   "engines": {
     "node": ">=20.0.0"

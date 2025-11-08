@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <meta charset="utf-8">
+    <title>db/query-utils.mjs - Documentation</title>
+    
+    
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+    <script src="scripts/nav.js" defer></script>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav >
+    
+    
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#analyzeDirectory">analyzeDirectory</a></li><li><a href="global.html#calculateMaxDepth">calculateMaxDepth</a></li><li><a href="global.html#countFiles">countFiles</a></li><li><a href="global.html#detectTechnologies">detectTechnologies</a></li><li><a href="global.html#findDuplicates">findDuplicates</a></li><li><a href="global.html#findSimilarDocuments">findSimilarDocuments</a></li><li><a href="global.html#formatBytes">formatBytes</a></li><li><a href="global.html#generateSchema">generateSchema</a></li><li><a href="global.html#getCanonicalDocument">getCanonicalDocument</a></li><li><a href="global.html#getCategoryStats">getCategoryStats</a></li><li><a href="global.html#getDeviationStats">getDeviationStats</a></li><li><a href="global.html#getDirectorySize">getDirectorySize</a></li><li><a href="global.html#getGlobalStats">getGlobalStats</a></li><li><a href="global.html#getLearningPatterns">getLearningPatterns</a></li><li><a href="global.html#getLintingIssues">getLintingIssues</a></li><li><a href="global.html#getLintingStats">getLintingStats</a></li><li><a href="global.html#getRecentlyModified">getRecentlyModified</a></li><li><a href="global.html#getRepoName">getRepoName</a></li><li><a href="global.html#getRepoType">getRepoType</a></li><li><a href="global.html#getRepositoryStats">getRepositoryStats</a></li><li><a href="global.html#getScanHistory">getScanHistory</a></li><li><a href="global.html#getUnresolvedDeviations">getUnresolvedDeviations</a></li><li><a href="global.html#listCanonicalDocuments">listCanonicalDocuments</a></li><li><a href="global.html#searchByFilename">searchByFilename</a></li><li><a href="global.html#searchDocuments">searchDocuments</a></li></ul>
+    
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">db/query-utils.mjs</h1>
+    
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>#!/usr/bin/env node
+
+/**
+ * DocuMind Query Utilities
+ *
+ * Comprehensive query functions for the DocuMind database.
+ * Use these functions in other scripts or export for MCP server.
+ */
+
+import Database from 'better-sqlite3';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const DB_PATH = path.join(__dirname, '../../data/documind.db');
+
+// =============================================================================
+// DATABASE CONNECTION
+// =============================================================================
+
+export function getDatabase() {
+  const db = new Database(DB_PATH, { readonly: false });
+  db.pragma('foreign_keys = ON');
+  return db;
+}
+
+// =============================================================================
+// FULL-TEXT SEARCH
+// =============================================================================
+
+/**
+ * Search documents by content using FTS5 full-text search
+ *
+ * @param {string} query - Search query (supports FTS5 syntax)
+ * @param {object} options - Search options
+ * @returns {Array} Matching documents with snippets
+ */
+export function searchDocuments(query, options = {}) {
+  const {
+    repository = null,
+    category = null,
+    limit = 20,
+    offset = 0,
+  } = options;
+
+  const db = getDatabase();
+
+  let sql = `
+    SELECT
+      d.id, d.path, d.repository, d.filename, d.category,
+      d.modified_at, d.file_size, d.line_count,
+      snippet(documents_fts, 3, '&lt;mark>', '&lt;/mark>', '...', 32) as snippet,
+      rank
+    FROM documents_fts
+    JOIN documents d ON documents_fts.rowid = d.id
+    WHERE documents_fts MATCH ?
+  `;
+
+  const params = [query];
+
+  if (repository) {
+    sql += ' AND d.repository = ?';
+    params.push(repository);
+  }
+
+  if (category) {
+    sql += ' AND d.category = ?';
+    params.push(category);
+  }
+
+  sql += ' ORDER BY rank LIMIT ? OFFSET ?';
+  params.push(limit, offset);
+
+  const results = db.prepare(sql).all(...params);
+  db.close();
+
+  return results;
+}
+
+/**
+ * Search by filename pattern
+ *
+ * @param {string} pattern - Filename pattern (supports SQL LIKE % wildcards)
+ * @param {object} options - Search options
+ * @returns {Array} Matching documents
+ */
+export function searchByFilename(pattern, options = {}) {
+  const {
+    repository = null,
+    category = null,
+    limit = 50,
+  } = options;
+
+  const db = getDatabase();
+
+  let sql = `
+    SELECT id, path, repository, filename, category, modified_at, file_size
+    FROM documents
+    WHERE filename LIKE ?
+  `;
+
+  const params = [pattern];
+
+  if (repository) {
+    sql += ' AND repository = ?';
+    params.push(repository);
+  }
+
+  if (category) {
+    sql += ' AND category = ?';
+    params.push(category);
+  }
+
+  sql += ' ORDER BY modified_at DESC LIMIT ?';
+  params.push(limit);
+
+  const results = db.prepare(sql).all(...params);
+  db.close();
+
+  return results;
+}
+
+// =============================================================================
+// SIMILARITY &amp; DUPLICATES
+// =============================================================================
+
+/**
+ * Find similar documents (based on content_similarities table)
+ *
+ * @param {number} documentId - Document ID to find similarities for
+ * @param {number} threshold - Minimum similarity score (0.0-1.0)
+ * @returns {Array} Similar documents with scores
+ */
+export function findSimilarDocuments(documentId, threshold = 0.7) {
+  const db = getDatabase();
+
+  const sql = `
+    SELECT
+      cs.similarity_score,
+      cs.deviation_type,
+      d1.id as doc1_id, d1.path as doc1_path, d1.repository as doc1_repo,
+      d2.id as doc2_id, d2.path as doc2_path, d2.repository as doc2_repo
+    FROM content_similarities cs
+    JOIN documents d1 ON cs.doc1_id = d1.id
+    JOIN documents d2 ON cs.doc2_id = d2.id
+    WHERE (cs.doc1_id = ? OR cs.doc2_id = ?)
+      AND cs.similarity_score >= ?
+    ORDER BY cs.similarity_score DESC
+  `;
+
+  const results = db.prepare(sql).all(documentId, documentId, threshold);
+  db.close();
+
+  return results;
+}
+
+/**
+ * Get all duplicate/near-duplicate documents
+ *
+ * @param {number} threshold - Minimum similarity score (default: 0.9 for duplicates)
+ * @returns {Array} Duplicate document pairs
+ */
+export function findDuplicates(threshold = 0.9) {
+  const db = getDatabase();
+
+  const sql = `
+    SELECT
+      cs.similarity_score,
+      d1.path as path1, d1.repository as repo1, d1.filename as file1,
+      d2.path as path2, d2.repository as repo2, d2.filename as file2,
+      d1.modified_at as modified1, d2.modified_at as modified2
+    FROM content_similarities cs
+    JOIN documents d1 ON cs.doc1_id = d1.id
+    JOIN documents d2 ON cs.doc2_id = d2.id
+    WHERE cs.similarity_score >= ?
+      AND cs.deviation_type = 'duplicate'
+    ORDER BY cs.similarity_score DESC
+  `;
+
+  const results = db.prepare(sql).all(threshold);
+  db.close();
+
+  return results;
+}
+
+// =============================================================================
+// DEVIATIONS &amp; INCONSISTENCIES
+// =============================================================================
+
+/**
+ * Get unresolved deviations
+ *
+ * @param {object} options - Filter options
+ * @returns {Array} Unresolved deviations
+ */
+export function getUnresolvedDeviations(options = {}) {
+  const {
+    severity = null,
+    type = null,
+    repository = null,
+    limit = 50,
+  } = options;
+
+  const db = getDatabase();
+
+  let sql = `
+    SELECT
+      dev.id, dev.deviation_type, dev.severity, dev.description,
+      dev.detected_at, dev.suggested_fix,
+      d.path, d.repository, d.filename
+    FROM deviations dev
+    JOIN documents d ON dev.document_id = d.id
+    WHERE dev.resolved_at IS NULL
+  `;
+
+  const params = [];
+
+  if (severity) {
+    sql += ' AND dev.severity = ?';
+    params.push(severity);
+  }
+
+  if (type) {
+    sql += ' AND dev.deviation_type = ?';
+    params.push(type);
+  }
+
+  if (repository) {
+    sql += ' AND d.repository = ?';
+    params.push(repository);
+  }
+
+  sql += ' ORDER BY dev.severity DESC, dev.detected_at DESC LIMIT ?';
+  params.push(limit);
+
+  const results = db.prepare(sql).all(...params);
+  db.close();
+
+  return results;
+}
+
+/**
+ * Get deviation statistics by type and severity
+ *
+ * @returns {Array} Deviation statistics
+ */
+export function getDeviationStats() {
+  const db = getDatabase();
+
+  const sql = `
+    SELECT
+      deviation_type,
+      severity,
+      COUNT(*) as count,
+      COUNT(CASE WHEN resolved_at IS NOT NULL THEN 1 END) as resolved,
+      COUNT(CASE WHEN resolved_at IS NULL THEN 1 END) as unresolved
+    FROM deviations
+    GROUP BY deviation_type, severity
+    ORDER BY severity DESC, count DESC
+  `;
+
+  const results = db.prepare(sql).all();
+  db.close();
+
+  return results;
+}
+
+// =============================================================================
+// CANONICAL DOCUMENTS
+// =============================================================================
+
+/**
+ * Get canonical document for a subject
+ *
+ * @param {string} subject - Subject name (e.g., "MJML-INTEGRATION")
+ * @returns {object|null} Canonical document info
+ */
+export function getCanonicalDocument(subject) {
+  const db = getDatabase();
+
+  const sql = `
+    SELECT
+      cd.subject, cd.reason, cd.confidence_score, cd.established_at,
+      cd.variants, cd.manual_override,
+      d.id, d.path, d.repository, d.filename, d.modified_at
+    FROM canonical_docs cd
+    JOIN documents d ON cd.canonical_doc_id = d.id
+    WHERE cd.subject = ?
+  `;
+
+  const result = db.prepare(sql).get(subject);
+  db.close();
+
+  return result || null;
+}
+
+/**
+ * List all canonical documents
+ *
+ * @returns {Array} All canonical documents
+ */
+export function listCanonicalDocuments() {
+  const db = getDatabase();
+
+  const sql = `
+    SELECT
+      cd.subject, cd.confidence_score, cd.manual_override,
+      d.path, d.repository, d.filename
+    FROM canonical_docs cd
+    JOIN documents d ON cd.canonical_doc_id = d.id
+    ORDER BY cd.subject
+  `;
+
+  const results = db.prepare(sql).all();
+  db.close();
+
+  return results;
+}
+
+// =============================================================================
+// LINTING ISSUES
+// =============================================================================
+
+/**
+ * Get linting issues for a document
+ *
+ * @param {string} path - Document path
+ * @returns {Array} Linting issues
+ */
+export function getLintingIssues(path) {
+  const db = getDatabase();
+
+  const sql = `
+    SELECT
+      li.rule_code, li.line_number, li.severity, li.message,
+      li.auto_fixable, li.fixed_at, li.fix_applied
+    FROM linting_issues li
+    JOIN documents d ON li.document_id = d.id
+    WHERE d.path = ?
+    ORDER BY li.severity DESC, li.line_number
+  `;
+
+  const results = db.prepare(sql).all(path);
+  db.close();
+
+  return results;
+}
+
+/**
+ * Get linting statistics by rule and severity
+ *
+ * @returns {Array} Linting statistics
+ */
+export function getLintingStats() {
+  const db = getDatabase();
+
+  const sql = `
+    SELECT
+      rule_code,
+      severity,
+      COUNT(*) as total,
+      COUNT(CASE WHEN fixed_at IS NOT NULL THEN 1 END) as fixed,
+      COUNT(CASE WHEN fixed_at IS NULL THEN 1 END) as unfixed,
+      COUNT(CASE WHEN auto_fixable = 1 THEN 1 END) as auto_fixable
+    FROM linting_issues
+    GROUP BY rule_code, severity
+    ORDER BY severity DESC, total DESC
+  `;
+
+  const results = db.prepare(sql).all();
+  db.close();
+
+  return results;
+}
+
+// =============================================================================
+// REPOSITORY &amp; CATEGORY STATS
+// =============================================================================
+
+/**
+ * Get repository statistics
+ *
+ * @returns {Array} Repository stats
+ */
+export function getRepositoryStats() {
+  const db = getDatabase();
+
+  const sql = `
+    SELECT
+      repository,
+      COUNT(*) as doc_count,
+      ROUND(SUM(file_size) / 1024.0 / 1024.0, 2) as size_mb,
+      SUM(line_count) as total_lines,
+      SUM(word_count) as total_words,
+      MAX(modified_at) as last_modified
+    FROM documents
+    GROUP BY repository
+    ORDER BY doc_count DESC
+  `;
+
+  const results = db.prepare(sql).all();
+  db.close();
+
+  return results;
+}
+
+/**
+ * Get category statistics
+ *
+ * @param {string} repository - Optional repository filter
+ * @returns {Array} Category stats
+ */
+export function getCategoryStats(repository = null) {
+  const db = getDatabase();
+
+  let sql = `
+    SELECT
+      category,
+      COUNT(*) as doc_count,
+      ROUND(SUM(file_size) / 1024.0 / 1024.0, 2) as size_mb
+    FROM documents
+  `;
+
+  const params = [];
+
+  if (repository) {
+    sql += ' WHERE repository = ?';
+    params.push(repository);
+  }
+
+  sql += ' GROUP BY category ORDER BY doc_count DESC';
+
+  const results = db.prepare(sql).all(...params);
+  db.close();
+
+  return results;
+}
+
+// =============================================================================
+// RECENT CHANGES
+// =============================================================================
+
+/**
+ * Get recently modified documents
+ *
+ * @param {number} days - Number of days to look back (default: 7)
+ * @param {number} limit - Max results (default: 50)
+ * @returns {Array} Recently modified documents
+ */
+export function getRecentlyModified(days = 7, limit = 50) {
+  const db = getDatabase();
+
+  const sql = `
+    SELECT
+      path, repository, filename, category,
+      modified_at, file_size, line_count
+    FROM documents
+    WHERE modified_at >= datetime('now', '-' || ? || ' days')
+    ORDER BY modified_at DESC
+    LIMIT ?
+  `;
+
+  const results = db.prepare(sql).all(days, limit);
+  db.close();
+
+  return results;
+}
+
+/**
+ * Get scan history
+ *
+ * @param {number} limit - Max results (default: 10)
+ * @returns {Array} Scan history records
+ */
+export function getScanHistory(limit = 10) {
+  const db = getDatabase();
+
+  const sql = `
+    SELECT
+      scan_started, scan_completed, repositories_scanned,
+      documents_found, documents_added, documents_updated,
+      duration_ms, status
+    FROM scan_history
+    ORDER BY scan_started DESC
+    LIMIT ?
+  `;
+
+  const results = db.prepare(sql).all(limit);
+  db.close();
+
+  return results;
+}
+
+// =============================================================================
+// LEARNING PATTERNS
+// =============================================================================
+
+/**
+ * Get learning patterns by rule code
+ *
+ * @param {string} ruleCode - Linting rule code (e.g., "MD040")
+ * @returns {Array} Learning patterns
+ */
+export function getLearningPatterns(ruleCode = null) {
+  const db = getDatabase();
+
+  let sql = `
+    SELECT
+      rule_code, pattern_type, before_example, after_example,
+      explanation, frequency, confidence, last_seen
+    FROM learning_patterns
+  `;
+
+  const params = [];
+
+  if (ruleCode) {
+    sql += ' WHERE rule_code = ?';
+    params.push(ruleCode);
+  }
+
+  sql += ' ORDER BY frequency DESC, confidence DESC';
+
+  const results = db.prepare(sql).all(...params);
+  db.close();
+
+  return results;
+}
+
+// =============================================================================
+// STATISTICS
+// =============================================================================
+
+/**
+ * Get global statistics
+ *
+ * @returns {object} Global stats
+ */
+export function getGlobalStats() {
+  const db = getDatabase();
+
+  const stats = {
+    totalDocuments: db.prepare('SELECT COUNT(*) as count FROM documents').get().count,
+    totalSize: db.prepare('SELECT ROUND(SUM(file_size) / 1024.0 / 1024.0, 2) as mb FROM documents').get().mb,
+    totalLines: db.prepare('SELECT SUM(line_count) as lines FROM documents').get().lines,
+    totalWords: db.prepare('SELECT SUM(word_count) as words FROM documents').get().words,
+    repositoryCount: db.prepare('SELECT COUNT(DISTINCT repository) as count FROM documents').get().count,
+    categoryCount: db.prepare('SELECT COUNT(DISTINCT category) as count FROM documents').get().count,
+    lintingIssues: db.prepare('SELECT COUNT(*) as count FROM linting_issues WHERE fixed_at IS NULL').get().count,
+    unresolvedDeviations: db.prepare('SELECT COUNT(*) as count FROM deviations WHERE resolved_at IS NULL').get().count,
+    lastScan: db.prepare("SELECT stat_value FROM statistics WHERE stat_name = 'last_scan'").get()?.stat_value,
+  };
+
+  db.close();
+
+  return stats;
+}
+
+// =============================================================================
+// EXPORT FOR MCP SERVER
+// =============================================================================
+
+export default {
+  // Database connection
+  getDatabase,
+
+  // Search
+  searchDocuments,
+  searchByFilename,
+
+  // Similarity
+  findSimilarDocuments,
+  findDuplicates,
+
+  // Deviations
+  getUnresolvedDeviations,
+  getDeviationStats,
+
+  // Canonical
+  getCanonicalDocument,
+  listCanonicalDocuments,
+
+  // Linting
+  getLintingIssues,
+  getLintingStats,
+
+  // Stats
+  getRepositoryStats,
+  getCategoryStats,
+  getRecentlyModified,
+  getScanHistory,
+
+  // Learning
+  getLearningPatterns,
+
+  // Global
+  getGlobalStats,
+};
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+    
+    
+</div>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Sat Nov 08 2025 23:11:46 GMT+0100 (Central European Standard Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/polyfill.js"></script>
+<script src="scripts/linenumber.js"></script>
+
+
+
+</body>
+</html>
