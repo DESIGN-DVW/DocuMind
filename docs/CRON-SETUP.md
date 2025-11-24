@@ -31,9 +31,21 @@ The system installs the following cron jobs:
 
 | Job | Schedule | Frequency | Command | Log File |
 |-----|----------|-----------|---------|----------|
+| --- | --- | --- | --- | --- |
+| --- | --- | --- | --- | --- |
+| --- | --- | --- | --- | --- |
 | **Scan** | `0 * * * *` | Every hour | `npm run scan:report` | `logs/cron-markdown-scan-hourly.log` |
+| --- | --- | --- | --- | --- |
+| --- | --- | --- | --- | --- |
+| --- | --- | --- | --- | --- |
 | **Index** | `5 * * * *` | Every hour (+5min) | `npm run index` | `logs/cron-markdown-index-hourly.log` |
+| --- | --- | --- | --- | --- |
+| --- | --- | --- | --- | --- |
+| --- | --- | --- | --- | --- |
 | **Validate** | `0 9 * * *` | Daily at 9:00 AM | `npm run validate` | `logs/cron-markdown-validate-daily.log` |
+| --- | --- | --- | --- | --- |
+| --- | --- | --- | --- | --- |
+| --- | --- | --- | --- | --- |
 | **Lint** | `0 10 * * *` | Daily at 10:00 AM | `npm run lint` | `logs/cron-markdown-lint-daily.log` |
 
 ### Schedule Explanation
@@ -74,7 +86,7 @@ npm run validate
 npm run lint
 ```
 
-### Step 3: Install Cron Jobs
+## Step 3: Install Cron Jobs
 
 ```bash
 npm run cron:setup
@@ -99,8 +111,6 @@ ls -la logs/
 tail -f logs/cron-markdown-scan-hourly.log
 ```
 
----
-
 ## Management
 
 ### View Installed Jobs
@@ -113,7 +123,7 @@ crontab -l
 node scripts/setup-cron.mjs --list
 ```
 
-### View Logs
+## View Logs
 
 ```bash
 # Watch all logs in real-time
@@ -129,7 +139,7 @@ tail -n 100 logs/cron-markdown-scan-hourly.log
 grep -i error logs/*.log
 ```
 
-### Rotate Logs
+## Rotate Logs
 
 Logs will grow over time. Rotate them periodically:
 
@@ -143,7 +153,7 @@ mv logs/*.log logs/archive/$(date +%Y-%m-%d)/ 2>/dev/null || true
 truncate -s 0 logs/*.log
 ```
 
-### Stop Cron Jobs
+## Stop Cron Jobs
 
 ```bash
 # Remove all markdown cron jobs
@@ -153,8 +163,6 @@ npm run cron:stop
 crontab -l | grep markdown
 # (should show nothing)
 ```
-
----
 
 ## Customization
 
@@ -212,8 +220,6 @@ Then reinstall:
 npm run cron:setup
 ```
 
----
-
 ## Common Cron Schedules
 
 ```text
@@ -251,8 +257,6 @@ npm run cron:setup
 0 9 1 * *
 ```
 
----
-
 ## Troubleshooting
 
 ### Jobs Not Running
@@ -283,7 +287,7 @@ log show --predicate 'process == "cron"' --last 1h
 grep CRON /var/log/syslog
 ```
 
-### Scripts Failing
+## Scripts Failing
 
 **Run script manually to see errors:**
 
@@ -306,7 +310,7 @@ which node
 # Should show: /usr/local/bin/node or similar
 ```
 
-### Logs Not Created
+## Logs Not Created
 
 **Check logs directory exists:**
 
@@ -354,8 +358,6 @@ function generateCronEntry(job) {
 }
 ```
 
----
-
 ## Alternative: Launchd (macOS)
 
 On macOS, you can use `launchd` instead of cron:
@@ -402,8 +404,6 @@ launchctl start com.dvwdesign.markdown-scan
 launchctl list | grep markdown
 ```
 
----
-
 ## Best Practices
 
 ### 1. Monitor Logs Regularly
@@ -415,7 +415,7 @@ Set up log monitoring:
 alias markdown-logs='tail -f ~/path/to/Markdown/logs/cron-*.log'
 ```
 
-### 2. Set Up Alerts
+## 2. Set Up Alerts
 
 Create a monitoring script:
 
@@ -435,7 +435,7 @@ if [ -n "$ERRORS" ]; then
 fi
 ```
 
-### 3. Test Before Deploy
+## 3. Test Before Deploy
 
 Always test cron jobs manually before scheduling:
 
@@ -447,7 +447,7 @@ npm run validate
 npm run lint
 ```
 
-### 4. Use Absolute Paths
+## 4. Use Absolute Paths
 
 Cron runs with limited PATH. Always use absolute paths in scripts.
 
@@ -455,26 +455,58 @@ Cron runs with limited PATH. Always use absolute paths in scripts.
 
 All cron commands redirect to log files. Never rely on email output.
 
----
-
 ## Quick Reference
 
 | Task | Command |
 |------|---------|
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | Install cron jobs | `npm run cron:setup` |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | Remove cron jobs | `npm run cron:stop` |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | List jobs | `node scripts/setup-cron.mjs --list` |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | View crontab | `crontab -l` |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | Edit crontab manually | `crontab -e` |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | View all logs | `tail -f logs/cron-*.log` |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | View scan log | `tail -f logs/cron-markdown-scan-hourly.log` |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | Archive logs | `mv logs/*.log logs/archive/` |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | Test scan | `npm run scan:report` |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | Test index | `npm run index` |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | Test validate | `npm run validate` |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | Test lint | `npm run lint` |
-
----
 
 **Version:** 1.0.0
 **Last Updated:** 2025-11-06

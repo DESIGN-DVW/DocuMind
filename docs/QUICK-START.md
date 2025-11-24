@@ -87,8 +87,6 @@ Total Files: 743
 Valid Files: 58 (7.8%)
 ```
 
----
-
 ## Review Results
 
 ```bash
@@ -101,8 +99,6 @@ cat index/organized-index.md
 # View validation report
 cat index/validation-report.md
 ```
-
----
 
 ## Set Up Automation
 
@@ -140,8 +136,6 @@ Stop cron jobs:
 npm run cron:stop
 ```
 
----
-
 ## Daily Workflow
 
 ### Check for Issues
@@ -161,8 +155,6 @@ npm run lint:fix
 ```bash
 npm run scan:report && npm run index
 ```
-
----
 
 ## Common Tasks
 
@@ -201,8 +193,6 @@ Then re-scan:
 npm run scan:report && npm run index
 ```
 
----
-
 ## Troubleshooting
 
 ### "all-markdown-files.json not found"
@@ -228,7 +218,7 @@ npm run cron:setup
 tail -f logs/cron-*.log
 ```
 
-### Scripts failing
+## Scripts failing
 
 **Solution:**
 
@@ -241,8 +231,6 @@ rm -rf node_modules package-lock.json
 npm install
 ```
 
----
-
 ## Next Steps
 
 1. **Set up automation** - Choose watcher or cron
@@ -251,24 +239,50 @@ npm install
 4. **Read full documentation** - See [CLAUDE.md](../CLAUDE.md)
 5. **Set up cron** - See [CRON-SETUP.md](CRON-SETUP.md)
 
----
-
 ## Quick Reference
 
 | Task | Command |
 |------|---------|
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | Scan repositories | `npm run scan:report` |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | Create index | `npm run index` |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | Validate timestamps | `npm run validate` |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | Check linting | `npm run lint` |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | Fix linting | `npm run lint:fix` |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | Watch for changes | `npm run watch` |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | Install cron | `npm run cron:setup` |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | Stop cron | `npm run cron:stop` |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | List cron jobs | `npm run cron:list` |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | View logs | `tail -f logs/cron-*.log` |
-
----
 
 **Version:** 1.0.0
 **Last Updated:** 2025-11-06

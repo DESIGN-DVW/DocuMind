@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <meta charset="utf-8">
+    <title>scripts/fix-github-org-references.mjs - Documentation</title>
+    
+    
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+    <script src="scripts/nav.js" defer></script>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav >
+    
+    
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-config_constants.html">config/constants</a><ul class='methods'><li data-type='method'><a href="module-config_constants.html#.getAllRepositoryNames">getAllRepositoryNames</a></li><li data-type='method'><a href="module-config_constants.html#.getGitHubUrl">getGitHubUrl</a></li><li data-type='method'><a href="module-config_constants.html#.getLocalPath">getLocalPath</a></li><li data-type='method'><a href="module-config_constants.html#.isActiveRepository">isActiveRepository</a></li><li data-type='method'><a href="module-config_constants.html#.isLocalOnly">isLocalOnly</a></li></ul></li><li><a href="module-scripts_fix-github-org-references.html">scripts/fix-github-org-references</a></li></ul><h3>Global</h3><ul><li><a href="global.html#analyzeDirectory">analyzeDirectory</a></li><li><a href="global.html#calculateMaxDepth">calculateMaxDepth</a></li><li><a href="global.html#countFiles">countFiles</a></li><li><a href="global.html#detectTechnologies">detectTechnologies</a></li><li><a href="global.html#findDuplicates">findDuplicates</a></li><li><a href="global.html#findSimilarDocuments">findSimilarDocuments</a></li><li><a href="global.html#formatBytes">formatBytes</a></li><li><a href="global.html#generateSchema">generateSchema</a></li><li><a href="global.html#getCanonicalDocument">getCanonicalDocument</a></li><li><a href="global.html#getCategoryStats">getCategoryStats</a></li><li><a href="global.html#getDeviationStats">getDeviationStats</a></li><li><a href="global.html#getDirectorySize">getDirectorySize</a></li><li><a href="global.html#getGlobalStats">getGlobalStats</a></li><li><a href="global.html#getLearningPatterns">getLearningPatterns</a></li><li><a href="global.html#getLintingIssues">getLintingIssues</a></li><li><a href="global.html#getLintingStats">getLintingStats</a></li><li><a href="global.html#getRecentlyModified">getRecentlyModified</a></li><li><a href="global.html#getRepoName">getRepoName</a></li><li><a href="global.html#getRepoType">getRepoType</a></li><li><a href="global.html#getRepositoryStats">getRepositoryStats</a></li><li><a href="global.html#getScanHistory">getScanHistory</a></li><li><a href="global.html#getUnresolvedDeviations">getUnresolvedDeviations</a></li><li><a href="global.html#listCanonicalDocuments">listCanonicalDocuments</a></li><li><a href="global.html#searchByFilename">searchByFilename</a></li><li><a href="global.html#searchDocuments">searchDocuments</a></li></ul>
+    
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">scripts/fix-github-org-references.mjs</h1>
+    
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>#!/usr/bin/env node
+
+/**
+ * Fix GitHub Organization References
+ *
+ * This script fixes all incorrect GitHub organization references across all repositories.
+ * It replaces:
+ * - github.com/DVWDesign → github.com/DESIGN-DVW
+ * - github.com/FigmaAPI/* → github.com/DESIGN-DVW/*
+ * - "DVWDesign organization" → "DESIGN-DVW organization"
+ *
+ * @module scripts/fix-github-org-references
+ */
+
+import { readFileSync, writeFileSync } from 'fs';
+import { resolve, join } from 'path';
+import { globSync } from 'glob';
+import chalk from 'chalk';
+
+// ============================================================================
+// CONFIGURATION
+// ============================================================================
+
+const BASE_PATH = '/Users/Shared/htdocs/github/DVWDesign';
+
+const REPOSITORIES = [
+  'DocuMind',
+  'RootDispatcher',
+  'Figma-Plug-ins',
+  'LibraryAssetManager',
+  'Aprimo',
+  'CampaignManager',
+  'GlossiaApp',
+  'FigmaAPI/@figma-core',
+  'FigmaAPI/@figma-docs',
+  'FigmaAPI/FigmailAPP',
+  'FigmaAPI/FigmaDSController'
+];
+
+const FILE_PATTERNS = [
+  '**/*.md',
+  '**/*.json',
+  '**/*.mjs',
+  '**/*.js'
+];
+
+const IGNORE_PATTERNS = [
+  '**/node_modules/**',
+  '**/.git/**',
+  '**/dist/**',
+  '**/build/**',
+  '**/coverage/**',
+  '**/.next/**',
+  '**/index/**',
+  '**/.backups/**'
+];
+
+// ============================================================================
+// REPLACEMENT RULES
+// ============================================================================
+
+const REPLACEMENTS = [
+  // Fix incorrect GitHub organization URLs
+  {
+    pattern: /github\.com\/DVWDesign\//g,
+    replacement: 'github.com/DESIGN-DVW/',
+    description: 'Fix DVWDesign → DESIGN-DVW in URLs'
+  },
+
+  // Fix FigmaAPI references (FigmaAPI doesn't exist on GitHub)
+  {
+    pattern: /github\.com\/DESIGN-DVW\/FigmaAPI\/FigmailAPP/g,
+    replacement: 'github.com/DESIGN-DVW/FigmailAPP',
+    description: 'Fix FigmaAPI/FigmailAPP → FigmailAPP'
+  },
+  {
+    pattern: /github\.com\/DESIGN-DVW\/FigmaAPI\/FigmaDSController/g,
+    replacement: 'github.com/DESIGN-DVW/FigmaDSController',
+    description: 'Fix FigmaAPI/FigmaDSController → FigmaDSController'
+  },
+  {
+    pattern: /github\.com\/DESIGN-DVW\/FigmaAPI\/@figma-core/g,
+    replacement: 'github.com/DESIGN-DVW/@figma-core',
+    description: 'Fix FigmaAPI/@figma-core → @figma-core'
+  },
+  {
+    pattern: /github\.com\/DESIGN-DVW\/FigmaAPI\/@figma-docs/g,
+    replacement: 'github.com/DESIGN-DVW/@figma-docs',
+    description: 'Fix FigmaAPI/@figma-docs → @figma-docs'
+  },
+  {
+    pattern: /github\.com\/DESIGN-DVW\/FigmaAPI\/Figma-DAM/g,
+    replacement: 'github.com/DESIGN-DVW/Figma-DAM',
+    description: 'Fix FigmaAPI/Figma-DAM → Figma-DAM'
+  },
+  {
+    pattern: /github\.com\/DESIGN-DVW\/FigmaAPI\/Figma-Plug-ins/g,
+    replacement: 'github.com/DESIGN-DVW/Figma-Plug-ins',
+    description: 'Fix FigmaAPI/Figma-Plug-ins → Figma-Plug-ins'
+  },
+  {
+    pattern: /github\.com\/DESIGN-DVW\/FigmaAPI\/FigmaRestAPI/g,
+    replacement: 'github.com/DESIGN-DVW/FigmaRestAPI',
+    description: 'Fix FigmaAPI/FigmaRestAPI → FigmaRestAPI'
+  },
+
+  // Fix text references to organization name
+  {
+    pattern: /DVWDesign [Oo]rganization/g,
+    replacement: 'DESIGN-DVW organization',
+    description: 'Fix "DVWDesign organization" → "DESIGN-DVW organization"'
+  },
+  {
+    pattern: /for DVWDesign/g,
+    replacement: 'for DESIGN-DVW',
+    description: 'Fix "for DVWDesign" → "for DESIGN-DVW"'
+  },
+  {
+    pattern: /of DVWDesign/g,
+    replacement: 'of DESIGN-DVW',
+    description: 'Fix "of DVWDesign" → "of DESIGN-DVW"'
+  },
+  {
+    pattern: /@DVWDesign/g,
+    replacement: '@DESIGN-DVW',
+    description: 'Fix @DVWDesign → @DESIGN-DVW (in links)'
+  },
+
+  // Fix generic FigmaAPI references (when not a local path)
+  {
+    pattern: /github\.com\/DESIGN-DVW\/FigmaAPI/g,
+    replacement: 'github.com/DESIGN-DVW',
+    description: 'Remove orphaned FigmaAPI references'
+  }
+];
+
+// Special case: Don't replace these patterns
+const EXCEPTIONS = [
+  // Keep local file paths as-is
+  /\/Users\/Shared\/htdocs\/github\/DVWDesign\//,
+  // Keep package scope in package.json name field (handled separately)
+  /"name": "@dvwdesign\//,
+  // Keep BBEdit project references
+  /\.bbproject/
+];
+
+// ============================================================================
+// MAIN FUNCTION
+// ============================================================================
+
+async function fixGitHubOrgReferences() {
+  console.log(chalk.bold.cyan('\n🔧 Fixing GitHub Organization References\n'));
+
+  const stats = {
+    totalFiles: 0,
+    modifiedFiles: 0,
+    totalReplacements: 0,
+    byType: {}
+  };
+
+  const dryRun = process.argv.includes('--dry-run');
+  const verbose = process.argv.includes('--verbose');
+
+  if (dryRun) {
+    console.log(chalk.yellow('📋 DRY RUN MODE - No files will be modified\n'));
+  }
+
+  // Process each repository
+  for (const repo of REPOSITORIES) {
+    const repoPath = join(BASE_PATH, repo);
+    console.log(chalk.bold(`\n📂 Processing: ${repo}`));
+
+    // Find all files matching patterns
+    const files = globSync(FILE_PATTERNS, {
+      cwd: repoPath,
+      ignore: IGNORE_PATTERNS,
+      absolute: true,
+      nodir: true
+    });
+
+    console.log(chalk.gray(`   Found ${files.length} files to check`));
+
+    // Process each file
+    for (const file of files) {
+      try {
+        let content = readFileSync(file, 'utf8');
+        const originalContent = content;
+        let fileModified = false;
+        let replacementCount = 0;
+
+        // Check if file should be skipped (based on exceptions)
+        const shouldSkip = EXCEPTIONS.some(pattern => pattern.test(content));
+        if (shouldSkip &amp;&amp; content === originalContent) {
+          // Only skip if it's entirely exception-based content
+          continue;
+        }
+
+        // Apply each replacement rule
+        for (const rule of REPLACEMENTS) {
+          const before = content;
+          content = content.replace(rule.pattern, rule.replacement);
+
+          if (content !== before) {
+            fileModified = true;
+            const count = (before.match(rule.pattern) || []).length;
+            replacementCount += count;
+
+            if (!stats.byType[rule.description]) {
+              stats.byType[rule.description] = 0;
+            }
+            stats.byType[rule.description] += count;
+
+            if (verbose) {
+              console.log(chalk.green(`   ✓ ${rule.description}: ${count} replacement(s)`));
+            }
+          }
+        }
+
+        // Write file if modified
+        if (fileModified &amp;&amp; content !== originalContent) {
+          stats.modifiedFiles++;
+          stats.totalReplacements += replacementCount;
+
+          const relativePath = file.replace(BASE_PATH + '/', '');
+          console.log(chalk.green(`   ✓ Modified: ${relativePath} (${replacementCount} replacements)`));
+
+          if (!dryRun) {
+            writeFileSync(file, content, 'utf8');
+          }
+        }
+
+        stats.totalFiles++;
+
+      } catch (error) {
+        console.log(chalk.red(`   ✗ Error processing ${file}: ${error.message}`));
+      }
+    }
+  }
+
+  // Print summary
+  console.log(chalk.bold.cyan('\n📊 Summary\n'));
+  console.log(`Total files scanned: ${stats.totalFiles}`);
+  console.log(`Files modified: ${chalk.green(stats.modifiedFiles)}`);
+  console.log(`Total replacements: ${chalk.green(stats.totalReplacements)}`);
+
+  if (Object.keys(stats.byType).length > 0) {
+    console.log(chalk.bold('\n📋 Replacements by type:\n'));
+    for (const [type, count] of Object.entries(stats.byType)) {
+      console.log(`   ${chalk.green(count.toString().padStart(3))} × ${type}`);
+    }
+  }
+
+  if (dryRun) {
+    console.log(chalk.yellow('\n⚠️  This was a DRY RUN - no files were actually modified'));
+    console.log(chalk.yellow('   Run without --dry-run to apply changes\n'));
+  } else {
+    console.log(chalk.bold.green('\n✅ All references updated successfully!\n'));
+  }
+}
+
+// ============================================================================
+// RUN
+// ============================================================================
+
+fixGitHubOrgReferences().catch(error => {
+  console.error(chalk.red('\n❌ Error:'), error.message);
+  process.exit(1);
+});
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+    
+    
+</div>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Thu Nov 13 2025 00:47:44 GMT+0100 (Central European Standard Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/polyfill.js"></script>
+<script src="scripts/linenumber.js"></script>
+
+
+
+</body>
+</html>

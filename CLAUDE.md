@@ -15,6 +15,8 @@ This repository provides centralized markdown file management, linting, indexing
 **Key Functions:**
 
 - Scan all repositories for markdown files
+- Create new categories when needed
+-
 - Generate searchable indexes
 - Validate timestamps and versions
 - Auto-fix systematic linting errors
@@ -73,26 +75,52 @@ npm run lint                # Lint markdown files
 npm run lint:fix            # Auto-fix linting issues
 ```
 
----
-
 ## 📊 Repositories Scanned
 
 This system scans the following DVWDesign repositories:
 
 | Repository | Priority | Active | Location |
 |-----------|----------|--------|----------|
+| --- | --- | --- | --- |
+| --- | --- | --- | --- |
+| --- | --- | --- | --- |
 | FigmaAPI/FigmailAPP | High | ✅ | `/Users/Shared/htdocs/github/DVWDesign/FigmaAPI/FigmailAPP` |
+| --- | --- | --- | --- |
+| --- | --- | --- | --- |
+| --- | --- | --- | --- |
 | FigmaAPI/FigmaDSController | High | ✅ | `/Users/Shared/htdocs/github/DVWDesign/FigmaAPI/FigmaDSController` |
+| --- | --- | --- | --- |
+| --- | --- | --- | --- |
+| --- | --- | --- | --- |
 | FigmaAPI/@figma-core | High | ✅ | `/Users/Shared/htdocs/github/DVWDesign/FigmaAPI/@figma-core` |
+| --- | --- | --- | --- |
+| --- | --- | --- | --- |
+| --- | --- | --- | --- |
 | FigmaAPI/@figma-docs | High | ✅ | `/Users/Shared/htdocs/github/DVWDesign/FigmaAPI/@figma-docs` |
+| --- | --- | --- | --- |
+| --- | --- | --- | --- |
+| --- | --- | --- | --- |
 | Figma-Plug-ins | High | ✅ | `/Users/Shared/htdocs/github/DVWDesign/Figma-Plug-ins` |
+| --- | --- | --- | --- |
+| --- | --- | --- | --- |
+| --- | --- | --- | --- |
 | GlossiaApp | Medium | ✅ | `/Users/Shared/htdocs/github/DVWDesign/GlossiaApp` |
+| --- | --- | --- | --- |
+| --- | --- | --- | --- |
+| --- | --- | --- | --- |
 | Contentful | Medium | ✅ | `/Users/Shared/htdocs/github/DVWDesign/Contentful` |
+| --- | --- | --- | --- |
+| --- | --- | --- | --- |
+| --- | --- | --- | --- |
 | IconJar | Low | ✅ | `/Users/Shared/htdocs/github/DVWDesign/IconJar` |
+| --- | --- | --- | --- |
+| --- | --- | --- | --- |
+| --- | --- | --- | --- |
 | AdobePlugIns | Low | ✅ | `/Users/Shared/htdocs/github/DVWDesign/AdobePlugIns` |
+| --- | --- | --- | --- |
+| --- | --- | --- | --- |
+| --- | --- | --- | --- |
 | Markdown | High | ✅ | `/Users/Shared/htdocs/github/DVWDesign/Markdown` |
-
----
 
 ## 🛠️ Scripts
 
@@ -100,18 +128,57 @@ This system scans the following DVWDesign repositories:
 
 | Command | Purpose | Output |
 |---------|---------|--------|
+| --- | --- | --- |
+| --- | --- | --- |
+| --- | --- | --- |
 | `npm run scan` | Scan all repositories | `index/all-markdown-files.json` |
+| --- | --- | --- |
+| --- | --- | --- |
+| --- | --- | --- |
 | `npm run scan:report` | Generate detailed scan report | `index/scan-report.md` |
+| --- | --- | --- |
+| --- | --- | --- |
+| --- | --- | --- |
 | `npm run index` | Create organized index | `index/organized-index.md` |
+| --- | --- | --- |
+| --- | --- | --- |
+| --- | --- | --- |
 | `npm run index:update` | Update existing index | Updates `organized-index.md` |
+| --- | --- | --- |
+| --- | --- | --- |
+| --- | --- | --- |
 | `npm run validate` | Validate timestamps/versions | `index/validation-report.md` |
+| --- | --- | --- |
+| --- | --- | --- |
+| --- | --- | --- |
 | `npm run validate:fix` | Auto-fix validation issues | Updates markdown files |
+| --- | --- | --- |
+| --- | --- | --- |
+| --- | --- | --- |
 | `npm run watch` | Watch for changes | Auto-updates on file changes |
+| --- | --- | --- |
+| --- | --- | --- |
+| --- | --- | --- |
 | `npm run lint` | Lint markdown files | Console output |
+| --- | --- | --- |
+| --- | --- | --- |
+| --- | --- | --- |
 | `npm run lint:fix` | Auto-fix markdown issues | Updates files in-place |
+| --- | --- | --- |
+| --- | --- | --- |
+| --- | --- | --- |
 | `npm run fix` | Fix systematic errors | Updates current directory |
+| --- | --- | --- |
+| --- | --- | --- |
+| --- | --- | --- |
 | `npm run fix:all` | Fix all repositories | Updates all repo markdown |
+| --- | --- | --- |
+| --- | --- | --- |
+| --- | --- | --- |
 | `npm run cron:setup` | Setup automated cron jobs | Cron configuration |
+| --- | --- | --- |
+| --- | --- | --- |
+| --- | --- | --- |
 | `npm run cron:stop` | Stop cron jobs | Stops automation |
 
 ### scan-all-repos.mjs
@@ -220,8 +287,6 @@ npm run fix:all           # Fix all repositories
 node scripts/fix-markdown.mjs --dry-run   # Preview
 ```
 
----
-
 ## 📋 Markdown Linting Rules
 
 Configuration: `config/.markdownlint.json`
@@ -246,8 +311,6 @@ Configuration: `config/.markdownlint.json`
 npm run lint              # Check all markdown
 npm run lint:fix          # Auto-fix issues
 ```
-
----
 
 ## 🤖 Agent Integration
 
@@ -278,8 +341,6 @@ Location: `.claude/agents/markdown-fixer.md`
 @markdown-fixer generate report
 ```
 
----
-
 ## 📚 Workflow Examples
 
 ### Example 1: Initial Setup
@@ -302,14 +363,14 @@ cat index/scan-report.md
 cat index/validation-report.md
 ```
 
-### Example 2: Daily Maintenance
+## Example 2: Daily Maintenance
 
 ```bash
 # Run watcher (leave running)
 npm run watch
 ```
 
-### Example 3: Fix Linting Issues
+## Example 3: Fix Linting Issues
 
 ```bash
 # 1. Check for issues
@@ -325,7 +386,7 @@ npm run lint:fix
 npm run lint
 ```
 
-### Example 4: Cross-Repository Analysis
+## Example 4: Cross-Repository Analysis
 
 ```bash
 # 1. Scan all repositories
@@ -340,8 +401,6 @@ npm run validate
 # 4. Review validation report
 cat index/validation-report.md
 ```
-
----
 
 ## 🔗 Integration Points
 
@@ -363,21 +422,32 @@ cat index/validation-report.md
 - Validates all for consistency
 - Fixes all systematically
 
----
-
 ## 📊 Generated Outputs
 
 All outputs are in `index/` (gitignored):
 
 | File | Purpose | Generated By |
 |------|---------|-------------|
+| --- | --- | --- |
+| --- | --- | --- |
+| --- | --- | --- |
 | `all-markdown-files.json` | Complete scan data | `npm run scan` |
+| --- | --- | --- |
+| --- | --- | --- |
+| --- | --- | --- |
 | `scan-report.md` | Human-readable scan report | `npm run scan:report` |
+| --- | --- | --- |
+| --- | --- | --- |
+| --- | --- | --- |
 | `organized-index.md` | Categorized file index | `npm run index` |
+| --- | --- | --- |
+| --- | --- | --- |
+| --- | --- | --- |
 | `categories.json` | JSON categories | `npm run index` |
+| --- | --- | --- |
+| --- | --- | --- |
+| --- | --- | --- |
 | `validation-report.md` | Timestamp/version validation | `npm run validate` |
-
----
 
 ## 🎯 Best Practices
 
@@ -400,8 +470,6 @@ All outputs are in `index/` (gitignored):
 5. **Keep Index Updated**
    - Use `npm run watch` when actively working
    - Or run `npm run index` after major changes
-
----
 
 ## 🔧 Configuration
 
@@ -435,24 +503,50 @@ Edit `scripts/watch-and-index.mjs`:
 const DEBOUNCE_MS = 5000; // 5 seconds (adjust as needed)
 ```
 
----
-
 ## 📞 Quick Reference
 
 | Task | Command |
 |------|---------|
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | Install | `npm install` |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | Scan all repos | `npm run scan` |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | Generate report | `npm run scan:report` |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | Create index | `npm run index` |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | Validate files | `npm run validate` |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | Watch for changes | `npm run watch` |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | Lint markdown | `npm run lint` |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | Auto-fix lint | `npm run lint:fix` |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | Fix specific file | `node scripts/fix-markdown.mjs path/to/file.md` |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | Preview fixes | `node scripts/fix-markdown.mjs --dry-run .` |
-
----
 
 ## 🚨 Troubleshooting
 
@@ -471,8 +565,6 @@ const DEBOUNCE_MS = 5000; // 5 seconds (adjust as needed)
 ### Watcher not detecting changes
 
 **Solution:** Check file is not in `IGNORE_PATTERNS`, restart watcher
-
----
 
 **Version:** 1.0.0
 **Last Updated:** 2025-11-06

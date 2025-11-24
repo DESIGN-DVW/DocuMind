@@ -5,6 +5,7 @@ Using the Figma MCP, analyze the component at the provided Figma URL or node ID.
 ## What to Provide
 
 Please provide ONE of the following:
+
 - **Option A:** Full Figma URL (e.g., `https://figma.com/file/ABC123/Design?node-id=1:2`)
 - **Option B:** File key + Node ID separately
 
@@ -42,6 +43,7 @@ I will use the Figma MCP tools to:
 ## Output Format
 
 I'll provide:
+
 - ✅ Structured markdown analysis
 - ✅ Design token mappings (CSS variables, MUI theme)
 - ✅ React/TypeScript code suggestions

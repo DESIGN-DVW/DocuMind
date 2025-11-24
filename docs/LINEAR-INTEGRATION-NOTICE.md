@@ -14,7 +14,7 @@
 
 ### Your Responsibilities
 
-```
+```text
 ┌────────────────────────────────────────────────────────┐
 │        DOCUMIND - DOCUMENTATION MANAGER                │
 ├────────────────────────────────────────────────────────┤
@@ -28,7 +28,7 @@
 │  ✓ Work in tandem with RootDispatcher on deployment   │
 │                                                         │
 └────────────────────────────────────────────────────────┘
-```
+```text
 
 ### What RandD Has Provided
 
@@ -51,11 +51,13 @@ You will organize and publish Linear documentation across all repositories as Ro
 The organization is implementing **Linear** as a modern project management platform with AI-powered integration via MCP (Model Context Protocol).
 
 **Deployment Model**:
+
 - **RandD**: Research, testing, and technical guidance ✅ COMPLETE
 - **RootDispatcher**: Organization-wide deployment execution 🚀 DEPLOYING
 - **DocuMind**: Documentation organization and publishing 📚 YOUR ROLE
 
 **Key Points**:
+
 - Linear will work **alongside** existing tools (Jira optional)
 - Cross-repository issue tracking via **Teams**
 - Claude Code integration for AI-powered workflows
@@ -72,39 +74,37 @@ Linear is a high-performance project management platform designed for software t
 - **Developer UX**: Keyboard-first, minimal clicks
 - **Modern API**: GraphQL + TypeScript SDK
 
----
-
 ## Organization Structure
 
 ### Linear Workspace: DVWDesign
 
 Five core teams are being set up:
 
-```
+```text
 1. RandD (RND) → DVWDesign/RandD
 2. FigmailAPP (FIG) → FigmailAPP
 3. FigmaDSController (FDS) → FigmaDSController
 4. Aprimo (APR) → aprimo-dam-api
 5. Infrastructure (INF) → All repos
-```
+```text
 
 ### DocuMind Consideration
 
 **Option A**: Add DocuMind team
-```
+
+```text
 6. DocuMind (DOC) → DVWDesign/DocuMind
-```
+```text
 
 **Option B**: Use existing team based on work type
-```
+
+```text
 - Documentation work → RandD team
 - Product features → Infrastructure team
 - Client work → Aprimo team (if applicable)
-```
+```text
 
 **Recommendation**: Evaluate DocuMind's scope - if it's primarily documentation/knowledge management, it may fit in RandD or Infrastructure team initially.
-
----
 
 ## How It Works
 
@@ -120,9 +120,9 @@ From **any repository**, create issues in **any team**:
 # Working in FigmailAPP
 "Create DocuMind issue: Document new email template API"
 → Creates DOC-10 (if dedicated team exists)
-```
+```text
 
-### GitHub Integration
+## GitHub Integration
 
 Pull requests auto-link to Linear issues:
 
@@ -132,11 +132,9 @@ Added API documentation for email templates
 
 Fixes DOC-42
 Relates to FIG-100
-```
+```text
 
 → Linear automatically links PR and updates both issues
-
----
 
 ## MCP Integration (Claude Code)
 
@@ -153,21 +151,19 @@ Add to `~/.config/claude/mcp.json`:
     }
   }
 }
-```
+```text
 
 ### AI-Powered Issue Creation
 
-```
+```text
 "Create a documentation task:
 - Title: Document CustomTooltip component API
 - Team: DocuMind (or RandD if no dedicated team)
 - Priority: Medium
 - Link to FDS-50"
-```
+```text
 
 Claude Code creates the issue automatically.
-
----
 
 ## Authentication & Permissions
 
@@ -179,7 +175,7 @@ Claude Code creates the issue automatically.
 
 ### Example
 
-```
+```text
 Developer: sarah@company.com
 Member of: RandD, DocuMind (if created), Infrastructure
 
@@ -187,7 +183,7 @@ MCP Access:
 ✅ Can create/edit issues in all 3 teams
 ✅ Can link documentation to code issues
 ✅ Can search across all teams
-```
+```text
 
 ### Security
 
@@ -197,46 +193,44 @@ MCP Access:
 
 **Details**: See [LINEAR-MCP-AUTHENTICATION.md](../../RandD/docs/LINEAR-MCP-AUTHENTICATION.md) in RandD repository
 
----
-
 ## Benefits for DocuMind
 
 ### 1. Documentation-to-Code Linking
 
 Link documentation work to implementation:
 
-```
+```text
 Code feature (FIG-100)
   ↓ requires
 Documentation (DOC-10)
   ↓ references
 Component spec (FDS-50)
-```
+```text
 
 All tracked and linked in Linear.
 
 ### 2. Faster Issue Creation
 
-```
+```text
 Before: Manual doc task tracking, scattered
 After: "Create doc task for new feature" → Done in 5 seconds
-```
+```text
 
 ### 3. Cross-Team Visibility
 
 See when documentation is needed:
 
-```
+```text
 FIG-100: "New email template feature"
   ↓ automatically creates
 DOC-15: "Document email template API"
-```
+```text
 
 Via automation rules.
 
 ### 4. AI-Powered Documentation Tasks
 
-```
+```text
 # Generate doc tasks from code
 "Create documentation tasks for all new FigmailAPP features this sprint"
 
@@ -245,15 +239,13 @@ Via automation rules.
 
 # Track progress
 "Show documentation completion status across all teams"
-```
-
----
+```text
 
 ## DocuMind-Specific Use Cases
 
 ### Documentation Tracking
 
-```
+```text
 # Component documentation
 DOC-10: Document CustomTooltip
   Links to: FDS-50 (component implementation)
@@ -265,11 +257,11 @@ DOC-11: Document REST endpoints
 # User guides
 DOC-12: Update user onboarding guide
   Links to: FIG-101 (new UX)
-```
+```text
 
-### Knowledge Base Management
+## Knowledge Base Management
 
-```
+```text
 # Articles
 DOC-20: Write Linear integration guide
   Type: Article
@@ -284,20 +276,18 @@ DOC-21: Create tooltip migration tutorial
 DOC-22: Update deployment FAQ
   Type: FAQ
   Links to: INF-30 (deployment changes)
-```
+```text
 
-### Documentation Sprint Planning
+## Documentation Sprint Planning
 
-```
+```text
 # Sprint cycle
 Cycle: Documentation Sprint 2025-W47
   ├── DOC-10 (Component docs)
   ├── DOC-11 (API docs)
   ├── DOC-12 (User guides)
   └── DOC-13 (Tutorials)
-```
-
----
+```text
 
 ## Timeline
 
@@ -325,8 +315,6 @@ Cycle: Documentation Sprint 2025-W47
 - Migrate active documentation tasks
 - Link to code repositories
 - Train team on workflows
-
----
 
 ## Action Items for DocuMind Team
 
@@ -415,8 +403,6 @@ Cycle: Documentation Sprint 2025-W47
 
 **Note**: RandD provides content and RootDispatcher deploys infrastructure. DocuMind organizes and publishes.
 
----
-
 ## Team Structure Decision
 
 ### Questions to Consider
@@ -440,13 +426,26 @@ Cycle: Documentation Sprint 2025-W47
 
 | Scenario | Recommendation |
 |----------|----------------|
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | Few docs, mostly research | Use RandD team |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | Infra/ops documentation | Use Infrastructure team |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | Product documentation hub | Create DocuMind team |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | Cross-functional docs | Create DocuMind team |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | High volume (15+/week) | Create DocuMind team |
-
----
 
 ## Resources
 
@@ -486,29 +485,27 @@ Location: `RandD/.linear/`
 
 ### Linear Resources
 
-- App: https://linear.app
-- Docs: https://linear.app/docs
-- MCP: https://linear.app/docs/mcp
-- API: https://linear.app/developers
-
----
+- App: <https://linear.app>
+- Docs: <https://linear.app/docs>
+- MCP: <https://linear.app/docs/mcp>
+- API: <https://linear.app/developers>
 
 ## Documentation-Specific Workflows
 
 ### Example 1: New Feature Documentation
 
-```
+```text
 1. FIG-100 created: "New email template feature"
 2. Automation creates DOC-50: "Document email template API"
 3. Developer completes FIG-100
 4. Doc writer assigned to DOC-50
 5. Documentation written, linked to FIG-100
 6. Both issues closed when complete
-```
+```text
 
 ### Example 2: Component Documentation Sprint
 
-```
+```text
 1. Create cycle: "Component Docs Sprint"
 2. Add tasks:
    - DOC-60: Document CustomTooltip
@@ -517,11 +514,11 @@ Location: `RandD/.linear/`
 3. Link to FDS issues for each component
 4. Track progress via cycle view
 5. Close sprint when docs complete
-```
+```text
 
 ### Example 3: Tutorial Creation
 
-```
+```text
 1. DOC-70: "Create CustomTooltip migration tutorial"
 2. Link to:
    - RND-25 (research)
@@ -530,9 +527,7 @@ Location: `RandD/.linear/`
 3. Write tutorial with code examples
 4. Publish to docs site
 5. Close issue with link to published tutorial
-```
-
----
+```text
 
 ## Questions & Support
 
@@ -548,23 +543,24 @@ Location: `RandD/.linear/`
 - Review architecture document
 - Attend Linear onboarding session (when scheduled)
 
----
-
 ## Decision Needed
 
 **Question**: How should DocuMind work be tracked in Linear?
 
 **Option A: Dedicated DocuMind Team** (DOC)
+
 - Pros: Clear documentation ownership, focused tracking
 - Cons: Extra team to manage
 - When: High volume, cross-functional docs
 
 **Option B: Use RandD Team** (RND)
+
 - Pros: Aligned with research/documentation
 - Cons: Mixed with R&D work
 - When: Low volume, mostly internal docs
 
 **Option C: Use Infrastructure Team** (INF)
+
 - Pros: Technical documentation co-located
 - Cons: Mixed with DevOps work
 - When: Mostly technical/infrastructure docs
@@ -572,8 +568,6 @@ Location: `RandD/.linear/`
 **Recommendation**: Answer the decision matrix questions above, then choose based on volume and type of work.
 
 **Please respond**: Preferred option and reasoning
-
----
 
 ## Next Steps
 
@@ -584,11 +578,10 @@ Location: `RandD/.linear/`
 5. **Test workflows** during team setup
 6. **Provide feedback** to improve adoption
 
----
-
-## Summary
+## Integration Summary
 
 Linear is being adopted organization-wide for:
+
 - Faster issue tracking
 - AI-powered workflows (Claude Code)
 - Cross-repository collaboration
@@ -609,7 +602,7 @@ As the **documentation manager**, DocuMind is responsible for:
 
 ## Documentation Workflow
 
-```
+```text
 RandD (Creates technical content)
     ↓ Provides documentation
 DocuMind (Organizes & publishes)
@@ -619,17 +612,16 @@ All Repositories (Consume documentation)
 RootDispatcher (Deploys infrastructure)
     ↓ Notifies DocuMind
 DocuMind (Publishes deployment docs)
-```
+```text
 
 DocuMind will benefit from Linear for:
+
 - Documentation-to-code linking
 - Cross-team visibility
 - Faster doc task creation
 - Better documentation coverage tracking
 
 **ACTION REQUIRED**: Review documentation and prepare organization strategy (see Action Items above).
-
----
 
 **Created**: 2025-11-14
 **Status**: Ready for Documentation Management
@@ -641,4 +633,4 @@ For questions, contact RandD team for technical content or review documentation 
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
-Co-Authored-By: Claude <noreply@anthropic.com)
+Co-Authored-By: Claude <<noreply@anthropic.com>)

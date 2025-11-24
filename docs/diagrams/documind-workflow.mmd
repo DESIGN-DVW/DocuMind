@@ -1,0 +1,24 @@
+graph TD
+    A[Start: DocuMind] --> B[Scan All Repositories]
+    B --> C{Files Changed?}
+    C -->|Yes| D[Extract Metadata]
+    C -->|No| E[Wait for Changes]
+    D --> F[Validate Markdown]
+    F --> G{Valid?}
+    G -->|Yes| H[Generate Index]
+    G -->|No| I[Auto-Fix Issues]
+    I --> F
+    H --> J[Update Documentation]
+    J --> K[Generate Reports]
+    K --> L{Git Hook Active?}
+    L -->|Yes| M[Run Pre-Commit]
+    L -->|No| N[Manual Commit]
+    M --> O[Commit & Push]
+    N --> O
+    O --> E
+    E --> C
+
+    style A fill:#4CAF50,color:#fff
+    style H fill:#2196F3,color:#fff
+    style I fill:#FF9800,color:#fff
+    style O fill:#9C27B0,color:#fff

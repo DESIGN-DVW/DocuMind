@@ -1,0 +1,244 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0.0",
+  "description": "Custom markdown error patterns for advanced validation",
+  "patterns": [
+    {
+      "id": "context-numbering-1",
+      "category": "Context-Dependent Numbering",
+      "name": "Numbered Lists Breaking Hierarchy",
+      "description": "Numbered lists interrupted by content break continuation",
+      "severity": "error",
+      "regex": "^\\d+\\.\\s+.+\\n\\n(?!^\\d+\\.\\s+)[^\\n]+\\n\\n^\\d+\\.\\s+",
+      "flags": "gm",
+      "fixStrategy": "ai-assisted",
+      "fixDescription": "Requires context to determine if content should be indented or list should restart",
+      "examples": {
+        "wrong": "1. First\\n2. Second\\n\\nText here\\n\\n3. Third",
+        "correct": "1. First\\n2. Second\\n\\n   Text here\\n\\n3. Third"
+      }
+    },
+    {
+      "id": "context-numbering-2",
+      "category": "Context-Dependent Numbering",
+      "name": "Mixed Numbered/Unnumbered Lists",
+      "description": "Switching between numbered and bulleted lists without proper nesting",
+      "severity": "warning",
+      "regex": "^(\\d+\\.|-|\\*)\\s+",
+      "flags": "gm",
+      "fixStrategy": "automated",
+      "fixDescription": "Check for mixed list types in sequence",
+      "validation": "consecutive-lines-different-types"
+    },
+    {
+      "id": "heading-context-1",
+      "category": "Heading Context",
+      "name": "Skipped Heading Levels",
+      "description": "Jumping heading levels (e.g., H2 to H4)",
+      "severity": "error",
+      "regex": "^#{2}\\s+.+\\n\\n#{4,}\\s+",
+      "flags": "gm",
+      "fixStrategy": "automated",
+      "fixDescription": "Insert intermediate heading levels"
+    },
+    {
+      "id": "heading-context-2",
+      "category": "Heading Context",
+      "name": "Multiple H1 Headings",
+      "description": "More than one top-level heading in document",
+      "severity": "warning",
+      "regex": "^#\\s+.+(\\n.+)*^#\\s+",
+      "flags": "gm",
+      "fixStrategy": "ai-assisted",
+      "fixDescription": "Semantic decision required - which should be H1"
+    },
+    {
+      "id": "code-block-1",
+      "category": "Code Block",
+      "name": "Nested Code Blocks",
+      "description": "Code blocks inside code blocks",
+      "severity": "error",
+      "regex": "^```[a-z]*\\n(.*\\n)*?```[a-z]*\\n(.*\\n)*?^```",
+      "flags": "gm",
+      "fixStrategy": "automated",
+      "fixDescription": "Close first block before starting second"
+    },
+    {
+      "id": "code-block-2",
+      "category": "Code Block",
+      "name": "Code Block Without Language",
+      "description": "Code block missing language specifier",
+      "severity": "error",
+      "regex": "^```$",
+      "flags": "gm",
+      "fixStrategy": "automated",
+      "fixDescription": "Auto-detect language from content (already implemented in fix-markdown.mjs)"
+    },
+    {
+      "id": "link-ref-1",
+      "category": "Link & Reference",
+      "name": "Undefined Reference Links",
+      "description": "Reference-style links without definition",
+      "severity": "error",
+      "regex": "\\[.+\\]\\[(\\w+)\\]",
+      "flags": "g",
+      "fixStrategy": "ai-assisted",
+      "fixDescription": "Need to find or create URL for reference",
+      "validation": "check-definition-exists"
+    },
+    {
+      "id": "link-ref-2",
+      "category": "Link & Reference",
+      "name": "Broken Internal Links",
+      "description": "Links to files/headings that don't exist",
+      "severity": "error",
+      "regex": "\\[.+\\]\\((?!http)[^\\)]+\\)",
+      "flags": "g",
+      "fixStrategy": "automated",
+      "fixDescription": "Validate file existence",
+      "validation": "file-system-check"
+    },
+    {
+      "id": "table-1",
+      "category": "Table Formatting",
+      "name": "Misaligned Table Columns",
+      "description": "Different number of columns in table rows",
+      "severity": "error",
+      "regex": "^\\|(.+\\|)+$",
+      "flags": "gm",
+      "fixStrategy": "automated",
+      "fixDescription": "Count pipes per line and normalize",
+      "validation": "pipe-count-consistency"
+    },
+    {
+      "id": "table-2",
+      "category": "Table Formatting",
+      "name": "Table Without Header Separator",
+      "description": "Missing |---|---| separator line",
+      "severity": "error",
+      "regex": "^\\|(.+\\|)+\\n^\\|(?![-:\\s]+\\|)",
+      "flags": "gm",
+      "fixStrategy": "automated",
+      "fixDescription": "Insert separator after header row"
+    },
+    {
+      "id": "whitespace-1",
+      "category": "Indentation & Whitespace",
+      "name": "Inconsistent List Indentation",
+      "description": "Mixed 2-space and 4-space indentation",
+      "severity": "warning",
+      "regex": "^(\\s{2}|\\s{4})[-*+]\\s+",
+      "flags": "gm",
+      "fixStrategy": "automated",
+      "fixDescription": "Standardize to 2-space indents"
+    },
+    {
+      "id": "whitespace-2",
+      "category": "Indentation & Whitespace",
+      "name": "Trailing Spaces",
+      "description": "Spaces at end of lines",
+      "severity": "warning",
+      "regex": "\\s+$",
+      "flags": "gm",
+      "fixStrategy": "automated",
+      "fixDescription": "Remove trailing spaces"
+    },
+    {
+      "id": "frontmatter-1",
+      "category": "Frontmatter & Metadata",
+      "name": "Malformed YAML Frontmatter",
+      "description": "Invalid YAML syntax in frontmatter",
+      "severity": "error",
+      "regex": "^---\\n(.*\\n)*?---\\n",
+      "flags": "gm",
+      "fixStrategy": "ai-assisted",
+      "fixDescription": "YAML parsing and correction required",
+      "validation": "yaml-parse"
+    },
+    {
+      "id": "frontmatter-2",
+      "category": "Frontmatter & Metadata",
+      "name": "Missing Required Metadata",
+      "description": "Documents missing standard metadata fields",
+      "severity": "warning",
+      "regex": "^---\\n(?!.*version:)",
+      "flags": "gm",
+      "fixStrategy": "automated",
+      "fixDescription": "Add default metadata fields",
+      "requiredFields": ["version", "updated", "author"]
+    },
+    {
+      "id": "ai-issue-1",
+      "category": "AI-Specific",
+      "name": "Over-Formatted Emphasis",
+      "description": "Bold text used instead of headings",
+      "severity": "warning",
+      "regex": "^\\*\\*[A-Z][^*]+\\*\\*:",
+      "flags": "gm",
+      "fixStrategy": "ai-assisted",
+      "fixDescription": "Semantic decision - should be heading or keep as emphasis"
+    },
+    {
+      "id": "ai-issue-2",
+      "category": "AI-Specific",
+      "name": "Excessive Horizontal Rules",
+      "description": "Too many --- separators",
+      "severity": "warning",
+      "regex": "---",
+      "flags": "g",
+      "fixStrategy": "automated",
+      "fixDescription": "Remove excessive horizontal rules",
+      "threshold": "max-3-per-document"
+    }
+  ],
+  "validationRules": {
+    "consecutive-lines-different-types": {
+      "description": "Check if consecutive list items use different markers",
+      "implementation": "compare-adjacent-lines"
+    },
+    "check-definition-exists": {
+      "description": "Verify reference link has corresponding definition",
+      "implementation": "extract-refs-and-defs-compare"
+    },
+    "file-system-check": {
+      "description": "Validate file/path existence",
+      "implementation": "fs-stat-check"
+    },
+    "pipe-count-consistency": {
+      "description": "Ensure all table rows have same column count",
+      "implementation": "count-pipes-per-line"
+    },
+    "yaml-parse": {
+      "description": "Parse and validate YAML syntax",
+      "implementation": "yaml-parser"
+    }
+  },
+  "fixStrategies": {
+    "automated": {
+      "description": "Can be fixed programmatically with regex/logic",
+      "tools": ["sed", "awk", "grep", "regex"]
+    },
+    "ai-assisted": {
+      "description": "Requires semantic understanding or context",
+      "tools": ["claude-agent", "semantic-analysis"]
+    },
+    "manual": {
+      "description": "Requires human review and decision",
+      "tools": ["human-review"]
+    }
+  },
+  "severityLevels": {
+    "error": {
+      "description": "Breaks rendering or causes serious issues",
+      "action": "must-fix"
+    },
+    "warning": {
+      "description": "Suboptimal formatting but functional",
+      "action": "should-fix"
+    },
+    "info": {
+      "description": "Style preference or minor inconsistency",
+      "action": "optional-fix"
+    }
+  }
+}

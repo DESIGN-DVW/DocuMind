@@ -1,9 +1,17 @@
 {
-  "name": "@dvwdesign/documind",
+  "name": "@design-dvw/documind",
   "version": "1.0.0",
-  "description": "DocuMind - Documentation Intelligence & Management System for DVWDesign organization",
+  "description": "DocuMind - Documentation Intelligence & Management System for DESIGN-DVW organization",
   "type": "module",
   "main": "scripts/index-markdown.mjs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DESIGN-DVW/DocuMind.git"
+  },
+  "homepage": "https://github.com/DESIGN-DVW/DocuMind",
+  "bugs": {
+    "url": "https://github.com/DESIGN-DVW/DocuMind/issues"
+  },
   "scripts": {
     "scan": "node scripts/scan-all-repos.mjs",
     "scan:report": "node scripts/scan-all-repos.mjs --report",
@@ -34,7 +42,24 @@
     "docs:jsdoc": "jsdoc -c jsdoc.config.json",
     "docs:jsdoc:serve": "npx serve docs/07-api/jsdoc",
     "docs:generate": "npm run docs:jsdoc",
-    "docs:generate:all": "npm run docs:jsdoc"
+    "docs:generate:all": "npm run docs:jsdoc",
+    "links:check": "find . -name '*.md' -not -path './node_modules/*' -not -path './index/*' -not -path './.git/*' | xargs markdown-link-check --config config/.markdown-link-check.json",
+    "diagram:generate": "mmdc -i docs/diagrams/source.mmd -o docs/diagrams/output.png",
+    "validate:custom": "node scripts/validate-custom-errors.mjs",
+    "validate:custom:all": "node scripts/validate-custom-errors.mjs --all",
+    "fix:custom": "node scripts/fix-custom-errors.mjs",
+    "fix:custom:all": "node scripts/fix-custom-errors.mjs --all",
+    "fix:custom:dry-run": "node scripts/fix-custom-errors.mjs --dry-run",
+    "analyze:patterns": "node scripts/analyze-error-patterns.mjs",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "**/*.md": [
+      "markdownlint-cli2 --fix --config config/.markdownlint.json"
+    ],
+    "**/*.{js,mjs,json}": [
+      "prettier --write"
+    ]
   },
   "keywords": [
     "markdown",
@@ -44,7 +69,7 @@
     "registry",
     "automation"
   ],
-  "author": "DVWDesign",
+  "author": "DESIGN-DVW",
   "license": "MIT",
   "dependencies": {
     "better-sqlite3": "^9.2.2",
@@ -65,11 +90,17 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "markdownlint-cli2": "^0.15.0",
-    "tree-cli": "^0.6.7",
-    "jsdoc": "^4.0.5",
+    "@mermaid-js/mermaid-cli": "^11.12.0",
     "better-docs": "^2.7.3",
-    "docdash": "^2.0.2"
+    "docdash": "^2.0.2",
+    "husky": "^9.1.7",
+    "jsdoc": "^4.0.5",
+    "lint-staged": "^16.2.6",
+    "markdown-link-check": "^3.14.1",
+    "markdownlint-cli2": "^0.15.0",
+    "prettier": "^3.6.2",
+    "puppeteer": "^24.30.0",
+    "tree-cli": "^0.6.7"
   },
   "engines": {
     "node": ">=20.0.0"

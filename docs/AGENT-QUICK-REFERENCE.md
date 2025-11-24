@@ -11,6 +11,7 @@
 **Purpose:** Centralized markdown management, linting, and documentation intelligence for DVWDesign organization.
 
 **Key Features:**
+
 - SQLite database with 8,173+ documents
 - Content hashing for change detection
 - Full-text search (FTS5)
@@ -29,7 +30,7 @@ cd /Users/Shared/htdocs/github/DVWDesign/Markdown
 npm install                    # Install dependencies (if needed)
 npm run db:init                # Initialize database
 npm run scan:enhanced          # Scan all repositories
-```
+```text
 
 ### Common Commands
 
@@ -56,13 +57,13 @@ npm run index                  # Create organized index
 npm run validate               # Validate timestamps
 npm run lint                   # Check markdown errors
 npm run lint:fix               # Auto-fix errors
-```
+```text
 
 ---
 
 ## File Structure
 
-```
+```text
 Markdown/
 ├── .claude/
 │   └── commands/              # Slash commands
@@ -88,9 +89,7 @@ Markdown/
 │       └── canonical-report.mjs          # To be created
 ├── package.json               # Dependencies and scripts
 └── README.md                  # Project overview
-```
-
----
+```text
 
 ## Database Schema
 
@@ -144,11 +143,10 @@ Markdown/
 3. **canonical_overview** - Canonical docs with variants
 4. **unresolved_deviations** - Pending deviations
 
----
-
 ## Query Utilities
 
 **Import:**
+
 ```javascript
 import {
   searchDocuments,
@@ -156,7 +154,7 @@ import {
   getRepositoryStats,
   // ... see full list in query-utils.mjs
 } from './scripts/db/query-utils.mjs';
-```
+```text
 
 ### Search Functions
 
@@ -173,7 +171,7 @@ searchByFilename('%.tsx', {
   repository: 'FigmailAPP',
   limit: 50
 });
-```
+```text
 
 ### Similarity Functions
 
@@ -183,7 +181,7 @@ findSimilarDocuments(documentId, 0.7);
 
 // Find duplicates (>90% similarity)
 findDuplicates(0.9);
-```
+```text
 
 ### Deviation Functions
 
@@ -196,7 +194,7 @@ getUnresolvedDeviations({
 
 // Deviation statistics
 getDeviationStats();
-```
+```text
 
 ### Stats Functions
 
@@ -212,15 +210,14 @@ getRecentlyModified(7, 50);  // Last 7 days
 
 // Global stats
 getGlobalStats();
-```
+```text
 
 **See:** `scripts/db/query-utils.mjs` for full API documentation
-
----
 
 ## Repositories Scanned
 
 ### High Priority (6 repos)
+
 - **FigmailAPP** - 4,501 docs, 39 MB
 - **Figma-Plug-ins** - 1,395 docs, 8 MB
 - **FigmaDSController** - 1,019 docs, 7 MB
@@ -229,16 +226,16 @@ getGlobalStats();
 - **Markdown** - This repository
 
 ### Medium Priority (2 repos)
+
 - **GlossiaApp** - 1,010 docs, 5 MB
 - **Contentful** - 236 docs, 1 MB
 
 ### Low Priority (2 repos)
+
 - **IconJar** - Icon management
 - **AdobePlugIns** - Adobe plugin tools
 
 **Total:** 10 repositories, 8,173 documents, 60.54 MB
-
----
 
 ## Category Detection
 
@@ -246,21 +243,58 @@ getGlobalStats();
 
 | Path Pattern | Category |
 |--------------|----------|
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | `/.claude/agents/` | agents |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | `/docs/01-agents/` | agents |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | `/docs/02-backend/` | backend |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | `/docs/03-frontend/` | frontend |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | `/docs/04-architecture/` | architecture |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | `/docs/05-guides/` | guides |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | `/docs/06-issues/` | issues |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | `/docs/99-shared/` | shared |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | `/docs/00-references/` | references |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | `README.md` | readme |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | `CLAUDE.md` | claude-instructions |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | `/docs/*` | documentation |
+| --- | --- |
+| --- | --- |
+| --- | --- |
 | Other | other |
-
----
 
 ## Workflows
 
@@ -273,29 +307,33 @@ const REPOS = [
   // ... existing
   { name: 'NewRepo', path: '/path/to/new/repo', priority: 'medium' },
 ];
-```
+```text
 
 Then run:
+
 ```bash
 npm run scan:enhanced
-```
+```text
 
 ### Find Duplicate Documentation
 
 **Phase 2 (Upcoming):**
+
 ```bash
 npm run analyze:similarities
-```
+```text
 
 **Manual Query (Now):**
+
 ```javascript
 import { findDuplicates } from './scripts/db/query-utils.mjs';
 const duplicates = findDuplicates(0.9);  // 90% similarity threshold
-```
+```text
 
 ### Search Documentation
 
-**Example: Find all MJML-related docs in FigmailAPP**
+### Example: Find all MJML-related docs in FigmailAPP**
+
 ```javascript
 import { searchDocuments } from './scripts/db/query-utils.mjs';
 
@@ -308,11 +346,12 @@ results.forEach(doc => {
   console.log(doc.path);
   console.log(doc.snippet);  // Highlighted snippet
 });
-```
+```text
 
 ### Track Recent Changes
 
-**Example: See what changed in last 7 days**
+### Example: See what changed in last 7 days**
+
 ```javascript
 import { getRecentlyModified } from './scripts/db/query-utils.mjs';
 
@@ -321,13 +360,12 @@ recent.forEach(doc => {
   console.log(`${doc.repository}/${doc.path}`);
   console.log(`Modified: ${doc.modified_at}`);
 });
-```
-
----
+```text
 
 ## Phase Implementation Status
 
 ### ✅ Phase 1: Foundation (Complete)
+
 - Database schema with 8 tables
 - Content hashing (SHA-256)
 - Enhanced scanner (10,493 files in 14s)
@@ -335,6 +373,7 @@ recent.forEach(doc => {
 - Full-text search (FTS5)
 
 ### ⏳ Phase 2: Similarity & Deviations (Week 2-4)
+
 - Similarity detection algorithm
 - Duplicate detection
 - Deviation tracking
@@ -342,18 +381,18 @@ recent.forEach(doc => {
 - Reporting dashboard
 
 ### ⏳ Phase 3: AI Learning (Week 5-6)
+
 - Learn from manual fixes
 - Pattern extraction
 - Canonical determination
 - Practice example generation
 
 ### ⏳ Phase 4: MCP Integration (Week 7-8)
+
 - MCP server implementation
 - Claude Code integration
 - Performance optimization
 - Query caching
-
----
 
 ## Common Tasks
 
@@ -374,9 +413,9 @@ npm install better-sqlite3 chalk gray-matter glob ora string-similarity
 # 4. Initialize
 npm run db:init
 npm run scan:enhanced
-```
+```text
 
-### Debug Database
+## Debug Database
 
 ```bash
 # Direct SQLite access
@@ -387,52 +426,57 @@ SELECT COUNT(*) FROM documents;
 SELECT repository, COUNT(*) FROM documents GROUP BY repository;
 SELECT * FROM scan_history ORDER BY scan_started DESC LIMIT 5;
 PRAGMA table_info(documents);
-```
+```text
 
-### Reset and Rescan
+## Reset and Rescan
 
 ```bash
 npm run db:reset           # Delete and recreate database
 npm run scan:enhanced      # Scan all repositories
-```
-
----
+```text
 
 ## Error Handling
 
 ### Common Issues
 
-**1. Missing Repository**
-```
+### 1. Missing Repository**
+
+```text
 ✗ Repository not found: /path/to/repo
-```
+```text
+
 **Fix:** Check repository path in `enhanced-scanner.mjs`
 
-**2. Schema Mismatch**
-```
+### 2. Schema Mismatch**
+
+```text
 SqliteError: table X has no column named Y
-```
+```text
+
 **Fix:** Run `npm run db:reset` to recreate database with latest schema
 
-**3. File Parse Errors**
-```
+### 3. File Parse Errors**
+
+```text
 Error parsing file.md: ENOENT: no such file or directory
-```
+```text
+
 **Fix:** Non-critical - broken symlink, will be skipped
 
-**4. Gray-Matter Engine Error**
-```
-gray-matter engine "announcement" is not registered
-```
-**Fix:** Non-critical - unsupported frontmatter format, will be skipped
+### 4. Gray-Matter Engine Error**
 
----
+```text
+gray-matter engine "announcement" is not registered
+```text
+
+**Fix:** Non-critical - unsupported frontmatter format, will be skipped
 
 ## Performance
 
 ### Scan Performance
 
 **Metrics (10 repositories, 10,493 files):**
+
 - First scan: ~25 seconds (all files parsed)
 - Second scan: ~14 seconds (93% files skipped via hash comparison)
 - Database size: ~60 MB
@@ -441,6 +485,7 @@ gray-matter engine "announcement" is not registered
 ### Query Performance
 
 **FTS5 Full-Text Search:**
+
 - 8,000+ documents
 - Sub-second response time
 - Boolean operators supported
@@ -453,27 +498,26 @@ gray-matter engine "announcement" is not registered
 3. Use indexes for common queries
 4. Batch operations when possible
 
----
-
 ## Documentation
 
 **Essential Reading:**
+
 1. [CONVERSATION-2025-11-07-DOCUMIND-DESIGN.md](CONVERSATION-2025-11-07-DOCUMIND-DESIGN.md) - Complete design discussion
 2. [PHASE-1-COMPLETION-REPORT.md](PHASE-1-COMPLETION-REPORT.md) - Implementation details
 3. [README.md](../README.md) - Project overview
 
 **Code Documentation:**
+
 - All query functions have JSDoc comments
 - Database schema is fully commented
 - Scanner includes inline explanations
-
----
 
 ## Agent Collaboration
 
 ### For doc-classifier Agent
 
 When organizing DocuMind files:
+
 - Keep database schema in `scripts/db/` (with code)
 - Design documents go in `docs/`
 - API documentation in `docs/api/` (if created)
@@ -482,6 +526,7 @@ When organizing DocuMind files:
 ### For markdown-fixer Agent
 
 DocuMind markdown standards:
+
 - Code blocks must have language identifiers (MD040)
 - Use version and timestamp in all docs
 - Consistent table formatting
@@ -490,12 +535,11 @@ DocuMind markdown standards:
 ### For similarity-analyzer Agent (Phase 2)
 
 When detecting similar documents:
+
 - Use string-similarity library
 - Threshold: 0.7 for variants, 0.9 for duplicates
 - Store results in content_similarities table
 - Generate deviation records for inconsistencies
-
----
 
 ## Contact & Support
 
@@ -505,11 +549,10 @@ When detecting similar documents:
 **Phase 1 Complete:** 2025-11-07
 
 **For Questions:**
+
 - Check conversation log: `docs/CONVERSATION-2025-11-07-DOCUMIND-DESIGN.md`
 - Check completion report: `docs/PHASE-1-COMPLETION-REPORT.md`
 - Review code comments in `scripts/db/query-utils.mjs`
-
----
 
 **Last Updated:** 2025-11-07
 **Version:** 1.0.0

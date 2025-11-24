@@ -1,0 +1,190 @@
+{
+  // ============================================================================
+  // GitLens Configuration - Minimal Zen Mode
+  // ============================================================================
+  // Purpose: Reduce clutter while keeping GitLens features available on-demand
+
+  // Enable Zen mode (minimal UI)
+  "gitlens.mode.active": "zen",
+
+  // Disable inline annotations (reduces clutter)
+  "gitlens.codeLens.enabled": false,
+  "gitlens.currentLine.enabled": false,
+  "gitlens.currentLine.pullRequests.enabled": false,
+
+  // Configure hovers (only show on line hover, not constantly)
+  "gitlens.hovers.enabled": true,
+  "gitlens.hovers.currentLine.over": "line",
+  "gitlens.hovers.currentLine.enabled": false,
+
+  // Status bar - Keep minimal info
+  "gitlens.statusBar.enabled": true,
+  "gitlens.statusBar.format": "${author}, ${ago}",
+  "gitlens.statusBar.command": "gitlens.showQuickCommitDetails",
+
+  // Disable sidebar views (use command palette instead)
+  "gitlens.views.repositories.enabled": false,
+  "gitlens.views.fileHistory.enabled": false,
+  "gitlens.views.lineHistory.enabled": false,
+  "gitlens.views.compare.enabled": false,
+  "gitlens.views.search.enabled": false,
+  "gitlens.views.commits.enabled": false,
+  "gitlens.views.branches.enabled": false,
+  "gitlens.views.remotes.enabled": false,
+  "gitlens.views.stashes.enabled": false,
+  "gitlens.views.tags.enabled": false,
+  "gitlens.views.contributors.enabled": false,
+  "gitlens.views.workspaces.enabled": false,
+  "gitlens.views.home.enabled": false,
+  "gitlens.views.timeline.enabled": false,
+  "gitlens.views.searchAndCompare.enabled": false,
+
+  // Disable GitLens+ (Cloud) features completely
+  "gitlens.plusFeatures.enabled": false,
+  "gitlens.launchpad.enabled": false,
+  "gitlens.cloudPatches.enabled": false,
+  "gitlens.workspaces.enabled": false,
+  "gitlens.cloudWorkspaces.enabled": false,
+  "gitlens.graph.enabled": false,
+  "gitlens.visualHistory.enabled": false,
+
+  // Disable all premium/trial features
+  "gitlens.showWelcomeOnInstall": false,
+  "gitlens.showWhatsNewAfterUpgrades": false,
+  "gitlens.ai.experimental.provider": "none",
+
+  // Disable blame annotations by default
+  "gitlens.blame.highlight.enabled": false,
+  "gitlens.blame.avatars": false,
+  "gitlens.blame.compact": true,
+
+  // Disable advanced features (Pro features, not needed)
+  "gitlens.advanced.messages": {
+    "suppressGitVersionWarning": true,
+    "suppressLineUncommittedWarning": true
+  },
+
+  // ============================================================================
+  // How to Use GitLens with This Configuration
+  // ============================================================================
+  // All GitLens features are still available via Command Palette (Cmd+Shift+P):
+  //
+  // - "GitLens: Show File History" - See all changes to current file
+  // - "GitLens: Show Line History" - See all changes to current line
+  // - "GitLens: Toggle File Blame" - Show/hide blame annotations
+  // - "GitLens: Compare..." - Compare branches, commits, etc.
+  //
+  // Or right-click on any line and select GitLens options
+  //
+  // Status bar shows: Author and time of last change for current line
+  // Hover over any line: Shows commit details (only when you hover)
+
+  // ============================================================================
+  // Editor Configuration - General Best Practices
+  // ============================================================================
+
+  "editor.formatOnSave": true,
+  "editor.rulers": [80, 120],
+  "editor.renderWhitespace": "boundary",
+  "editor.bracketPairColorization.enabled": true,
+  "editor.guides.bracketPairs": true,
+
+  // File associations
+  "files.associations": {
+    "*.mjs": "javascript",
+    "CLAUDE.md": "markdown",
+    "*.bbprojectd": "xml"
+  },
+
+  // Exclude patterns for search/file tree
+  "files.exclude": {
+    "**/.git": true,
+    "**/.DS_Store": true,
+    "**/node_modules": true,
+    "**/index": true
+  },
+
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/build": true,
+    "**/coverage": true,
+    "**/.next": true,
+    "**/index": true,
+    "**/.backups": true
+  },
+
+  // ============================================================================
+  // Markdown Configuration
+  // ============================================================================
+
+  "[markdown]": {
+    "editor.defaultFormatter": "DavidAnson.vscode-markdownlint",
+    "editor.formatOnSave": true,
+    "editor.wordWrap": "on",
+    "editor.quickSuggestions": {
+      "comments": "off",
+      "strings": "off",
+      "other": "off"
+    }
+  },
+
+  // Markdownlint configuration
+  "markdownlint.config": {
+    "extends": "./config/.markdownlint.json"
+  },
+
+  // ============================================================================
+  // JavaScript/Node.js Configuration
+  // ============================================================================
+
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 2
+  },
+
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 2
+  },
+
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 2
+  },
+
+  // ============================================================================
+  // Terminal Configuration
+  // ============================================================================
+
+  "terminal.integrated.defaultProfile.osx": "zsh",
+  "terminal.integrated.fontSize": 13,
+
+  // ============================================================================
+  // Git Configuration (Built-in VS Code Git)
+  // ============================================================================
+
+  "git.autofetch": true,
+  "git.confirmSync": false,
+  "git.enableSmartCommit": true,
+  "git.suggestSmartCommit": false,
+
+  // Timeline view (alternative to GitLens for simple file history)
+  "timeline.excludeSources": [],
+
+  // ============================================================================
+  // Project-Specific Settings
+  // ============================================================================
+
+  // NPM scripts in sidebar
+  "npm.enableScriptExplorer": true,
+
+  // File nesting (group related files)
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.patterns": {
+    "package.json": "package-lock.json, .npmrc, .nvmrc",
+    "*.mjs": "$(capture).test.mjs, $(capture).spec.mjs",
+    "README.md": "CLAUDE.md, SETUP-COMPLETE.md",
+    "tsconfig.json": "tsconfig.*.json"
+  }
+}
