@@ -29,3 +29,9 @@ Thumbs.db
 
 # Reports
 reports/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+data/
