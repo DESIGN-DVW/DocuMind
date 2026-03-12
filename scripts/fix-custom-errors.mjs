@@ -328,6 +328,33 @@ function validateInternalLinks(content, filePath) {
 }
 
 /**
+ * Fix table separator row spacing (table-3)
+ * Adds spaces inside compact separator cells so the linter accepts them.
+ *
+ * Wrong:   |----------|--------|-------------|
+ * Correct: | ---------- | -------- | ------------- |
+ */
+function fixTableSeparatorSpacing(content) {
+  let changed = false;
+  const lines = content.split('\n');
+
+  const result = lines.map(line => {
+    // Detect compact separator rows: cells have no spaces (|---| or |:---:|)
+    if (/^\|:?-+:?(\|:?-+:?)+\|$/.test(line)) {
+      // Add a space on each side of the dashes inside every cell: |---| → | --- |
+      const normalized = line.replace(/\|(:?-+:?)/g, '| $1 ');
+      if (normalized !== line) {
+        changed = true;
+        return normalized;
+      }
+    }
+    return line;
+  });
+
+  return { content: result.join('\n'), changed };
+}
+
+/**
  * Remove excessive horizontal rules
  * Keeps max 3 per document
  */
@@ -369,6 +396,7 @@ async function fixFile(filePath, dryRun = false) {
       { name: 'Trailing Spaces', fn: fixTrailingSpaces },
       { name: 'List Indentation', fn: fixListIndentation },
       { name: 'Table Separators', fn: fixTableSeparators },
+      { name: 'Table Separator Spacing', fn: fixTableSeparatorSpacing },
       { name: 'Table Alignment', fn: fixTableAlignment },
       { name: 'Skipped Heading Levels', fn: fixSkippedHeadingLevels },
       { name: 'Nested Code Blocks', fn: fixNestedCodeBlocks },

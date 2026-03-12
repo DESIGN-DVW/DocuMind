@@ -122,6 +122,21 @@
       "fixDescription": "Insert separator after header row"
     },
     {
+      "id": "table-3",
+      "category": "Table Formatting",
+      "name": "Table Separator Spacing",
+      "description": "Separator row uses compact |---| format instead of required | --- | (spaces required for linter)",
+      "severity": "error",
+      "regex": "^\\|:?-+:?(\\|:?-+:?)+\\|$",
+      "flags": "gm",
+      "fixStrategy": "automated",
+      "fixDescription": "Add spaces inside separator cells: |----------| → | ---------- |",
+      "examples": {
+        "wrong": "|----------|--------|-------------|",
+        "correct": "| ---------- | -------- | ------------- |"
+      }
+    },
+    {
       "id": "whitespace-1",
       "category": "Indentation & Whitespace",
       "name": "Inconsistent List Indentation",

@@ -58,6 +58,26 @@
         "reveal": "always",
         "panel": "shared"
       }
+    },
+    {
+      "label": "Fix Table Separators",
+      "type": "shell",
+      "command": "npm run fix:custom",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Fix All Markdown (lint + custom)",
+      "type": "shell",
+      "command": "npm run lint:fix && npm run fix:custom",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
     }
   ]
 }

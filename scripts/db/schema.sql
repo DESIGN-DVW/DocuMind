@@ -313,5 +313,210 @@ CREATE TABLE IF NOT EXISTS statistics (
 );
 
 -- =============================================================================
+-- DOCUMENT RELATIONSHIPS (Graph Edges) — v2.0
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS doc_relationships (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  source_doc_id INTEGER NOT NULL,
+  target_doc_id INTEGER NOT NULL,
+  relationship_type TEXT NOT NULL CHECK (relationship_type IN (
+    'imports',          -- doc A references/links to doc B
+    'parent_of',        -- folder hierarchy
+    'variant_of',       -- same content, different version
+    'supersedes',       -- doc A replaces doc B
+    'depends_on',       -- doc A requires doc B context
+    'related_to',       -- topical relationship
+    'generated_from',   -- auto-generated from source
+    'dispatched_to'     -- RootDispatcher dispatch relationship
+  )),
+  weight REAL DEFAULT 1.0,
+  metadata TEXT,        -- JSON: { reason, auto_detected, confidence }
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (source_doc_id) REFERENCES documents(id) ON DELETE CASCADE,
+  FOREIGN KEY (target_doc_id) REFERENCES documents(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_rel_source ON doc_relationships(source_doc_id);
+CREATE INDEX IF NOT EXISTS idx_rel_target ON doc_relationships(target_doc_id);
+CREATE INDEX IF NOT EXISTS idx_rel_type ON doc_relationships(relationship_type);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_rel_unique
+  ON doc_relationships(source_doc_id, target_doc_id, relationship_type);
+
+-- =============================================================================
+-- KEYWORDS & CLASSIFICATIONS — v2.0
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS keywords (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  document_id INTEGER NOT NULL,
+  keyword TEXT NOT NULL,
+  category TEXT,        -- 'topic', 'technology', 'repo', 'person', 'action'
+  score REAL DEFAULT 1.0,
+  source TEXT CHECK (source IN ('extracted', 'manual', 'inferred')),
+  FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_keywords_doc ON keywords(document_id);
+CREATE INDEX IF NOT EXISTS idx_keywords_keyword ON keywords(keyword);
+CREATE INDEX IF NOT EXISTS idx_keywords_category ON keywords(category);
+CREATE INDEX IF NOT EXISTS idx_keywords_score ON keywords(score DESC);
+
+-- FTS for keyword search
+CREATE VIRTUAL TABLE IF NOT EXISTS keywords_fts USING fts5(
+  keyword,
+  category,
+  content='keywords',
+  content_rowid='id'
+);
+
+CREATE TRIGGER IF NOT EXISTS keywords_ai AFTER INSERT ON keywords BEGIN
+  INSERT INTO keywords_fts(rowid, keyword, category)
+  VALUES (new.id, new.keyword, new.category);
+END;
+
+CREATE TRIGGER IF NOT EXISTS keywords_ad AFTER DELETE ON keywords BEGIN
+  INSERT INTO keywords_fts(keywords_fts, rowid, keyword, category)
+  VALUES('delete', old.id, old.keyword, old.category);
+END;
+
+-- =============================================================================
+-- FOLDER HIERARCHY — v2.0
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS folder_nodes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  path TEXT UNIQUE NOT NULL,
+  repository TEXT NOT NULL,
+  parent_path TEXT,
+  depth INTEGER NOT NULL,
+  doc_count INTEGER DEFAULT 0,
+  total_size INTEGER DEFAULT 0,
+  classification TEXT,  -- 'docs', 'config', 'source', 'tests', 'scripts', 'assets', 'build'
+  diagram_url TEXT,     -- FigJam URL for this hierarchy
+  mermaid_file TEXT,    -- Path to .mmd file
+  last_scanned TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_folder_repo ON folder_nodes(repository);
+CREATE INDEX IF NOT EXISTS idx_folder_parent ON folder_nodes(parent_path);
+CREATE INDEX IF NOT EXISTS idx_folder_class ON folder_nodes(classification);
+CREATE INDEX IF NOT EXISTS idx_folder_depth ON folder_nodes(depth);
+
+-- =============================================================================
+-- DIAGRAM REGISTRY — v2.0
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS diagrams (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  document_id INTEGER,           -- source document (if applicable)
+  folder_node_id INTEGER,        -- source folder (if applicable)
+  diagram_type TEXT NOT NULL CHECK (diagram_type IN (
+    'folder_tree',
+    'relationship_graph',
+    'decision_tree',
+    'flowchart',
+    'sequence',
+    'state',
+    'gantt'
+  )),
+  name TEXT NOT NULL,
+  mermaid_path TEXT,             -- path to .mmd file
+  figjam_url TEXT,               -- FigJam diagram URL
+  figjam_file_key TEXT,          -- Figma file key (for reuse within same project file)
+  generated_at TEXT NOT NULL,
+  source_hash TEXT,              -- hash of source data to detect staleness
+  stale BOOLEAN DEFAULT 0,
+  FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE SET NULL,
+  FOREIGN KEY (folder_node_id) REFERENCES folder_nodes(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_diagrams_type ON diagrams(diagram_type);
+CREATE INDEX IF NOT EXISTS idx_diagrams_doc ON diagrams(document_id);
+CREATE INDEX IF NOT EXISTS idx_diagrams_folder ON diagrams(folder_node_id);
+CREATE INDEX IF NOT EXISTS idx_diagrams_figjam ON diagrams(figjam_file_key);
+CREATE INDEX IF NOT EXISTS idx_diagrams_stale ON diagrams(stale) WHERE stale = 1;
+
+-- =============================================================================
+-- FILE CONVERSIONS LOG — v2.0
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS conversions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  source_path TEXT NOT NULL,
+  source_format TEXT NOT NULL CHECK (source_format IN (
+    'docx', 'rtf', 'pdf', 'html', 'txt'
+  )),
+  output_path TEXT NOT NULL,
+  output_format TEXT NOT NULL DEFAULT 'markdown',
+  status TEXT NOT NULL CHECK (status IN ('pending', 'completed', 'failed')),
+  converted_at TEXT,
+  document_id INTEGER,           -- resulting document entry (if indexed)
+  error TEXT,
+  metadata TEXT,                 -- JSON: page count, word count, etc.
+  FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_conversions_status ON conversions(status);
+CREATE INDEX IF NOT EXISTS idx_conversions_format ON conversions(source_format);
+
+-- =============================================================================
+-- GRAPH VIEWS — v2.0
+-- =============================================================================
+
+-- View: Document relationship graph (for API)
+CREATE VIEW IF NOT EXISTS document_graph AS
+SELECT
+  dr.id as edge_id,
+  dr.relationship_type,
+  dr.weight,
+  s.path as source_path,
+  s.repository as source_repo,
+  s.filename as source_name,
+  t.path as target_path,
+  t.repository as target_repo,
+  t.filename as target_name
+FROM doc_relationships dr
+JOIN documents s ON dr.source_doc_id = s.id
+JOIN documents t ON dr.target_doc_id = t.id;
+
+-- View: Keyword cloud per repository
+CREATE VIEW IF NOT EXISTS repo_keyword_cloud AS
+SELECT
+  d.repository,
+  k.keyword,
+  k.category,
+  COUNT(*) as frequency,
+  AVG(k.score) as avg_score
+FROM keywords k
+JOIN documents d ON k.document_id = d.id
+GROUP BY d.repository, k.keyword, k.category
+ORDER BY frequency DESC;
+
+-- View: Folder hierarchy with doc counts
+CREATE VIEW IF NOT EXISTS folder_tree AS
+SELECT
+  fn.path,
+  fn.repository,
+  fn.depth,
+  fn.classification,
+  fn.doc_count,
+  fn.total_size,
+  fn.diagram_url,
+  fn.parent_path
+FROM folder_nodes fn
+ORDER BY fn.repository, fn.depth, fn.path;
+
+-- View: Stale diagrams needing regeneration
+CREATE VIEW IF NOT EXISTS stale_diagrams AS
+SELECT
+  dg.id,
+  dg.name,
+  dg.diagram_type,
+  dg.mermaid_path,
+  dg.figjam_url,
+  dg.generated_at,
+  COALESCE(d.path, fn.path) as source_path
+FROM diagrams dg
+LEFT JOIN documents d ON dg.document_id = d.id
+LEFT JOIN folder_nodes fn ON dg.folder_node_id = fn.id
+WHERE dg.stale = 1;
+
+-- =============================================================================
 -- END OF SCHEMA
 -- =============================================================================

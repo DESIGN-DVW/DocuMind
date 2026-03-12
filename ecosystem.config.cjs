@@ -1,0 +1,25 @@
+module.exports = {
+  apps: [{
+    name: 'documind',
+    script: 'daemon/server.mjs',
+    watch: false,
+    instances: 1,
+    autorestart: true,
+    max_restarts: 10,
+    restart_delay: 5000,
+    env: {
+      PORT: 9000,
+      NODE_ENV: 'production',
+      DOCUMIND_DB: './data/documind.db'
+    },
+    env_development: {
+      PORT: 9000,
+      NODE_ENV: 'development',
+      DOCUMIND_DB: './data/documind.db'
+    },
+    log_date_format: 'YYYY-MM-DD HH:mm:ss',
+    error_file: './data/logs/error.log',
+    out_file: './data/logs/out.log',
+    merge_logs: true
+  }]
+};

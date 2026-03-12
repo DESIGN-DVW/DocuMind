@@ -1,571 +1,372 @@
-# CLAUDE.md - Markdown Repository
+# CLAUDE.md - DocuMind v2.0
 
-## Centralized Markdown Management for DVWDesign Organization
+## Documentation Intelligence & Management System
 
-**Version:** 1.1.0
+**Version:** 2.0.0
 **Created:** 2025-11-06
-**Last Updated:** 2025-11-06
+**Last Updated:** 2026-03-10
+**Package:** `@design-dvw/documind`
 
 ---
 
-## 🎯 Purpose
+## Overview
 
-This repository provides centralized markdown file management, linting, indexing, and automation for all DVWDesign repositories.
+DocuMind is the central documentation intelligence service for the DVWDesign ecosystem. It runs as a persistent background daemon (PM2-managed) on port 9000, providing:
 
-**Key Functions:**
+- Full-text search across 620+ markdown files via SQLite FTS5
+- Document relationship graph with recursive traversal
+- File conversion (DOCX/RTF to Markdown, PDF indexing)
+- Keyword extraction and classification (TF-IDF)
+- Folder hierarchy analysis with Mermaid diagram generation
+- Scheduled scanning, linting, and fixing across 14+ repositories
+- Agent-callable REST API
 
-- Scan all repositories for markdown files
-- Create new categories when needed
--
-- Generate searchable indexes
-- Validate timestamps and versions
-- Auto-fix systematic linting errors
-- Watch for changes and auto-update
+**Absolute path:** `/Users/Shared/htdocs/github/DVWDesign/DocuMind/`
 
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```text
-Markdown/
+DocuMind/
+├── daemon/
+│   ├── server.mjs            # Express API on port 9000
+│   ├── scheduler.mjs         # node-cron job orchestrator
+│   ├── watcher.mjs           # chokidar file watcher
+│   └── hooks.mjs             # Claude hook handlers
+├── processors/
+│   ├── markdown-processor.mjs    # Parse, lint, index markdown
+│   ├── pdf-processor.mjs         # PDF text extraction + summary
+│   ├── word-processor.mjs        # DOCX/RTF to Markdown
+│   ├── mermaid-processor.mjs     # Generate .mmd files + FigJam links
+│   ├── tree-processor.mjs        # Folder hierarchy analysis
+│   └── keyword-processor.mjs     # TF-IDF keyword extraction
+├── graph/
+│   ├── relations.mjs             # Document relationship builder
+│   └── queries.mjs               # Graph traversal (recursive CTEs)
 ├── scripts/
-│   ├── fix-markdown.mjs          # Auto-fix linting errors
-│   ├── scan-all-repos.mjs        # Scan all repositories
-│   ├── index-markdown.mjs        # Generate organized index
-│   ├── validate-timestamps.mjs   # Validate metadata
-│   └── watch-and-index.mjs       # Watch for changes
+│   ├── db/
+│   │   ├── schema.sql            # Full DB schema (v2.0)
+│   │   └── init-database.mjs     # DB initialization + migration
+│   ├── scan-all-repos.mjs        # Multi-repo scanner
+│   ├── index-markdown.mjs        # Index builder
+│   ├── fix-markdown.mjs          # Auto-fixer
+│   ├── validate-timestamps.mjs   # Metadata validator
+│   ├── watch-and-index.mjs       # Legacy watcher (use daemon instead)
+│   └── generate-tree-schema.mjs  # Tree schema generator
+├── data/
+│   ├── documind.db               # SQLite database (FTS5 + graph)
+│   └── mermaid/                  # Generated .mmd diagram files
 ├── config/
-│   └── .markdownlint.json        # Linting configuration
-├── .claude/
-│   └── agents/
-│       └── markdown-fixer.md     # Markdown fixer agent
-├── index/                        # Generated indexes (gitignored)
-│   ├── all-markdown-files.json
-│   ├── organized-index.md
-│   ├── categories.json
-│   ├── scan-report.md
-│   └── validation-report.md
-├── docs/                         # Repository documentation
-├── package.json                  # NPM configuration
-├── .gitignore
-├── CLAUDE.md                     # This file
-└── README.md                     # Usage instructions
+│   ├── .markdownlint.json        # Linting rules
+│   └── .markdown-link-check.json # Link validation config
+├── ecosystem.config.cjs          # PM2 daemon configuration
+├── package.json
+└── CLAUDE.md                     # This file
 ```
 
 ---
 
-## 🚀 Quick Start
+## Daemon Mode (Primary)
 
-### Installation
+DocuMind runs as a PM2-managed background service:
 
 ```bash
-cd /Users/Shared/htdocs/github/DVWDesign/Markdown
-npm install
+# Start daemon
+npm run daemon:start        # pm2 start ecosystem.config.cjs
+
+# Stop daemon
+npm run daemon:stop         # pm2 stop documind
+
+# Dev mode (foreground)
+npm run daemon:dev          # node daemon/server.mjs
+
+# Check status
+npm run daemon:status       # pm2 show documind
+
+# View logs
+npm run daemon:logs         # pm2 logs documind
 ```
 
-### Basic Usage
+### API Endpoints (port 9000)
+
+| Endpoint | Method | Description |
+| -------- | ------ | ----------- |
+| `/health` | GET | Health check + version |
+| `/stats` | GET | Dashboard statistics |
+| `/search?q=` | GET | Full-text search via FTS5 |
+| `/graph` | GET | Document relationship graph |
+| `/tree/:repo` | GET | Folder hierarchy + diagrams |
+| `/keywords` | GET | Keyword cloud data |
+| `/diagrams` | GET | Diagram registry |
+| `/scan` | POST | Trigger scan (optional: `{ repo }`) |
+| `/index` | POST | Reindex documents |
+| `/convert` | POST | Convert file (DOCX/RTF/PDF) |
+| `/hook` | POST | Claude hook receiver |
+
+### Scheduled Tasks
+
+| Schedule | Task |
+| -------- | ---- |
+| Every 15 min | File watcher heartbeat check |
+| Every hour | Incremental scan (changed files only, via content_hash) |
+| Daily 2 AM | Full scan + similarity detection + deviation analysis |
+| Weekly Sun | PDF re-index + keyword refresh + graph rebuild |
+
+---
+
+## Database Schema (SQLite + FTS5)
+
+### Core Tables (v1.0)
+
+- `documents` — All indexed documents with content, metadata, content_hash
+- `documents_fts` — FTS5 virtual table for full-text search
+- `scan_runs` — Scan execution history
+- `similarities` — Document similarity pairs (Levenshtein + cosine)
+- `deviations` — Convention deviation detection
+- `canonical_docs` — Canonical document registry
+
+### v2.0 Tables
+
+- `doc_relationships` — Graph edges (8 relationship types: imports, parent_of, variant_of, supersedes, depends_on, related_to, generated_from, dispatched_to)
+- `keywords` — TF-IDF extracted keywords with categories (technology, action, topic)
+- `keywords_fts` — FTS5 for keyword search
+- `folder_nodes` — Repository folder hierarchy with classification
+- `diagrams` — Diagram registry (Mermaid paths + FigJam URLs + staleness tracking)
+- `conversions` — File conversion audit log
+
+### Key Views
+
+- `document_graph` — Joined relationship view with source/target paths
+- `repo_keyword_cloud` — Aggregated keyword scores per repository
+- `folder_tree` — Hierarchical folder view with doc counts
+- `stale_diagrams` — Diagrams needing regeneration
+
+### Database Commands
+
+```bash
+npm run db:init             # Initialize/migrate schema
+npm run db:reset            # Drop and recreate (destructive!)
+npm run db:migrate          # Apply migrations only
+```
+
+---
+
+## Processors
+
+### Markdown Processor
+
+Parses markdown files with gray-matter frontmatter, detects category from path/content, indexes into documents table with full content for FTS5.
+
+### PDF Processor
+
+Extracts text via pdf-parse, generates summaries (first 500 words + headings), stores in documents table, logs in conversions table.
+
+### Word Processor
+
+Converts DOCX to Markdown via mammoth + turndown. Adds frontmatter, enforces markdownlint compliance. RTF support via text extraction.
+
+### Keyword Processor
+
+TF-IDF keyword extraction via natural.js. Classifies keywords into technology, action, and topic categories. Batch inserts into keywords table.
+
+### Tree Processor
+
+Walks repository directories, classifies folders (docs, source, config, tests, scripts, assets), stores in folder_nodes table, generates color-coded Mermaid .mmd files.
+
+### Mermaid Processor
+
+Generates .mmd diagram files, registers in diagrams table with staleness detection via source_hash comparison. Inserts FigJam links into markdown files.
+
+---
+
+## Graph Queries
+
+Document relationships support recursive CTE traversal:
+
+```bash
+# Find related docs (2 hops)
+curl "http://localhost:9000/graph?docId=42&hops=2"
+
+# Full graph export
+curl "http://localhost:9000/graph"
+```
+
+Relationship types: `imports`, `parent_of`, `variant_of`, `supersedes`, `depends_on`, `related_to`, `generated_from`, `dispatched_to`
+
+---
+
+## CLI Commands (Legacy + New)
+
+### Scanning & Indexing
 
 ```bash
 npm run scan                # Scan all repositories
-npm run scan:report         # Generate detailed report
+npm run scan:report         # Scan + generate report
+npm run scan:enhanced       # Enhanced scanner with similarity detection
 npm run index               # Create organized index
-npm run validate            # Validate timestamps/versions
-npm run watch               # Watch for changes
+npm run index:update        # Update existing index
+```
+
+### Linting & Fixing
+
+```bash
 npm run lint                # Lint markdown files
 npm run lint:fix            # Auto-fix linting issues
+npm run fix                 # Fix systematic errors (current dir)
+npm run fix:all             # Fix all repositories
+npm run fix:custom          # Fix custom error patterns
+npm run fix:custom:all      # Fix custom errors across all repos
 ```
 
-## 📊 Repositories Scanned
-
-This system scans the following DVWDesign repositories:
-
-| Repository | Priority | Active | Location |
-|-----------|----------|--------|----------|
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| FigmaAPI/FigmailAPP | High | ✅ | `/Users/Shared/htdocs/github/DVWDesign/FigmaAPI/FigmailAPP` |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| FigmaAPI/FigmaDSController | High | ✅ | `/Users/Shared/htdocs/github/DVWDesign/FigmaAPI/FigmaDSController` |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| FigmaAPI/@figma-core | High | ✅ | `/Users/Shared/htdocs/github/DVWDesign/FigmaAPI/@figma-core` |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| FigmaAPI/@figma-docs | High | ✅ | `/Users/Shared/htdocs/github/DVWDesign/FigmaAPI/@figma-docs` |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| Figma-Plug-ins | High | ✅ | `/Users/Shared/htdocs/github/DVWDesign/Figma-Plug-ins` |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| GlossiaApp | Medium | ✅ | `/Users/Shared/htdocs/github/DVWDesign/GlossiaApp` |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| Contentful | Medium | ✅ | `/Users/Shared/htdocs/github/DVWDesign/Contentful` |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| IconJar | Low | ✅ | `/Users/Shared/htdocs/github/DVWDesign/IconJar` |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| AdobePlugIns | Low | ✅ | `/Users/Shared/htdocs/github/DVWDesign/AdobePlugIns` |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| Markdown | High | ✅ | `/Users/Shared/htdocs/github/DVWDesign/Markdown` |
-
-## 🛠️ Scripts
-
-### Core Commands
-
-| Command | Purpose | Output |
-|---------|---------|--------|
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| `npm run scan` | Scan all repositories | `index/all-markdown-files.json` |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| `npm run scan:report` | Generate detailed scan report | `index/scan-report.md` |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| `npm run index` | Create organized index | `index/organized-index.md` |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| `npm run index:update` | Update existing index | Updates `organized-index.md` |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| `npm run validate` | Validate timestamps/versions | `index/validation-report.md` |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| `npm run validate:fix` | Auto-fix validation issues | Updates markdown files |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| `npm run watch` | Watch for changes | Auto-updates on file changes |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| `npm run lint` | Lint markdown files | Console output |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| `npm run lint:fix` | Auto-fix markdown issues | Updates files in-place |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| `npm run fix` | Fix systematic errors | Updates current directory |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| `npm run fix:all` | Fix all repositories | Updates all repo markdown |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| `npm run cron:setup` | Setup automated cron jobs | Cron configuration |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| `npm run cron:stop` | Stop cron jobs | Stops automation |
-
-### scan-all-repos.mjs
-
-Scans all DVWDesign repositories for markdown files and generates comprehensive index.
-
-**Output:**
-
-- `index/all-markdown-files.json` - Complete scan data
-- `index/scan-report.md` - Human-readable report
-
-**Features:**
-
-- Extracts frontmatter metadata
-- Analyzes file structure (headings, lines, size)
-- Detects timestamps, versions, Claude markers
-- Groups by repository
-
-**Usage:**
+### Analysis
 
 ```bash
-npm run scan              # Scan only
-npm run scan:report       # Scan + generate report
+npm run analyze:similarities    # Detect similar documents
+npm run analyze:deviations      # Detect convention deviations
+npm run analyze:all             # Run all analyses
+npm run analyze:patterns        # Analyze error patterns
 ```
 
-### index-markdown.mjs
-
-Creates organized searchable index from scan results.
-
-**Output:**
-
-- `index/organized-index.md` - Organized by category
-- `index/categories.json` - JSON categories
-
-**Categories:**
-
-- AI Agents
-- Documentation
-- Guides
-- Architecture
-- Backend
-- Frontend
-- Shared Resources
-- README Files
-- Claude Instructions
-- Other
-
-**Usage:**
+### Reports
 
 ```bash
-npm run index             # Requires scan first
+npm run report:dashboard    # Deviation dashboard
+npm run report:canonical    # Canonical document report
 ```
 
-### validate-timestamps.mjs
-
-Validates markdown files for missing timestamps, versions, and metadata.
-
-**Output:**
-
-- `index/validation-report.md` - Validation report
-
-**Checks:**
-
-- Missing timestamp
-- Missing version
-- Missing Claude marker
-- Recently modified files without timestamps
-
-**Usage:**
+### Tree & Diagrams
 
 ```bash
-npm run validate          # Requires scan first
+npm run tree:visual         # Display tree in terminal
+npm run tree:structure      # Export tree to file
+npm run tree:schema         # Generate JSON tree schema
+npm run tree:update         # Update structure + schema
+npm run diagram:generate    # Generate diagram from .mmd source
 ```
 
-### watch-and-index.mjs
-
-Watches for markdown file changes and auto-updates index.
-
-**Features:**
-
-- Watches all DVWDesign repositories
-- Debounces updates (5 seconds)
-- Auto-runs scan + index on changes
-
-**Usage:**
+### Validation
 
 ```bash
-npm run watch             # Press Ctrl+C to stop
+npm run validate            # Validate timestamps/versions
+npm run validate:fix        # Auto-fix validation issues
+npm run validate:custom     # Validate custom error patterns
 ```
 
-### fix-markdown.mjs
-
-Automatically fixes systematic markdown linting errors.
-
-**Fixes:**
-
-- Line breaks around block elements
-- Empty code block language identifiers
-- Bold/italic text that should be headings
-
-**Usage:**
+### Documentation
 
 ```bash
-npm run fix               # Fix current directory
-npm run fix:all           # Fix all repositories
-node scripts/fix-markdown.mjs --dry-run   # Preview
+npm run docs:jsdoc          # Generate JSDoc documentation
+npm run docs:jsdoc:serve    # Serve JSDoc on local server
 ```
 
-## 📋 Markdown Linting Rules
+---
+
+## Markdown Standards
 
 Configuration: `config/.markdownlint.json`
 
-**Enforced Rules:**
+### Enforced Rules
 
 - MD001: Heading levels increment by one
 - MD003: ATX-style headings (`#` not underline)
 - MD022: Blank lines around headings
 - MD031: Blank lines around fenced code blocks
 - MD032: Blank lines around lists
-- MD040: **GLOBAL POLICY** - ALL code blocks MUST have type
+- MD040: ALL code blocks MUST have language type
 
-**Relaxed Rules:**
-
-- MD013: Line length (disabled for links)
-- MD033: Inline HTML (allows specific tags)
-
-**Usage:**
-
-```bash
-npm run lint              # Check all markdown
-npm run lint:fix          # Auto-fix issues
-```
-
-## 🤖 Agent Integration
-
-### markdown-fixer Agent
-
-Location: `.claude/agents/markdown-fixer.md`
-
-**Purpose:** Automatically fixes systematic markdown linting errors across all repositories.
-
-**Triggers:**
-
-- `@markdown-fixer`
-- Markdown lint errors
-- Markdown validation
-
-**Capabilities:**
-
-- Cross-repository analysis
-- Systematic error auto-fix
-- Context-aware fixes
-- Intelligent code block detection
-
-**Usage in Claude Code:**
+### Table Separator Format
 
 ```text
-@markdown-fixer fix all repositories
-@markdown-fixer validate timestamps
-@markdown-fixer generate report
+CORRECT:
+| Column | Column |
+| ------ | ------ |
+
+WRONG:
+| Column | Column |
+|--------|--------|
 ```
 
-## 📚 Workflow Examples
+Rule: one space between pipe and dashes on each side.
 
-### Example 1: Initial Setup
+---
 
-```bash
-# 1. Install dependencies
-npm install
+## Dependencies
 
-# 2. Run initial scan
-npm run scan:report
+### Runtime
 
-# 3. Create organized index
-npm run index
+- `better-sqlite3` — SQLite with FTS5 support
+- `express` — REST API server (port 9000)
+- `chokidar` — File system watcher
+- `node-cron` — Scheduled task runner
+- `mammoth` — DOCX to HTML conversion
+- `turndown` — HTML to Markdown conversion
+- `pdf-parse` — PDF text extraction
+- `natural` — NLP toolkit (TF-IDF keyword extraction)
+- `gray-matter` — Markdown frontmatter parser
+- `fast-glob` — File pattern matching
+- `chalk` — Terminal output styling
+- `zod` — Schema validation
 
-# 4. Validate timestamps
-npm run validate
+### Dev
 
-# 5. Review reports
-cat index/scan-report.md
-cat index/validation-report.md
-```
+- `@mermaid-js/mermaid-cli` — Mermaid diagram rendering
+- `markdownlint-cli2` — Markdown linting
+- `prettier` — Code formatting
+- `husky` + `lint-staged` — Pre-commit hooks
+- `jsdoc` — API documentation generation
 
-## Example 2: Daily Maintenance
+---
 
-```bash
-# Run watcher (leave running)
-npm run watch
-```
+## Integration Points
 
-## Example 3: Fix Linting Issues
+### RootDispatcher
 
-```bash
-# 1. Check for issues
-npm run lint
+- Port 9000 registered in `RootDispatcher/config/port-registry.json`
+- Dispatches indexed as `dispatched_to` relationships in graph
+- Changelog entries tracked via document indexing
 
-# 2. Preview fixes
-node scripts/fix-markdown.mjs --dry-run .
+### Figma MCP
 
-# 3. Apply fixes
-npm run lint:fix
+- FigJam diagram generation via `generate_diagram` tool
+- Diagram URLs stored in `diagrams` table
+- FigJam links inserted into markdown files
 
-# 4. Verify
-npm run lint
-```
+### Claude Code Hooks
 
-## Example 4: Cross-Repository Analysis
+- `post-write` on `.md` files triggers re-lint + re-index
+- `post-commit` triggers scan of changed files
+- Hook endpoint: `POST http://localhost:9000/hook`
 
-```bash
-# 1. Scan all repositories
-npm run scan:report
+### All DVWDesign Repositories
 
-# 2. Review largest files
-grep "Largest Files" index/scan-report.md
+- Scans 14+ repositories for markdown files
+- Monitors file changes via chokidar watcher
+- Provides full-text search across entire ecosystem
 
-# 3. Check for missing timestamps
-npm run validate
+---
 
-# 4. Review validation report
-cat index/validation-report.md
-```
+## RootDispatcher Integration
 
-## 🔗 Integration Points
+**Version:** 1.0 | **Last updated:** 2026-03-10
 
-### With @figma-docs
+This repo is part of the DVWDesign ecosystem coordinated by RootDispatcher.
 
-- Uses same `@figma-core` agent infrastructure (symlinked)
-- Complements documentation sync system
-- Provides markdown quality assurance
+### Session Start Protocol
 
-### With FigmailAPP
+1. Read memory file: `/Users/Shared/htdocs/github/DVWDesign/RootDispatcher/memory/repos/DocuMind.md`
+2. Check pending dispatches: `RootDispatcher/dispatches/pending/ALL/` and `RootDispatcher/dispatches/pending/DocuMind/`
+3. Read shared conventions if needed: `RootDispatcher/memory/global-rules.md`
+4. Apply pending dispatches and move to `dispatches/applied/`
 
-- Ports proven markdown infrastructure
-- Uses same linting configuration
-- Shares markdown-fixer agent logic
+### Session End Protocol
 
-### With All Repositories
+1. Update memory file with current state
+2. Move applied dispatches to `dispatches/applied/`
+3. Append to `RootDispatcher/memory/changelog.jsonl`
+4. Log significant decisions to `RootDispatcher/memory/decisions.jsonl`
 
-- Scans all for markdown files
-- Validates all for consistency
-- Fixes all systematically
+---
 
-## 📊 Generated Outputs
-
-All outputs are in `index/` (gitignored):
-
-| File | Purpose | Generated By |
-|------|---------|-------------|
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| `all-markdown-files.json` | Complete scan data | `npm run scan` |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| `scan-report.md` | Human-readable scan report | `npm run scan:report` |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| `organized-index.md` | Categorized file index | `npm run index` |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| `categories.json` | JSON categories | `npm run index` |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| `validation-report.md` | Timestamp/version validation | `npm run validate` |
-
-## 🎯 Best Practices
-
-1. **Run Scan Regularly**
-   - Use `npm run watch` for continuous monitoring
-   - Or run `npm run scan` weekly
-
-2. **Validate Before Committing**
-   - Always run `npm run lint` before git commit
-   - Fix issues with `npm run lint:fix`
-
-3. **Check Validation Reports**
-   - Review `index/validation-report.md` monthly
-   - Fix missing timestamps/versions
-
-4. **Use Agent for Complex Fixes**
-   - Use `@markdown-fixer` in Claude Code
-   - Let agent handle context-dependent issues
-
-5. **Keep Index Updated**
-   - Use `npm run watch` when actively working
-   - Or run `npm run index` after major changes
-
-## 🔧 Configuration
-
-### Add New Repository
-
-Edit `scripts/scan-all-repos.mjs`:
-
-```javascript
-const REPOS = [
-  // ... existing repos
-  { name: 'NewRepo', priority: 'medium', active: true },
-];
-```
-
-### Customize Linting Rules
-
-Edit `config/.markdownlint.json`:
-
-```json
-{
-  "MD040": true,  // Enforce code block types
-  "MD013": false  // Disable line length
-}
-```
-
-### Adjust Watch Debounce
-
-Edit `scripts/watch-and-index.mjs`:
-
-```javascript
-const DEBOUNCE_MS = 5000; // 5 seconds (adjust as needed)
-```
-
-## 📞 Quick Reference
-
-| Task | Command |
-|------|---------|
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| Install | `npm install` |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| Scan all repos | `npm run scan` |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| Generate report | `npm run scan:report` |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| Create index | `npm run index` |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| Validate files | `npm run validate` |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| Watch for changes | `npm run watch` |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| Lint markdown | `npm run lint` |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| Auto-fix lint | `npm run lint:fix` |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| Fix specific file | `node scripts/fix-markdown.mjs path/to/file.md` |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| Preview fixes | `node scripts/fix-markdown.mjs --dry-run .` |
-
-## 🚨 Troubleshooting
-
-### Error: "all-markdown-files.json not found"
-
-**Solution:** Run `npm run scan` first
-
-### Error: "Repository not found"
-
-**Solution:** Verify repository exists at expected location in `scripts/scan-all-repos.mjs`
-
-### Linting not catching errors
-
-**Solution:** Check `.markdownlint.json` configuration, ensure VSCode extension uses same config
-
-### Watcher not detecting changes
-
-**Solution:** Check file is not in `IGNORE_PATTERNS`, restart watcher
-
-**Version:** 1.0.0
-**Last Updated:** 2025-11-06
-**Status:** ✅ Production Ready
+**Status:** Active (PM2 daemon on port 9000)
+**Engine:** Node.js >= 20.0.0
