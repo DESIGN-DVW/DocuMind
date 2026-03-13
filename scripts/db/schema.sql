@@ -418,8 +418,11 @@ CREATE TABLE IF NOT EXISTS diagrams (
   )),
   name TEXT NOT NULL,
   mermaid_path TEXT,             -- path to .mmd file
-  figjam_url TEXT,               -- FigJam diagram URL
+  figjam_url TEXT,               -- FigJam diagram URL (generated — immutable)
   figjam_file_key TEXT,          -- Figma file key (for reuse within same project file)
+  curated_url TEXT,              -- curated FigJam URL (after moving to central board)
+  curated_at TEXT,               -- when curated_url was set
+  repository TEXT,               -- originating repository name
   generated_at TEXT NOT NULL,
   source_hash TEXT,              -- hash of source data to detect staleness
   stale BOOLEAN DEFAULT 0,
@@ -432,6 +435,8 @@ CREATE INDEX IF NOT EXISTS idx_diagrams_doc ON diagrams(document_id);
 CREATE INDEX IF NOT EXISTS idx_diagrams_folder ON diagrams(folder_node_id);
 CREATE INDEX IF NOT EXISTS idx_diagrams_figjam ON diagrams(figjam_file_key);
 CREATE INDEX IF NOT EXISTS idx_diagrams_stale ON diagrams(stale) WHERE stale = 1;
+CREATE INDEX IF NOT EXISTS idx_diagrams_curated ON diagrams(curated_url) WHERE curated_url IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_diagrams_repo ON diagrams(repository);
 
 -- =============================================================================
 -- FILE CONVERSIONS LOG — v2.0
@@ -510,12 +515,33 @@ SELECT
   dg.diagram_type,
   dg.mermaid_path,
   dg.figjam_url,
+  dg.curated_url,
+  dg.repository,
   dg.generated_at,
+  CASE
+    WHEN dg.curated_url IS NOT NULL THEN 'curated'
+    WHEN dg.stale = 1 THEN 'stale'
+    ELSE 'generated'
+  END as status,
   COALESCE(d.path, fn.path) as source_path
 FROM diagrams dg
 LEFT JOIN documents d ON dg.document_id = d.id
 LEFT JOIN folder_nodes fn ON dg.folder_node_id = fn.id
-WHERE dg.stale = 1;
+WHERE dg.stale = 1 OR dg.curated_url IS NULL;
+
+-- View: Diagrams awaiting curation
+CREATE VIEW IF NOT EXISTS pending_relinks AS
+SELECT
+  id,
+  name,
+  diagram_type,
+  repository,
+  figjam_url AS generated_url,
+  curated_url,
+  mermaid_path,
+  generated_at
+FROM diagrams
+WHERE curated_url IS NULL AND figjam_url IS NOT NULL;
 
 -- =============================================================================
 -- END OF SCHEMA

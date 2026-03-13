@@ -21,6 +21,7 @@ import crypto from 'crypto';
  * @param {number} [options.folderNodeId] - Associated folder node ID
  * @param {string} [options.figjamUrl] - FigJam URL (if already generated)
  * @param {string} [options.figjamFileKey] - Figma file key
+ * @param {string} [options.repository] - Originating repository name
  */
 export async function generateDiagram(db, options) {
   const {
@@ -32,6 +33,7 @@ export async function generateDiagram(db, options) {
     folderNodeId,
     figjamUrl,
     figjamFileKey,
+    repository,
   } = options;
 
   const now = new Date().toISOString();
@@ -69,8 +71,8 @@ export async function generateDiagram(db, options) {
       `
     INSERT INTO diagrams (document_id, folder_node_id, diagram_type, name,
                          mermaid_path, figjam_url, figjam_file_key,
-                         generated_at, source_hash, stale)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+                         repository, generated_at, source_hash, stale)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
   `
     )
     .run(
@@ -81,6 +83,7 @@ export async function generateDiagram(db, options) {
       mermaidPath,
       figjamUrl || null,
       figjamFileKey || null,
+      repository || null,
       now,
       sourceHash
     );

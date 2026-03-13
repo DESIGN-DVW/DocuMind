@@ -11,6 +11,12 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { initScheduler } from './scheduler.mjs';
 import { initWatcher } from './watcher.mjs';
+import {
+  relinkDiagram,
+  propagateRelink,
+  propagateRelinkAllRepos,
+  syncRegistryFromDb,
+} from '../processors/relink-processor.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -239,6 +245,66 @@ app.get('/diagrams', (req, res) => {
 
   const results = db.prepare(sql).all(...params);
   res.json({ count: results.length, diagrams: results });
+});
+
+// Diagram relinking — set curated URL and propagate across markdown
+app.post('/diagrams/relink', async (req, res) => {
+  const { name, curatedUrl } = req.body;
+  if (!name || !curatedUrl) {
+    return res.status(400).json({ error: 'Missing "name" or "curatedUrl"' });
+  }
+
+  const result = relinkDiagram(db, name, curatedUrl);
+  if (!result) {
+    return res.status(404).json({ error: `Diagram "${name}" not found` });
+  }
+
+  // Propagate URL change across all repos
+  const registryPath = path.join(ROOT, '../RootDispatcher/config/repository-registry.json');
+  let propagated = {};
+  if (result.oldUrl) {
+    try {
+      propagated = await propagateRelinkAllRepos(db, result.oldUrl, curatedUrl, registryPath);
+    } catch (err) {
+      console.error('[relink] propagation error:', err.message);
+    }
+  }
+
+  res.json({
+    status: 'relinked',
+    diagram: name,
+    oldUrl: result.oldUrl,
+    curatedUrl,
+    propagated,
+  });
+});
+
+// List diagrams awaiting curation
+app.get('/diagrams/pending-relinks', (_req, res) => {
+  const hasView = db
+    .prepare(
+      `SELECT COUNT(*) as count FROM sqlite_master WHERE type='view' AND name='pending_relinks'`
+    )
+    .get();
+  if (!hasView.count) return res.json({ pending: [] });
+
+  const pending = db.prepare('SELECT * FROM pending_relinks').all();
+  res.json({ count: pending.length, pending });
+});
+
+// Regenerate DIAGRAM-REGISTRY.md from database for a repo
+app.post('/diagrams/sync-registry', async (req, res) => {
+  const { repository, repoPath } = req.body;
+  if (!repository || !repoPath) {
+    return res.status(400).json({ error: 'Missing "repository" or "repoPath"' });
+  }
+
+  try {
+    const result = await syncRegistryFromDb(db, repository, repoPath);
+    res.json({ status: 'synced', ...result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // --- Start ---
