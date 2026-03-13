@@ -204,6 +204,109 @@ export async function syncRegistryFromDb(db, repository, repoPath) {
 }
 
 // ---------------------------------------------------------------------------
+// Reverse sync: registry markdown → DB
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse DIAGRAM-REGISTRY.md and upsert rows into the database.
+ * Used when users manually edit the registry file.
+ * @param {import('better-sqlite3').Database} db
+ * @param {string} repository - Repository name
+ * @param {string} repoPath - Filesystem path to the repo root
+ * @returns {Promise<{ synced: number, created: number, updated: number }>}
+ */
+export async function reverseSyncFromRegistry(db, repository, repoPath) {
+  const registryPath = path.join(repoPath, REGISTRY_REL);
+  const { rows } = await parseRegistryMarkdown(registryPath);
+
+  let created = 0;
+  let updated = 0;
+
+  for (const row of rows) {
+    const existing = db
+      .prepare('SELECT id FROM diagrams WHERE name = ? AND repository = ?')
+      .get(row.diagram, repository);
+
+    const now = new Date().toISOString();
+
+    if (existing) {
+      db.prepare(
+        `UPDATE diagrams
+         SET curated_url = CASE WHEN ? != '' THEN ? ELSE curated_url END,
+             curated_at = CASE WHEN ? != '' THEN ? ELSE curated_at END,
+             stale = CASE WHEN ? = 'stale' THEN 1 ELSE 0 END
+         WHERE id = ?`
+      ).run(row.curatedUrl, row.curatedUrl, row.curatedUrl, now, row.status, existing.id);
+      updated++;
+    } else {
+      // Infer diagram type from file name or default to flowchart
+      db.prepare(
+        `INSERT INTO diagrams (name, diagram_type, mermaid_path, figjam_url, curated_url,
+                               curated_at, repository, generated_at, source_hash, stale)
+         VALUES (?, 'flowchart', ?, ?, ?, ?, ?, ?, '', 0)`
+      ).run(
+        row.diagram,
+        row.mmd ? path.join(repoPath, 'docs/diagrams', row.mmd) : null,
+        row.generatedUrl || null,
+        row.curatedUrl || null,
+        row.curatedUrl ? now : null,
+        repository,
+        row.updated || now
+      );
+      created++;
+    }
+  }
+
+  return { synced: rows.length, created, updated };
+}
+
+// ---------------------------------------------------------------------------
+// Bulk relink: multiple diagrams at once
+// ---------------------------------------------------------------------------
+
+/**
+ * Relink multiple diagrams in a single operation.
+ * @param {import('better-sqlite3').Database} db
+ * @param {Record<string, string>} mappings - Map of diagram name → curated URL
+ * @param {string} [registryPath] - Path to repository-registry.json for propagation
+ * @returns {Promise<{ results: Array<{name: string, status: string, oldUrl?: string}>, propagated: Record<string, string[]> }>}
+ */
+export async function bulkRelink(db, mappings, registryPath) {
+  const results = [];
+  const allPropagations = {};
+
+  for (const [name, curatedUrl] of Object.entries(mappings)) {
+    const result = relinkDiagram(db, name, curatedUrl);
+    if (!result) {
+      results.push({ name, status: 'not_found' });
+      continue;
+    }
+
+    results.push({ name, status: 'relinked', oldUrl: result.oldUrl });
+
+    // Propagate URL change
+    if (result.oldUrl && registryPath) {
+      try {
+        const propagated = await propagateRelinkAllRepos(
+          db,
+          result.oldUrl,
+          curatedUrl,
+          registryPath
+        );
+        for (const [repo, files] of Object.entries(propagated)) {
+          if (!allPropagations[repo]) allPropagations[repo] = [];
+          allPropagations[repo].push(...files);
+        }
+      } catch {
+        // Continue with other mappings on propagation error
+      }
+    }
+  }
+
+  return { results, propagated: allPropagations };
+}
+
+// ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
 

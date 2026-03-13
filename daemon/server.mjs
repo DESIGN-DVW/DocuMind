@@ -16,7 +16,10 @@ import {
   propagateRelink,
   propagateRelinkAllRepos,
   syncRegistryFromDb,
+  reverseSyncFromRegistry,
+  bulkRelink,
 } from '../processors/relink-processor.mjs';
+import { processHook } from './hooks.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -62,12 +65,31 @@ app.get('/stats', (_req, res) => {
     .prepare('SELECT scan_completed FROM scan_history ORDER BY scan_completed DESC LIMIT 1')
     .get();
 
+  // Pending relinks + stale diagrams
+  let pendingRelinks = 0;
+  let staleDiagrams = 0;
+  if (diagrams_exist.count > 0) {
+    const hasRelinksView = db
+      .prepare(
+        `SELECT COUNT(*) as count FROM sqlite_master WHERE type='view' AND name='pending_relinks'`
+      )
+      .get();
+    if (hasRelinksView.count) {
+      pendingRelinks = db.prepare('SELECT COUNT(*) as count FROM pending_relinks').get().count;
+    }
+    staleDiagrams = db
+      .prepare('SELECT COUNT(*) as count FROM diagrams WHERE stale = 1')
+      .get().count;
+  }
+
   res.json({
     documents: docs.count,
     repositories: repos.count,
     open_issues: issues.count,
     keywords: keywordCount,
     diagrams: diagramCount,
+    pending_relinks: pendingRelinks,
+    stale_diagrams: staleDiagrams,
     last_scan: lastScan?.scan_completed || null,
     uptime: process.uptime(),
   });
@@ -185,11 +207,11 @@ app.post('/convert', (req, res) => {
 });
 
 // Claude hook receiver
-app.post('/hook', (req, res) => {
+app.post('/hook', async (req, res) => {
   const { event, file, repo } = req.body;
   console.log(`[hook] ${event} — ${file || repo || 'unknown'}`);
-  res.json({ status: 'received', event });
-  // TODO: trigger appropriate action based on event type
+  const result = await processHook(db, req.body);
+  res.json({ status: 'received', event, ...(result || {}) });
 });
 
 // Keywords
@@ -301,6 +323,37 @@ app.post('/diagrams/sync-registry', async (req, res) => {
 
   try {
     const result = await syncRegistryFromDb(db, repository, repoPath);
+    res.json({ status: 'synced', ...result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Bulk relink — multiple diagrams in one call
+app.post('/diagrams/bulk-relink', async (req, res) => {
+  const { mappings } = req.body;
+  if (!mappings || typeof mappings !== 'object' || Object.keys(mappings).length === 0) {
+    return res.status(400).json({ error: 'Missing "mappings" object { diagramName: curatedUrl }' });
+  }
+
+  const registryPath = path.join(ROOT, '../RootDispatcher/config/repository-registry.json');
+  try {
+    const result = await bulkRelink(db, mappings, registryPath);
+    res.json({ status: 'completed', ...result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Reverse sync — parse DIAGRAM-REGISTRY.md and upsert into DB
+app.post('/diagrams/reverse-sync', async (req, res) => {
+  const { repository, repoPath } = req.body;
+  if (!repository || !repoPath) {
+    return res.status(400).json({ error: 'Missing "repository" or "repoPath"' });
+  }
+
+  try {
+    const result = await reverseSyncFromRegistry(db, repository, repoPath);
     res.json({ status: 'synced', ...result });
   } catch (err) {
     res.status(500).json({ error: err.message });

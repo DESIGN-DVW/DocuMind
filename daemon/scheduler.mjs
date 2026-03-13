@@ -76,9 +76,46 @@ export function initScheduler(db, root) {
     console.log('[scheduler] Weekly analysis completed');
   });
 
+  // Every 6 hours: check for diagrams pending curation
+  cron.schedule('0 */6 * * *', () => {
+    console.log('[scheduler] Checking pending diagram relinks...');
+    const hasView = db
+      .prepare(
+        `SELECT COUNT(*) as count FROM sqlite_master WHERE type='view' AND name='pending_relinks'`
+      )
+      .get();
+
+    if (!hasView.count) {
+      console.log('[scheduler] pending_relinks view not found — run migration');
+      return;
+    }
+
+    const pending = db.prepare('SELECT * FROM pending_relinks').all();
+    if (pending.length === 0) {
+      console.log('[scheduler] No diagrams pending curation');
+      return;
+    }
+
+    console.log(`[scheduler] ${pending.length} diagram(s) awaiting curation:`);
+    for (const d of pending) {
+      console.log(`  - "${d.name}" (${d.repository || 'unknown repo'}) → ${d.generated_url}`);
+    }
+
+    // Update statistics
+    const now = new Date().toISOString();
+    db.prepare(
+      `
+      INSERT INTO statistics (stat_name, stat_value, updated_at)
+      VALUES ('pending_relinks', ?, ?)
+      ON CONFLICT(stat_name) DO UPDATE SET stat_value = ?, updated_at = ?
+    `
+    ).run(String(pending.length), now, String(pending.length), now);
+  });
+
   console.log('[scheduler] Cron jobs registered:');
   console.log('  */15 * * * *  — heartbeat + stats');
   console.log('  0 * * * *     — hourly incremental scan');
+  console.log('  0 */6 * * *   — pending diagram relinks check');
   console.log('  0 2 * * *     — daily full scan + analysis');
   console.log('  0 3 * * 0     — weekly deep analysis');
 }
