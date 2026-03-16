@@ -7,8 +7,13 @@
  */
 
 import { watch } from 'chokidar';
+import fs from 'fs/promises';
 import path from 'path';
 import { writingNow } from './registry-lock.mjs';
+import {
+  reverseSyncFromRegistry,
+  propagateRelinkAllRepos,
+} from '../processors/relink-processor.mjs';
 
 const REPOS_ROOT = '/Users/Shared/htdocs/github/DVWDesign';
 
@@ -31,6 +36,7 @@ const IGNORE_PATTERNS = [
 ];
 
 const DEBOUNCE_MS = 5000;
+let ROOT = null;
 let debounceTimer = null;
 const pendingChanges = new Set();
 
@@ -39,6 +45,7 @@ const pendingChanges = new Set();
  * @param {string} root - DocuMind root directory
  */
 export function initWatcher(db, root) {
+  ROOT = root;
   console.log('[watcher] Initializing file watcher...');
 
   const watcher = watch(WATCH_PATTERNS, {
@@ -89,39 +96,117 @@ export function initWatcher(db, root) {
   return watcher;
 }
 
-function processPendingChanges(db) {
-  const changes = [...pendingChanges].map(s => JSON.parse(s));
-  pendingChanges.clear();
+async function processPendingChanges(db) {
+  try {
+    const changes = [...pendingChanges].map(s => JSON.parse(s));
+    pendingChanges.clear();
 
-  console.log(`[watcher] Processing ${changes.length} change(s)...`);
+    console.log(`[watcher] Processing ${changes.length} change(s)...`);
 
-  for (const change of changes) {
-    const ext = path.extname(change.path).toLowerCase();
+    for (const change of changes) {
+      const ext = path.extname(change.path).toLowerCase();
 
-    if (change.event === 'unlink') {
-      // Remove from database
-      db.prepare('DELETE FROM documents WHERE path = ?').run(change.path);
-      console.log(`[watcher] Removed from index: ${change.path}`);
-      continue;
+      if (change.event === 'unlink') {
+        // Remove from database
+        db.prepare('DELETE FROM documents WHERE path = ?').run(change.path);
+        console.log(`[watcher] Removed from index: ${change.path}`);
+        continue;
+      }
+
+      // Determine repository from path (used for non-registry .md files)
+      const repoMatch = change.path.replace(REPOS_ROOT + '/', '').split('/')[0];
+
+      switch (ext) {
+        case '.md': {
+          if (path.basename(change.path) === 'DIAGRAM-REGISTRY.md') {
+            // Resolve repo from repository-registry.json (handles compound paths like FigmaAPI/FigmailAPP)
+            const registryJsonPath = path.join(
+              ROOT,
+              '../RootDispatcher/config/repository-registry.json'
+            );
+            const registryJson = JSON.parse(await fs.readFile(registryJsonPath, 'utf-8'));
+            const repoEntry = registryJson.repositories.find(
+              r =>
+                r.active === true &&
+                change.path.startsWith(path.join(registryJson.basePath, r.path) + '/')
+            );
+            if (!repoEntry) {
+              console.log(`[watcher] DIAGRAM-REGISTRY.md change in unknown repo: ${change.path}`);
+              break;
+            }
+            const repoName = repoEntry.name;
+            const repoPath = path.join(registryJson.basePath, repoEntry.path);
+
+            console.log(
+              `[watcher] DIAGRAM-REGISTRY.md changed in ${repoName} — starting reverse sync`
+            );
+
+            // Snapshot: diagrams with no curated_url before reverse sync (for WATCH-03)
+            const prevNoCurated = db
+              .prepare(
+                'SELECT name, figjam_url FROM diagrams WHERE repository = ? AND curated_url IS NULL'
+              )
+              .all(repoName);
+
+            // Reverse sync: file -> DB
+            const result = await reverseSyncFromRegistry(db, repoName, repoPath);
+            console.log(
+              `[watcher] Reverse sync complete for ${repoName}: ${result.synced} synced, ${result.created} created, ${result.updated} updated`
+            );
+
+            // WATCH-03: Detect newly-curated URLs and propagate
+            if (prevNoCurated.length > 0) {
+              const newlyCurated = prevNoCurated.filter(row => {
+                const updated = db
+                  .prepare('SELECT curated_url FROM diagrams WHERE name = ? AND repository = ?')
+                  .get(row.name, repoName);
+                return updated?.curated_url != null;
+              });
+
+              if (newlyCurated.length > 0) {
+                console.log(
+                  `[watcher] ${newlyCurated.length} newly-curated diagram(s) — propagating`
+                );
+                for (const diagram of newlyCurated) {
+                  if (diagram.figjam_url) {
+                    const curatedUrl = db
+                      .prepare('SELECT curated_url FROM diagrams WHERE name = ? AND repository = ?')
+                      .get(diagram.name, repoName)?.curated_url;
+                    try {
+                      await propagateRelinkAllRepos(
+                        db,
+                        diagram.figjam_url,
+                        curatedUrl,
+                        registryJsonPath
+                      );
+                    } catch (err) {
+                      console.error(
+                        `[watcher] Propagation error for ${diagram.name}:`,
+                        err.message
+                      );
+                    }
+                  }
+                }
+              }
+            }
+          } else {
+            // TODO: trigger markdown-processor re-index for this file
+            console.log(`[watcher] Queued markdown re-index: ${change.path} (repo: ${repoMatch})`);
+          }
+          break;
+        }
+        case '.pdf':
+          // TODO: trigger pdf-processor
+          console.log(`[watcher] Queued PDF processing: ${change.path}`);
+          break;
+        case '.docx':
+        case '.rtf':
+          // TODO: trigger word-processor conversion
+          console.log(`[watcher] Queued conversion: ${change.path}`);
+          break;
+      }
     }
-
-    // Determine repository from path
-    const repoMatch = change.path.replace(REPOS_ROOT + '/', '').split('/')[0];
-
-    switch (ext) {
-      case '.md':
-        // TODO: trigger markdown-processor re-index for this file
-        console.log(`[watcher] Queued markdown re-index: ${change.path} (repo: ${repoMatch})`);
-        break;
-      case '.pdf':
-        // TODO: trigger pdf-processor
-        console.log(`[watcher] Queued PDF processing: ${change.path}`);
-        break;
-      case '.docx':
-      case '.rtf':
-        // TODO: trigger word-processor conversion
-        console.log(`[watcher] Queued conversion: ${change.path}`);
-        break;
-    }
+  } catch (err) {
+    console.error('[watcher] processPendingChanges error:', err.message);
   }
 }
