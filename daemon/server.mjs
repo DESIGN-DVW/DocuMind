@@ -8,6 +8,7 @@
 import express from 'express';
 import Database from 'better-sqlite3';
 import fs from 'fs/promises';
+import { readFileSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initScheduler } from './scheduler.mjs';
@@ -29,6 +30,14 @@ const ROOT = path.resolve(__dirname, '..');
 
 const PORT = process.env.PORT || 9000;
 const DB_PATH = process.env.DOCUMIND_DB || path.join(ROOT, 'data/documind.db');
+
+// --- Repository Registry (for PNG serving) ---
+const registryPath = path.join(ROOT, '../RootDispatcher/config/repository-registry.json');
+const registryJson = JSON.parse(readFileSync(registryPath, 'utf-8'));
+const REPOS_ROOT = registryJson.basePath;
+const repoRegistry = new Map(
+  registryJson.repositories.filter(r => r.active !== false).map(r => [r.name, r.path])
+);
 
 // --- Database ---
 const db = new Database(DB_PATH);
