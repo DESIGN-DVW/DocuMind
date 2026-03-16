@@ -8,11 +8,28 @@
 
 import fs from 'fs/promises';
 import path from 'path';
+import { writingNow } from '../daemon/registry-lock.mjs';
 
 // ---------------------------------------------------------------------------
 // Registry path relative to a repo root
 // ---------------------------------------------------------------------------
 const REGISTRY_REL = 'docs/diagrams/DIAGRAM-REGISTRY.md';
+
+// ---------------------------------------------------------------------------
+// Status derivation — single source of truth
+// ---------------------------------------------------------------------------
+
+/**
+ * Canonical status derivation for a diagram row.
+ * Single source of truth — called by all sync paths.
+ * @param {{ curated_url?: string|null, stale?: number|boolean }} diagram
+ * @returns {'curated' | 'stale' | 'generated'}
+ */
+export function computeStatus(diagram) {
+  if (diagram.curated_url) return 'curated';
+  if (diagram.stale) return 'stale';
+  return 'generated';
+}
 
 // ---------------------------------------------------------------------------
 // Database operations
@@ -27,19 +44,19 @@ const REGISTRY_REL = 'docs/diagrams/DIAGRAM-REGISTRY.md';
  */
 export function relinkDiagram(db, name, curatedUrl) {
   const row = db
-    .prepare('SELECT id, figjam_url, curated_url FROM diagrams WHERE name = ?')
+    .prepare('SELECT id, figjam_url, curated_url, repository FROM diagrams WHERE name = ?')
     .get(name);
 
   if (!row) return null;
 
   const now = new Date().toISOString();
-  db.prepare('UPDATE diagrams SET curated_url = ?, curated_at = ? WHERE id = ?').run(
+  db.prepare('UPDATE diagrams SET curated_url = ?, curated_at = ?, stale = 0 WHERE id = ?').run(
     curatedUrl,
     now,
     row.id
   );
 
-  return { id: row.id, oldUrl: row.figjam_url };
+  return { id: row.id, oldUrl: row.figjam_url, repository: row.repository };
 }
 
 // ---------------------------------------------------------------------------
@@ -192,15 +209,31 @@ export async function syncRegistryFromDb(db, repository, repoPath) {
     png: d.mermaid_path ? path.basename(d.mermaid_path, '.mmd') + '.png' : '',
     generatedUrl: d.figjam_url || '',
     curatedUrl: d.curated_url || '',
-    status: d.curated_url ? 'curated' : d.stale ? 'stale' : 'generated',
+    status: computeStatus(d),
     updated: (d.curated_at || d.generated_at || '').slice(0, 10),
   }));
 
   const registryPath = path.join(repoPath, REGISTRY_REL);
   await fs.mkdir(path.dirname(registryPath), { recursive: true });
-  await writeRegistryMarkdown(registryPath, rows, `# Diagram Registry — ${repository}`);
+  await safeWriteRegistry(registryPath, rows, `# Diagram Registry — ${repository}`);
 
   return { path: registryPath, count: rows.length };
+}
+
+/**
+ * Write registry markdown with in-flight guard.
+ * Prevents watcher from re-processing our own writes.
+ * @param {string} filePath
+ * @param {RegistryRow[]} rows
+ * @param {string} header
+ */
+export async function safeWriteRegistry(filePath, rows, header) {
+  writingNow.add(filePath);
+  try {
+    await writeRegistryMarkdown(filePath, rows, header);
+  } finally {
+    setTimeout(() => writingNow.delete(filePath), 3000);
+  }
 }
 
 // ---------------------------------------------------------------------------
