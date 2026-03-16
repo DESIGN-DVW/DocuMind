@@ -48,6 +48,9 @@ db.pragma('journal_mode = WAL');
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 
+// Dashboard static files
+app.use('/dashboard', express.static(path.join(ROOT, 'dashboard')));
+
 // Health check
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', version: '2.0.0', uptime: process.uptime() });

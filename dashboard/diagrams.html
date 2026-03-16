@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DocuMind — Diagram Curation Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 14px;
+      color: #1e293b;
+      background: #f8fafc;
+      padding: 24px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #0f172a;
+      margin-bottom: 16px;
+    }
+
+    /* Error banner */
+    #error-banner {
+      display: none;
+      background: #fef2f2;
+      border: 1px solid #fca5a5;
+      color: #dc2626;
+      padding: 10px 14px;
+      border-radius: 6px;
+      margin-bottom: 14px;
+      font-size: 0.875rem;
+    }
+
+    /* Filter controls */
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 16px;
+      padding: 12px 16px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+    }
+
+    .filter-row label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #64748b;
+      margin-right: 2px;
+    }
+
+    .filter-row select,
+    .filter-row input[type="text"] {
+      padding: 6px 10px;
+      border: 1px solid #cbd5e1;
+      border-radius: 5px;
+      font-size: 0.875rem;
+      color: #1e293b;
+      background: #fff;
+      height: 34px;
+    }
+
+    .filter-row select:focus,
+    .filter-row input[type="text"]:focus {
+      outline: none;
+      border-color: #6366f1;
+      box-shadow: 0 0 0 2px rgba(99,102,241,0.15);
+    }
+
+    .filter-row input[type="text"] {
+      min-width: 180px;
+    }
+
+    .btn {
+      padding: 6px 14px;
+      border: none;
+      border-radius: 5px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      height: 34px;
+      transition: background 0.15s;
+    }
+
+    .btn-primary {
+      background: #6366f1;
+      color: #fff;
+    }
+
+    .btn-primary:hover { background: #4f46e5; }
+
+    .btn-secondary {
+      background: #e2e8f0;
+      color: #475569;
+    }
+
+    .btn-secondary:hover { background: #cbd5e1; }
+
+    .btn-sm {
+      padding: 3px 10px;
+      font-size: 0.8rem;
+      height: 28px;
+    }
+
+    .btn-curate {
+      background: #6366f1;
+      color: #fff;
+    }
+
+    .btn-curate:hover { background: #4f46e5; }
+
+    .btn-delete {
+      background: #f1f5f9;
+      color: #64748b;
+      border: 1px solid #cbd5e1;
+    }
+
+    .btn-delete:hover { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
+
+    .row-count {
+      margin-left: auto;
+      font-size: 0.8rem;
+      color: #94a3b8;
+    }
+
+    /* Table */
+    .table-wrapper {
+      overflow-x: auto;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      background: #fff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+
+    thead th {
+      background: #f1f5f9;
+      color: #475569;
+      font-weight: 600;
+      text-align: left;
+      padding: 10px 14px;
+      border-bottom: 1px solid #e2e8f0;
+      white-space: nowrap;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid #f1f5f9;
+      transition: background 0.1s;
+    }
+
+    tbody tr:last-child { border-bottom: none; }
+
+    tbody tr:nth-child(even) { background: #fafafa; }
+
+    tbody tr:hover { background: #f0f4ff; }
+
+    tbody td {
+      padding: 9px 14px;
+      vertical-align: middle;
+    }
+
+    td.name-cell {
+      font-weight: 500;
+      color: #0f172a;
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    td a {
+      color: #6366f1;
+      text-decoration: none;
+    }
+
+    td a:hover { text-decoration: underline; }
+
+    /* Status badges */
+    .badge {
+      display: inline-block;
+      padding: 2px 9px;
+      border-radius: 12px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+      color: #fff;
+    }
+
+    .badge-curated   { background: #22c55e; }
+    .badge-stale     { background: #f59e0b; }
+    .badge-generated { background: #64748b; }
+
+    /* PNG thumbnails */
+    img.thumb {
+      width: 48px;
+      height: 36px;
+      object-fit: cover;
+      border-radius: 3px;
+      cursor: pointer;
+      border: 1px solid #e2e8f0;
+      display: block;
+    }
+
+    .no-thumb {
+      color: #cbd5e1;
+      font-size: 0.8rem;
+    }
+
+    /* Actions */
+    .actions {
+      display: flex;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: #94a3b8;
+    }
+
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 24px;
+      color: #94a3b8;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Diagram Curation Dashboard</h1>
+
+  <div id="error-banner"></div>
+
+  <div class="filter-row">
+    <label for="filter-repo">Repo:</label>
+    <select id="filter-repo">
+      <option value="">All repos</option>
+    </select>
+
+    <label for="filter-status">Status:</label>
+    <select id="filter-status">
+      <option value="">All statuses</option>
+      <option value="generated">generated</option>
+      <option value="stale">stale</option>
+      <option value="curated">curated</option>
+    </select>
+
+    <label for="filter-text">Name:</label>
+    <input id="filter-text" type="text" placeholder="Search by name...">
+
+    <button class="btn btn-primary" onclick="applyFilters()">Filter</button>
+    <button class="btn btn-secondary" onclick="resetFilters()">Reset</button>
+    <button class="btn btn-secondary" onclick="loadDiagrams()">Refresh</button>
+
+    <span class="row-count" id="row-count"></span>
+  </div>
+
+  <div class="table-wrapper">
+    <table id="diagram-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Repo</th>
+          <th>Status</th>
+          <th>Generated URL</th>
+          <th>Curated URL</th>
+          <th>PNG</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="diagram-tbody">
+        <tr><td colspan="7" class="loading">Loading diagrams...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    var allRows = [];
+
+    // ----------------------------------------------------------------
+    // Data loading
+    // ----------------------------------------------------------------
+
+    async function loadDiagrams() {
+      var tbody = document.getElementById('diagram-tbody');
+      tbody.innerHTML = '<tr><td colspan="7" class="loading">Loading diagrams...</td></tr>';
+      showError('');
+
+      try {
+        var res = await fetch('/diagrams');
+        if (!res.ok) {
+          showError('Failed to load diagrams: HTTP ' + res.status);
+          tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Failed to load diagrams.</td></tr>';
+          return;
+        }
+        var data = await res.json();
+        allRows = data.diagrams || [];
+        populateRepoFilter();
+        applyFilters();
+      } catch (err) {
+        showError('Network error loading diagrams: ' + err.message);
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Network error — is the daemon running?</td></tr>';
+      }
+    }
+
+    // ----------------------------------------------------------------
+    // Filters
+    // ----------------------------------------------------------------
+
+    function populateRepoFilter() {
+      var sel = document.getElementById('filter-repo');
+      // Preserve current selection
+      var current = sel.value;
+      // Clear all but the first "All repos" option
+      while (sel.options.length > 1) sel.remove(1);
+      var repos = allRows.map(function(r) { return r.repository; });
+      repos = repos.filter(function(v, i, a) { return a.indexOf(v) === i; }).sort();
+      repos.forEach(function(repo) {
+        var opt = document.createElement('option');
+        opt.value = repo;
+        opt.textContent = repo;
+        sel.appendChild(opt);
+      });
+      // Restore selection if still valid
+      if (current) sel.value = current;
+    }
+
+    function applyFilters() {
+      var repo   = document.getElementById('filter-repo').value;
+      var status = document.getElementById('filter-status').value;
+      var text   = document.getElementById('filter-text').value.toLowerCase().trim();
+
+      var filtered = allRows.filter(function(r) {
+        return (!repo   || r.repository === repo) &&
+               (!status || r.status === status) &&
+               (!text   || r.name.toLowerCase().indexOf(text) !== -1);
+      });
+
+      renderTable(filtered);
+    }
+
+    function resetFilters() {
+      document.getElementById('filter-repo').value   = '';
+      document.getElementById('filter-status').value = '';
+      document.getElementById('filter-text').value   = '';
+      renderTable(allRows);
+    }
+
+    // ----------------------------------------------------------------
+    // Table rendering
+    // ----------------------------------------------------------------
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function renderTable(rows) {
+      var tbody = document.getElementById('diagram-tbody');
+      var count = document.getElementById('row-count');
+      tbody.innerHTML = '';
+
+      if (rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No diagrams match the current filters.</td></tr>';
+        count.textContent = '0 diagrams';
+        return;
+      }
+
+      count.textContent = rows.length + ' diagram' + (rows.length === 1 ? '' : 's');
+
+      rows.forEach(function(row) {
+        var tr = document.createElement('tr');
+        tr.id = 'row-' + row.name;
+
+        var figjamCell = row.figjam_url
+          ? '<a href="' + escapeHtml(row.figjam_url) + '" target="_blank" rel="noopener">Link</a>'
+          : '<span style="color:#cbd5e1">—</span>';
+
+        var curatedCell = row.curated_url
+          ? '<a href="' + escapeHtml(row.curated_url) + '" target="_blank" rel="noopener">Link</a>'
+          : '<span style="color:#cbd5e1">—</span>';
+
+        var pngCell = row.png_url
+          ? '<img class="thumb" src="' + escapeHtml(row.png_url) + '" alt="' + escapeHtml(row.name) + '" loading="lazy" onerror="this.style.display=\'none\'">'
+          : '<span class="no-thumb">—</span>';
+
+        tr.innerHTML =
+          '<td class="name-cell" title="' + escapeHtml(row.name) + '">' + escapeHtml(row.name) + '</td>' +
+          '<td>' + escapeHtml(row.repository) + '</td>' +
+          '<td><span id="badge-' + escapeHtml(row.name) + '" class="badge badge-' + escapeHtml(row.status) + '">' + escapeHtml(row.status) + '</span></td>' +
+          '<td>' + figjamCell + '</td>' +
+          '<td id="curated-' + escapeHtml(row.name) + '">' + curatedCell + '</td>' +
+          '<td>' + pngCell + '</td>' +
+          '<td class="actions">' +
+            '<button class="btn btn-sm btn-curate" onclick="curate(\'' + escapeHtml(row.name) + '\')">Curate</button>' +
+            '<button class="btn btn-sm btn-delete" onclick="markDeleted(\'' + escapeHtml(row.name) + '\')">Mark deleted</button>' +
+          '</td>';
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    // ----------------------------------------------------------------
+    // Actions
+    // ----------------------------------------------------------------
+
+    async function curate(name) {
+      var url = prompt('Enter curated URL for "' + name + '":');
+      if (!url || !url.trim()) return;
+      url = url.trim();
+
+      try {
+        var res = await fetch('/diagrams/relink', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: name, curatedUrl: url })
+        });
+
+        if (res.ok) {
+          // Update in-memory data — confirmed server success only (no optimistic update)
+          var row = allRows.find(function(r) { return r.name === name; });
+          if (row) {
+            row.curated_url = url;
+            row.status = 'curated';
+          }
+          // Update badge
+          var badge = document.getElementById('badge-' + name);
+          if (badge) {
+            badge.className = 'badge badge-curated';
+            badge.textContent = 'curated';
+          }
+          // Update curated cell
+          var curatedCell = document.getElementById('curated-' + name);
+          if (curatedCell) {
+            curatedCell.innerHTML = '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener">Link</a>';
+          }
+          showError('');
+        } else {
+          var errData = await res.json().catch(function() { return { error: 'Unknown error' }; });
+          showError('Curate failed for "' + name + '": ' + (errData.error || 'HTTP ' + res.status));
+        }
+      } catch (err) {
+        showError('Network error during curate: ' + err.message);
+      }
+    }
+
+    async function markDeleted(name) {
+      if (!confirm('Mark "' + name + '" standalone as deleted? This action cannot be undone.')) return;
+
+      try {
+        var res = await fetch('/diagrams/mark-standalone-deleted', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: name })
+        });
+
+        if (res.ok) {
+          showError('');
+          var tr = document.getElementById('row-' + name);
+          if (tr) tr.style.opacity = '0.4';
+        } else {
+          var errData = await res.json().catch(function() { return { error: 'Endpoint not yet available (Phase 5)' }; });
+          showError('Mark deleted failed for "' + name + '": ' + (errData.error || 'HTTP ' + res.status));
+        }
+      } catch (err) {
+        showError('Network error during mark-deleted: ' + err.message);
+      }
+    }
+
+    // ----------------------------------------------------------------
+    // UI helpers
+    // ----------------------------------------------------------------
+
+    function showError(msg) {
+      var el = document.getElementById('error-banner');
+      el.textContent = msg;
+      el.style.display = msg ? 'block' : 'none';
+    }
+
+    // ----------------------------------------------------------------
+    // Init
+    // ----------------------------------------------------------------
+
+    // Attach Enter key listener on name filter input
+    document.getElementById('filter-text').addEventListener('keyup', function(e) {
+      if (e.key === 'Enter') applyFilters();
+    });
+
+    // Load on page start
+    loadDiagrams();
+  </script>
+
+</body>
+</html>
