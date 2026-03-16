@@ -281,6 +281,50 @@ app.get('/diagrams', (req, res) => {
   res.json({ count: enriched.length, diagrams: enriched });
 });
 
+// Flat map of all diagram active URLs — agent consumption
+app.get('/diagrams/active-urls', (_req, res) => {
+  const hasTable = db
+    .prepare(`SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='diagrams'`)
+    .get();
+  if (!hasTable.count) return res.json({});
+
+  const rows = db.prepare('SELECT name, figjam_url, curated_url FROM diagrams').all();
+  const urlMap = {};
+  for (const row of rows) {
+    urlMap[row.name] = row.curated_url || row.figjam_url || null;
+  }
+  res.json(urlMap);
+});
+
+// Single diagram lookup — agent-facing, returns active URL + PNG URL + markdown snippet
+app.get('/diagrams/lookup/:name', (req, res) => {
+  const { name } = req.params;
+  const hasTable = db
+    .prepare(`SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='diagrams'`)
+    .get();
+  if (!hasTable.count) return res.status(404).json({ error: `Diagram "${name}" not found` });
+
+  const row = db.prepare('SELECT * FROM diagrams WHERE name = ?').get(name);
+  if (!row) return res.status(404).json({ error: `Diagram "${name}" not found` });
+
+  const activeUrl = row.curated_url || row.figjam_url || null;
+  const pngUrl = `/diagrams/png/${row.repository}/${row.name}.png`;
+  const markdownSnippet = activeUrl
+    ? `[![${row.name}](${pngUrl})](${activeUrl})`
+    : `![${row.name}](${pngUrl})`;
+
+  res.json({
+    name: row.name,
+    repository: row.repository,
+    active_url: activeUrl,
+    png_url: pngUrl,
+    figjam_url: row.figjam_url || null,
+    curated_url: row.curated_url || null,
+    status: computeStatus(row),
+    markdown_snippet: markdownSnippet,
+  });
+});
+
 // Diagram relinking — set curated URL and propagate across markdown
 app.post('/diagrams/relink', async (req, res) => {
   const { name, curatedUrl } = req.body;
