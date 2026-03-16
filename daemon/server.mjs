@@ -19,6 +19,7 @@ import {
   syncRegistryFromDb,
   reverseSyncFromRegistry,
   bulkRelink,
+  computeStatus,
 } from '../processors/relink-processor.mjs';
 import { processHook } from './hooks.mjs';
 
@@ -247,7 +248,7 @@ app.get('/keywords', (req, res) => {
 
 // Diagrams
 app.get('/diagrams', (req, res) => {
-  const { type, stale } = req.query;
+  const { type, stale, repository } = req.query;
   const hasTable = db
     .prepare(`SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='diagrams'`)
     .get();
@@ -263,11 +264,21 @@ app.get('/diagrams', (req, res) => {
   if (stale === 'true') {
     conditions.push('stale = 1');
   }
+  if (repository) {
+    conditions.push('repository = ?');
+    params.push(repository);
+  }
   if (conditions.length) sql += ' WHERE ' + conditions.join(' AND ');
   sql += ' ORDER BY generated_at DESC';
 
   const results = db.prepare(sql).all(...params);
-  res.json({ count: results.length, diagrams: results });
+  const enriched = results.map(d => ({
+    ...d,
+    active_url: d.curated_url || d.figjam_url || null,
+    png_url: `/diagrams/png/${d.repository}/${d.name}.png`,
+    status: computeStatus(d),
+  }));
+  res.json({ count: enriched.length, diagrams: enriched });
 });
 
 // Diagram relinking — set curated URL and propagate across markdown

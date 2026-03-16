@@ -207,17 +207,28 @@ export async function syncRegistryFromDb(db, repository, repoPath) {
     .prepare('SELECT * FROM diagrams WHERE repository = ? ORDER BY generated_at')
     .all(repository);
 
+  // Merge-write: preserve file-side curated_url when DB has none
+  const registryPath = path.join(repoPath, REGISTRY_REL);
+  let fileCuratedUrls = {};
+  try {
+    const { rows: fileRows } = await parseRegistryMarkdown(registryPath);
+    fileCuratedUrls = Object.fromEntries(
+      fileRows.filter(r => r.curatedUrl).map(r => [r.diagram, r.curatedUrl])
+    );
+  } catch {
+    // File may not exist yet — no merge needed
+  }
+
   const rows = diagrams.map(d => ({
     diagram: d.name,
     mmd: d.mermaid_path ? path.basename(d.mermaid_path) : '',
     png: d.mermaid_path ? path.basename(d.mermaid_path, '.mmd') + '.png' : '',
     generatedUrl: d.figjam_url || '',
-    curatedUrl: d.curated_url || '',
+    curatedUrl: d.curated_url || fileCuratedUrls[d.name] || '',
     status: computeStatus(d),
     updated: (d.curated_at || d.generated_at || '').slice(0, 10),
   }));
 
-  const registryPath = path.join(repoPath, REGISTRY_REL);
   await fs.mkdir(path.dirname(registryPath), { recursive: true });
   await safeWriteRegistry(registryPath, rows, `# Diagram Registry — ${repository}`);
 
