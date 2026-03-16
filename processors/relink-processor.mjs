@@ -89,9 +89,13 @@ export async function propagateRelinkAllRepos(db, oldUrl, newUrl, registryPath) 
   const results = {};
 
   for (const repo of registry.repositories) {
-    if (repo.status !== 'active') continue;
+    if (repo.active !== true) continue;
     try {
-      const modified = await propagateRelink(oldUrl, newUrl, repo.path);
+      const modified = await propagateRelink(
+        oldUrl,
+        newUrl,
+        path.join(registry.basePath, repo.path)
+      );
       if (modified.length) results[repo.name] = modified;
     } catch {
       // Repo path may not exist on this machine — skip silently
@@ -332,6 +336,38 @@ export async function bulkRelink(db, mappings, registryPath) {
         }
       } catch {
         // Continue with other mappings on propagation error
+      }
+    }
+  }
+
+  // Sync registry for all affected repos
+  if (registryPath) {
+    const registryJson = JSON.parse(await fs.readFile(registryPath, 'utf-8'));
+    const reposToSync = new Set();
+
+    // Collect repos from relinked diagrams
+    for (const res of results) {
+      if (res.status === 'relinked') {
+        const row = db.prepare('SELECT repository FROM diagrams WHERE name = ?').get(res.name);
+        if (row?.repository) reposToSync.add(row.repository);
+      }
+    }
+
+    // Also add repos that had file propagations
+    for (const repoName of Object.keys(allPropagations)) {
+      reposToSync.add(repoName);
+    }
+
+    // Sync each affected repo's registry
+    for (const repoName of reposToSync) {
+      const repoEntry = registryJson.repositories.find(
+        r => r.name === repoName && r.active !== false
+      );
+      if (!repoEntry) continue;
+      try {
+        await syncRegistryFromDb(db, repoName, path.join(registryJson.basePath, repoEntry.path));
+      } catch (err) {
+        console.error(`[bulkRelink] registry sync error for ${repoName}:`, err.message);
       }
     }
   }

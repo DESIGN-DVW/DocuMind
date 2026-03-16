@@ -8,6 +8,7 @@
 
 import { watch } from 'chokidar';
 import path from 'path';
+import { writingNow } from './registry-lock.mjs';
 
 const REPOS_ROOT = '/Users/Shared/htdocs/github/DVWDesign';
 
@@ -51,6 +52,10 @@ export function initWatcher(db, root) {
   });
 
   function queueChange(filePath, event) {
+    if (writingNow.has(filePath)) {
+      console.log(`[watcher] Skipping own write: ${filePath}`);
+      return;
+    }
     pendingChanges.add(JSON.stringify({ path: filePath, event }));
 
     if (debounceTimer) clearTimeout(debounceTimer);
