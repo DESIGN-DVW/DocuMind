@@ -305,6 +305,41 @@ app.get('/diagrams/active-urls', (_req, res) => {
   res.json(urlMap);
 });
 
+// PNG file serving — path traversal guarded
+app.get('/diagrams/png/:repo/:filename', (req, res) => {
+  const { repo, filename } = req.params;
+
+  // 1. Allowlist: repo name must be a known active repository
+  if (!repoRegistry.has(repo)) {
+    return res.status(400).json({ error: 'Unknown repository' });
+  }
+
+  // 2. Filename sanity: no path separators or traversal
+  if (filename.includes('/') || filename.includes('\\') || filename.includes('..')) {
+    return res.status(400).json({ error: 'Invalid filename' });
+  }
+
+  // 3. Must end in .png
+  if (!filename.endsWith('.png')) {
+    return res.status(400).json({ error: 'Only PNG files served' });
+  }
+
+  // 4. Resolve absolute path using registry's path field (handles nested repos like FigmaAPI/FigmailAPP)
+  const repoDir = path.resolve(REPOS_ROOT, repoRegistry.get(repo));
+  const filePath = path.resolve(repoDir, 'docs', 'diagrams', filename);
+
+  // 5. Prefix guard: resolved path must stay within the repo directory
+  if (!filePath.startsWith(repoDir)) {
+    return res.status(400).json({ error: 'Invalid path' });
+  }
+
+  // 6. Serve with error callback
+  res.sendFile(filePath, err => {
+    if (err && err.code === 'ENOENT') return res.status(404).json({ error: 'PNG not found' });
+    if (err) return res.status(500).json({ error: 'File serve error' });
+  });
+});
+
 // Single diagram lookup — agent-facing, returns active URL + PNG URL + markdown snippet
 app.get('/diagrams/lookup/:name', (req, res) => {
   const { name } = req.params;
