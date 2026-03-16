@@ -5,8 +5,13 @@
  * Processes events from Claude Code hooks (post-write, post-commit, diagram-curated)
  */
 
+import fs from 'fs/promises';
 import path from 'path';
-import { relinkDiagram, propagateRelinkAllRepos } from '../processors/relink-processor.mjs';
+import {
+  relinkDiagram,
+  propagateRelinkAllRepos,
+  syncRegistryFromDb,
+} from '../processors/relink-processor.mjs';
 
 /**
  * Process an incoming hook event
@@ -71,6 +76,25 @@ export async function processHook(db, event) {
           );
         } catch (err) {
           console.error('[hooks] diagram-curated: propagation error:', err.message);
+        }
+      }
+
+      // Sync registry file for the affected repo
+      if (registryPath && result.repository) {
+        try {
+          const registryJson = JSON.parse(await fs.readFile(registryPath, 'utf-8'));
+          const repoEntry = registryJson.repositories.find(
+            r => r.name === result.repository && r.active !== false
+          );
+          if (repoEntry) {
+            await syncRegistryFromDb(
+              db,
+              result.repository,
+              path.join(registryJson.basePath, repoEntry.path)
+            );
+          }
+        } catch (err) {
+          console.error('[hooks] diagram-curated: registry sync error:', err.message);
         }
       }
 

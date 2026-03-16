@@ -7,6 +7,7 @@
 
 import express from 'express';
 import Database from 'better-sqlite3';
+import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initScheduler } from './scheduler.mjs';
@@ -289,6 +290,24 @@ app.post('/diagrams/relink', async (req, res) => {
       propagated = await propagateRelinkAllRepos(db, result.oldUrl, curatedUrl, registryPath);
     } catch (err) {
       console.error('[relink] propagation error:', err.message);
+    }
+  }
+
+  // Sync registry file for the affected repo
+  const registryJson = JSON.parse(await fs.readFile(registryPath, 'utf-8'));
+  const repoEntry = registryJson.repositories.find(
+    r => r.name === result.repository && r.active !== false
+  );
+  if (repoEntry) {
+    try {
+      await syncRegistryFromDb(
+        db,
+        result.repository,
+        path.join(registryJson.basePath, repoEntry.path)
+      );
+    } catch (err) {
+      console.error('[relink] registry sync error:', err.message);
+      // Non-fatal — relink succeeded, registry sync is best-effort
     }
   }
 
