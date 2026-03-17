@@ -10,12 +10,14 @@ module.exports = {
     env: {
       PORT: 9000,
       NODE_ENV: 'production',
-      DOCUMIND_DB: './data/documind.db'
+      DOCUMIND_DB: './data/documind.db',
+      DOCUMIND_PROFILE: process.env.DOCUMIND_PROFILE || './config/profiles/dvwdesign.json'
     },
     env_development: {
       PORT: 9000,
       NODE_ENV: 'development',
-      DOCUMIND_DB: './data/documind.db'
+      DOCUMIND_DB: './data/documind.db',
+      DOCUMIND_PROFILE: process.env.DOCUMIND_PROFILE || './config/profiles/dvwdesign.json'
     },
     log_date_format: 'YYYY-MM-DD HH:mm:ss',
     error_file: './data/logs/error.log',

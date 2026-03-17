@@ -14,15 +14,7 @@ import {
   reverseSyncFromRegistry,
   propagateRelinkAllRepos,
 } from '../processors/relink-processor.mjs';
-
-const REPOS_ROOT = '/Users/Shared/htdocs/github/DVWDesign';
-
-const WATCH_PATTERNS = [
-  `${REPOS_ROOT}/**/*.md`,
-  `${REPOS_ROOT}/**/*.pdf`,
-  `${REPOS_ROOT}/**/*.docx`,
-  `${REPOS_ROOT}/**/*.rtf`,
-];
+import { commonDir } from '../context/utils.mjs';
 
 const IGNORE_PATTERNS = [
   '**/node_modules/**',
@@ -37,15 +29,26 @@ const IGNORE_PATTERNS = [
 
 const DEBOUNCE_MS = 5000;
 let ROOT = null;
+let REPOS_ROOT_RESOLVED = null;
 let debounceTimer = null;
 const pendingChanges = new Set();
 
 /**
  * @param {import('better-sqlite3').Database} db
  * @param {string} root - DocuMind root directory
+ * @param {object} ctx - Context profile object from loadProfile()
  */
-export function initWatcher(db, root) {
+export function initWatcher(db, root, ctx) {
   ROOT = root;
+  REPOS_ROOT_RESOLVED = commonDir(ctx.repoRoots.map(r => r.path));
+
+  const WATCH_PATTERNS = [
+    `${REPOS_ROOT_RESOLVED}/**/*.md`,
+    `${REPOS_ROOT_RESOLVED}/**/*.pdf`,
+    `${REPOS_ROOT_RESOLVED}/**/*.docx`,
+    `${REPOS_ROOT_RESOLVED}/**/*.rtf`,
+  ];
+
   console.log('[watcher] Initializing file watcher...');
 
   const watcher = watch(WATCH_PATTERNS, {
@@ -86,7 +89,7 @@ export function initWatcher(db, root) {
     })
     .on('ready', () => {
       console.log(
-        `[watcher] Ready. Monitoring ${WATCH_PATTERNS.length} patterns across ${REPOS_ROOT}`
+        `[watcher] Ready. Monitoring ${WATCH_PATTERNS.length} patterns across ${REPOS_ROOT_RESOLVED}`
       );
     })
     .on('error', err => {
@@ -114,7 +117,7 @@ async function processPendingChanges(db) {
       }
 
       // Determine repository from path (used for non-registry .md files)
-      const repoMatch = change.path.replace(REPOS_ROOT + '/', '').split('/')[0];
+      const repoMatch = change.path.replace(REPOS_ROOT_RESOLVED + '/', '').split('/')[0];
 
       switch (ext) {
         case '.md': {

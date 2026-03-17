@@ -8,7 +8,6 @@
 import express from 'express';
 import Database from 'better-sqlite3';
 import fs from 'fs/promises';
-import { readFileSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initScheduler } from './scheduler.mjs';
@@ -23,6 +22,8 @@ import {
   computeStatus,
 } from '../processors/relink-processor.mjs';
 import { processHook } from './hooks.mjs';
+import { loadProfile } from '../context/loader.mjs';
+import { commonDir } from '../context/utils.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,13 +32,22 @@ const ROOT = path.resolve(__dirname, '..');
 const PORT = process.env.PORT || 9000;
 const DB_PATH = process.env.DOCUMIND_DB || path.join(ROOT, 'data/documind.db');
 
+// --- Context Profile ---
+let ctx;
+try {
+  ctx = await loadProfile();
+  console.log(`[DocuMind] Loaded profile: ${ctx.profileId}`);
+} catch (err) {
+  console.error(err.message);
+  process.exit(1);
+}
+
 // --- Repository Registry (for PNG serving) ---
+// registryPath is still needed directly by diagram relink endpoints
 const registryPath = path.join(ROOT, '../RootDispatcher/config/repository-registry.json');
-const registryJson = JSON.parse(readFileSync(registryPath, 'utf-8'));
-const REPOS_ROOT = registryJson.basePath;
-const repoRegistry = new Map(
-  registryJson.repositories.filter(r => r.active !== false).map(r => [r.name, r.path])
-);
+const REPOS_ROOT =
+  commonDir(ctx.repoRoots.map(r => r.path)) || '/Users/Shared/htdocs/github/DVWDesign';
+const repoRegistry = new Map(ctx.repoRoots.map(r => [r.name, path.relative(REPOS_ROOT, r.path)]));
 
 // --- Database ---
 const db = new Database(DB_PATH);
@@ -258,6 +268,15 @@ app.get('/keywords', (req, res) => {
   res.json({ count: results.length, keywords: results });
 });
 
+// Helper: derive PNG URL from mermaid_path (actual filename) or fallback to name
+function pngUrlFor(d) {
+  if (d.mermaid_path) {
+    const base = path.basename(d.mermaid_path, '.mmd');
+    return `/diagrams/png/${d.repository}/${base}.png`;
+  }
+  return `/diagrams/png/${d.repository}/${d.name}.png`;
+}
+
 // Diagrams
 app.get('/diagrams', (req, res) => {
   const { type, stale, repository } = req.query;
@@ -287,7 +306,7 @@ app.get('/diagrams', (req, res) => {
   const enriched = results.map(d => ({
     ...d,
     active_url: d.curated_url || d.figjam_url || null,
-    png_url: `/diagrams/png/${d.repository}/${d.name}.png`,
+    png_url: pngUrlFor(d),
     status: computeStatus(d),
   }));
   res.json({ count: enriched.length, diagrams: enriched });
@@ -355,7 +374,7 @@ app.get('/diagrams/lookup/:name', (req, res) => {
   if (!row) return res.status(404).json({ error: `Diagram "${name}" not found` });
 
   const activeUrl = row.curated_url || row.figjam_url || null;
-  const pngUrl = `/diagrams/png/${row.repository}/${row.name}.png`;
+  const pngUrl = pngUrlFor(row);
   const markdownSnippet = activeUrl
     ? `[![${row.name}](${pngUrl})](${activeUrl})`
     : `![${row.name}](${pngUrl})`;
@@ -487,8 +506,8 @@ app.listen(PORT, () => {
   console.log(`Database: ${DB_PATH}`);
 
   // Initialize background services
-  initScheduler(db, ROOT);
-  initWatcher(db, ROOT);
+  initScheduler(db, ROOT, ctx);
+  initWatcher(db, ROOT, ctx);
 });
 
 export { app, db };
