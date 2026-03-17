@@ -10,85 +10,6 @@ import natural from 'natural';
 const TfIdf = natural.TfIdf;
 const tokenizer = new natural.WordTokenizer();
 
-// Technology keywords to classify
-const TECH_KEYWORDS = new Set([
-  'react',
-  'vue',
-  'angular',
-  'svelte',
-  'next',
-  'nuxt',
-  'vite',
-  'webpack',
-  'typescript',
-  'javascript',
-  'node',
-  'express',
-  'fastify',
-  'koa',
-  'mongodb',
-  'mongoose',
-  'postgresql',
-  'supabase',
-  'redis',
-  'sqlite',
-  'tailwind',
-  'shadcn',
-  'radix',
-  'mui',
-  'storybook',
-  'figma',
-  'docker',
-  'pm2',
-  'nginx',
-  'vercel',
-  'cloudflare',
-  'pnpm',
-  'npm',
-  'yarn',
-  'changesets',
-  'tsup',
-  'esbuild',
-  'jest',
-  'vitest',
-  'cypress',
-  'playwright',
-  'api',
-  'rest',
-  'graphql',
-  'websocket',
-  'mcp',
-  'auth',
-  'oauth',
-  'jwt',
-  'supabase',
-  'pdf',
-  'markdown',
-  'mermaid',
-  'figjam',
-]);
-
-// Action keywords
-const ACTION_KEYWORDS = new Set([
-  'deploy',
-  'build',
-  'test',
-  'install',
-  'configure',
-  'setup',
-  'migrate',
-  'upgrade',
-  'fix',
-  'debug',
-  'monitor',
-  'scan',
-  'create',
-  'delete',
-  'update',
-  'publish',
-  'release',
-]);
-
 // Stop words to exclude
 const STOP_WORDS = new Set([
   'the',
@@ -181,10 +102,14 @@ const STOP_WORDS = new Set([
 /**
  * Extract keywords from a document's content
  * @param {string} content - Document text
+ * @param {object} ctx - Context profile object (ctx.keywordTaxonomy used for classification)
  * @param {number} [topN=15] - Number of top keywords to return
  * @returns {Array<{keyword: string, category: string, score: number}>}
  */
-export function extractKeywords(content, topN = 15) {
+export function extractKeywords(content, ctx, topN = 15) {
+  const techSet = new Set(ctx.keywordTaxonomy.technology);
+  const actionSet = new Set(ctx.keywordTaxonomy.action);
+
   const tfidf = new TfIdf();
   tfidf.addDocument(content);
 
@@ -195,7 +120,7 @@ export function extractKeywords(content, topN = 15) {
     if (STOP_WORDS.has(word)) return;
     if (/^\d+$/.test(word)) return;
 
-    const category = classifyKeyword(word);
+    const category = classifyKeyword(word, techSet, actionSet);
     terms.push({
       keyword: word,
       category,
@@ -208,10 +133,14 @@ export function extractKeywords(content, topN = 15) {
 
 /**
  * Classify a keyword into a category
+ * @param {string} word - The keyword to classify
+ * @param {Set<string>} techSet - Set of technology keywords from ctx.keywordTaxonomy.technology
+ * @param {Set<string>} actionSet - Set of action keywords from ctx.keywordTaxonomy.action
+ * @returns {'technology'|'action'|'topic'}
  */
-function classifyKeyword(word) {
-  if (TECH_KEYWORDS.has(word)) return 'technology';
-  if (ACTION_KEYWORDS.has(word)) return 'action';
+function classifyKeyword(word, techSet, actionSet) {
+  if (techSet.has(word)) return 'technology';
+  if (actionSet.has(word)) return 'action';
   return 'topic';
 }
 
@@ -220,12 +149,13 @@ function classifyKeyword(word) {
  * @param {import('better-sqlite3').Database} db
  * @param {number} documentId
  * @param {string} content
+ * @param {object} ctx - Context profile object (ctx.keywordTaxonomy used for classification)
  */
-export function indexKeywords(db, documentId, content) {
+export function indexKeywords(db, documentId, content, ctx) {
   // Remove existing keywords for this document
   db.prepare('DELETE FROM keywords WHERE document_id = ?').run(documentId);
 
-  const keywords = extractKeywords(content);
+  const keywords = extractKeywords(content, ctx);
 
   const insert = db.prepare(`
     INSERT INTO keywords (document_id, keyword, category, score, source)

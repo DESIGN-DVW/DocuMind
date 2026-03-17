@@ -15,36 +15,18 @@
 import chalk from 'chalk';
 
 const BATCH_SIZE = 500;
-
-/**
- * Classification rules — checked in order, first match wins.
- * Using materialized path format for category hierarchy.
- */
-const CLASSIFICATION_RULES = [
-  { pattern: /\/docs\/api\//, classification: 'engineering/api-docs' },
-  { pattern: /CLAUDE\.md$/, classification: 'engineering/architecture' },
-  { pattern: /\/\.planning\//, classification: 'engineering/architecture' },
-  { pattern: /ADR[-_]/i, classification: 'engineering/architecture/adrs' },
-  { pattern: /README\.md$/i, classification: 'references/readme' },
-  { pattern: /CHANGELOG/i, classification: 'operations/changelog' },
-  { pattern: /\/scripts\//, classification: 'engineering/scripts' },
-  { pattern: /\/config\//, classification: 'engineering/config' },
-  { pattern: /\/tests?\//, classification: 'engineering/tests' },
-  { pattern: /\/docs\//, classification: 'guides/documentation' },
-  { pattern: /\.github\//, classification: 'operations/ci-cd' },
-  { pattern: /package\.json$/, classification: 'engineering/config' },
-];
-
 const DEFAULT_CLASSIFICATION = 'uncategorized';
 
 /**
- * Determine the classification for a document path.
+ * Determine the classification for a document path using ctx.classificationRules.
+ * Rules are already compiled RegExp objects (done once in loader.mjs).
  *
  * @param {string} docPath - The document path
+ * @param {Array<{pattern: RegExp, classification: string}>} rules - Compiled classification rules
  * @returns {string} Classification string (materialized path or 'uncategorized')
  */
-function classifyPath(docPath) {
-  for (const rule of CLASSIFICATION_RULES) {
+function classifyPath(docPath, rules) {
+  for (const rule of rules) {
     if (rule.pattern.test(docPath)) {
       return rule.classification;
     }
@@ -56,9 +38,10 @@ function classifyPath(docPath) {
  * Backfill classifications for all documents where classification IS NULL.
  *
  * @param {import('better-sqlite3').Database} db - Open better-sqlite3 database instance
+ * @param {object} ctx - Context profile object (ctx.classificationRules used for path matching)
  * @returns {number} Number of documents updated
  */
-export function backfillClassifications(db) {
+export function backfillClassifications(db, ctx) {
   const rows = db.prepare('SELECT id, path FROM documents WHERE classification IS NULL').all();
 
   const total = rows.length;
@@ -74,7 +57,7 @@ export function backfillClassifications(db) {
 
   const batchUpdate = db.transaction(batch => {
     for (const doc of batch) {
-      const classification = classifyPath(doc.path);
+      const classification = classifyPath(doc.path, ctx.classificationRules);
       update.run(classification, doc.id);
     }
   });

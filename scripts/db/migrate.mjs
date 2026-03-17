@@ -15,6 +15,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import chalk from 'chalk';
+import { loadProfile } from '../../context/loader.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -162,12 +163,16 @@ try {
   if (appliedCount > 0 || forceBackfill) {
     console.log(chalk.blue('\nRunning post-migration backfill...'));
 
+    // Load context profile for classification rules
+    const ctx = await loadProfile();
+    console.log(chalk.gray(`  Using profile: ${ctx.profileId}`));
+
     const { backfillSummaries } = await import('./backfill/backfill-summaries.mjs');
     const summaryCount = backfillSummaries(db);
     console.log(chalk.green(`  Backfilled ${summaryCount} document summaries`));
 
     const { backfillClassifications } = await import('./backfill/backfill-classifications.mjs');
-    const classCount = backfillClassifications(db);
+    const classCount = backfillClassifications(db, ctx);
     console.log(chalk.green(`  Backfilled ${classCount} document classifications`));
 
     // FTS5 rebuild after bulk writes (mandatory — prevents stale index after bulk UPDATEs)
