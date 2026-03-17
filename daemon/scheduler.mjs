@@ -6,12 +6,14 @@
  */
 
 import cron from 'node-cron';
+import { runScan } from '../orchestrator.mjs';
 
 /**
  * @param {import('better-sqlite3').Database} db
  * @param {string} root - DocuMind root directory
+ * @param {object} ctx - Context profile object from loadProfile()
  */
-export function initScheduler(db, root) {
+export function initScheduler(db, root, ctx) {
   console.log('[scheduler] Initializing cron jobs...');
 
   // Every 15 minutes: heartbeat + quick stats update
@@ -41,15 +43,18 @@ export function initScheduler(db, root) {
       .run().lastInsertRowid;
 
     try {
-      // TODO: integrate with scan-all-repos.mjs incremental mode
+      const result = await runScan(db, ctx, { mode: 'incremental' });
       db.prepare(
         `
         UPDATE scan_history
-        SET scan_completed = datetime('now'), status = 'completed', duration_ms = 0
+        SET scan_completed = datetime('now'), status = 'completed',
+            duration_ms = ?, documents_found = ?, documents_added = ?, documents_updated = ?
         WHERE id = ?
       `
-      ).run(scanId);
-      console.log('[scheduler] Hourly scan completed');
+      ).run(result.durationMs, result.documentsFound, result.added, result.updated, scanId);
+      console.log(
+        `[scheduler] Hourly scan completed: ${result.added} added, ${result.updated} updated in ${result.durationMs}ms`
+      );
     } catch (err) {
       db.prepare(
         `
@@ -65,15 +70,65 @@ export function initScheduler(db, root) {
   // Daily at 2 AM: full scan + similarity detection + deviation analysis
   cron.schedule('0 2 * * *', async () => {
     console.log('[scheduler] Starting daily full scan...');
-    // TODO: integrate with scan-all-repos.mjs + analyze:similarities + analyze:deviations
-    console.log('[scheduler] Daily scan completed');
+    const scanId = db
+      .prepare(
+        `
+      INSERT INTO scan_history (scan_started, status)
+      VALUES (datetime('now'), 'running')
+    `
+      )
+      .run().lastInsertRowid;
+    try {
+      const result = await runScan(db, ctx, { mode: 'full' });
+      db.prepare(
+        `
+        UPDATE scan_history
+        SET scan_completed = datetime('now'), status = 'completed',
+            duration_ms = ?, documents_found = ?, documents_added = ?, documents_updated = ?
+        WHERE id = ?
+      `
+      ).run(result.durationMs, result.documentsFound, result.added, result.updated, scanId);
+      console.log(`[scheduler] Daily full scan completed in ${result.durationMs}ms`);
+    } catch (err) {
+      db.prepare(
+        `
+        UPDATE scan_history SET scan_completed = datetime('now'), status = 'failed', error = ? WHERE id = ?
+      `
+      ).run(err.message, scanId);
+      console.error('[scheduler] Daily scan failed:', err.message);
+    }
   });
 
   // Weekly Sunday at 3 AM: PDF re-index + keyword refresh + graph rebuild
   cron.schedule('0 3 * * 0', async () => {
     console.log('[scheduler] Starting weekly deep analysis...');
-    // TODO: integrate with pdf-processor, keyword-processor, graph relations builder
-    console.log('[scheduler] Weekly analysis completed');
+    const scanId = db
+      .prepare(
+        `
+      INSERT INTO scan_history (scan_started, status)
+      VALUES (datetime('now'), 'running')
+    `
+      )
+      .run().lastInsertRowid;
+    try {
+      const result = await runScan(db, ctx, { mode: 'deep' });
+      db.prepare(
+        `
+        UPDATE scan_history
+        SET scan_completed = datetime('now'), status = 'completed',
+            duration_ms = ?, documents_found = ?, documents_added = ?, documents_updated = ?
+        WHERE id = ?
+      `
+      ).run(result.durationMs, result.documentsFound, result.added, result.updated, scanId);
+      console.log(`[scheduler] Weekly deep analysis completed in ${result.durationMs}ms`);
+    } catch (err) {
+      db.prepare(
+        `
+        UPDATE scan_history SET scan_completed = datetime('now'), status = 'failed', error = ? WHERE id = ?
+      `
+      ).run(err.message, scanId);
+      console.error('[scheduler] Weekly analysis failed:', err.message);
+    }
   });
 
   // Every 6 hours: check for diagrams pending curation

@@ -12,6 +12,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { initScheduler } from './scheduler.mjs';
 import { initWatcher } from './watcher.mjs';
+import { runScan } from '../orchestrator.mjs';
 import {
   relinkDiagram,
   propagateRelink,
@@ -206,20 +207,30 @@ app.get('/tree/:repo', (req, res) => {
 
 // Trigger scan
 app.post('/scan', async (req, res) => {
-  const { repo } = req.body;
-  res.json({
-    status: 'queued',
-    repo: repo || 'all',
-    message: 'Scan queued. Check /stats for progress.',
+  const { repo, mode = 'incremental' } = req.body;
+  res.json({ status: 'queued', repo: repo || 'all', mode });
+  // Non-blocking: run after response is sent
+  setImmediate(async () => {
+    try {
+      const result = await runScan(db, ctx, { mode, repo: repo || null });
+      console.log(`[server] /scan complete:`, result);
+    } catch (err) {
+      console.error('[server] /scan error:', err.message);
+    }
   });
-  // Actual scan runs via imported scanner (async, non-blocking)
-  // TODO: integrate with existing scan-all-repos.mjs
 });
 
 // Trigger index
 app.post('/index', (_req, res) => {
   res.json({ status: 'queued', message: 'Re-index queued.' });
-  // TODO: integrate with existing index-markdown.mjs
+  setImmediate(async () => {
+    try {
+      const result = await runScan(db, ctx, { mode: 'incremental' });
+      console.log(`[server] /index complete:`, result);
+    } catch (err) {
+      console.error('[server] /index error:', err.message);
+    }
+  });
 });
 
 // File conversion
