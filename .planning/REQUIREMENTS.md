@@ -9,7 +9,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Schema & Migration
 
-- [ ] **SCHM-01**: Schema migration system with versioned SQL files and a `schema_migrations` table (protects 8K live docs from destructive db:reset)
+- [x] **SCHM-01**: Schema migration system with versioned SQL files and a `schema_migrations` table (protects 8K live docs from destructive db:reset)
 - [ ] **SCHM-02**: Add `summary TEXT` column to documents table with FTS5 rebuild
 - [ ] **SCHM-03**: Add `classification TEXT` column to documents table (materialized path format: `engineering/architecture/adrs`)
 - [ ] **SCHM-04**: Create `document_tags` table (document_id, tag, source, confidence) with FTS5
@@ -97,7 +97,7 @@ Deferred to future milestone. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 | --- | --- | --- |
-| SCHM-01 | Phase 1 | Pending |
+| SCHM-01 | Phase 1 | Complete |
 | SCHM-02 | Phase 1 | Pending |
 | SCHM-03 | Phase 1 | Pending |
 | SCHM-04 | Phase 1 | Pending |

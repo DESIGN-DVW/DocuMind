@@ -10,29 +10,29 @@ See: .planning/PROJECT.md (updated 2026-03-15)
 ## Current Position
 
 Phase: 1 of 5 (Schema Migration Foundation)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-03-15 — Roadmap created, all 5 phases defined, 35 v1 requirements mapped
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-03-17 — Phase 1 Plan 1 complete: migration runner + db:reset guard
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 7% (1 of ~14 estimated plans)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 0
-- Average duration: —
-- Total execution time: —
+- Total plans completed: 1
+- Average duration: 5m 18s
+- Total execution time: 5m 18s
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 | ------- | ------- | ------- | ---------- |
-| - | - | - | - |
+| Phase 1 | 1 | 5m 18s | 5m 18s |
 
 **Recent Trend:**
 
-- Last 5 plans: —
+- Last 5 plans: 01-01 (5m 18s)
 - Trend: —
 
 Updated after each plan completion
@@ -48,10 +48,13 @@ Recent decisions affecting current work:
 - [Pre-phase]: MCP server uses stdio transport; `console.log` in any imported module corrupts JSON-RPC wire — mcp-server.mjs must redirect stdout to stderr at line 1
 - [Pre-phase]: Graph population has O(n²) sibling edge risk — cap at max 10 sibling edges per folder before running against live corpus
 - [Pre-phase]: Context profile schema must be designed generically (not DVW-shaped) to enable Step #3 portability
+- [01-01]: Migration runner is separate from init-database.mjs — init creates fresh DB; migrate evolves existing DB
+- [01-01]: Bootstrap schema_migrations created inline in migrate.mjs before reading applied versions (avoids chicken-and-egg ordering)
+- [01-01]: Backup includes -wal and -shm files to ensure SQLite WAL consistency
 
 ### Pending Todos
 
-None yet.
+None.
 
 ### Blockers/Concerns
 
@@ -60,6 +63,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-15
-Stopped at: Roadmap written, STATE.md initialized, REQUIREMENTS.md traceability confirmed — ready to plan Phase 1
+Last session: 2026-03-17
+Stopped at: Phase 1 Plan 1 complete — migration runner infrastructure built, schema_migrations table active in live DB
 Resume file: None
