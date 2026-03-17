@@ -1,3 +1,16 @@
+---
+gsd_state_version: 1.0
+milestone: v3.0
+milestone_name: milestone
+status: unknown
+last_updated: "2026-03-17T16:42:09.875Z"
+progress:
+  total_phases: 1
+  completed_phases: 1
+  total_plans: 3
+  completed_plans: 3
+---
+
 # Project State
 
 ## Project Reference
@@ -10,30 +23,30 @@ See: .planning/PROJECT.md (updated 2026-03-15)
 ## Current Position
 
 Phase: 1 of 5 (Schema Migration Foundation)
-Plan: 2 of 3 in current phase
+Plan: 3 of 3 in current phase — COMPLETE
 Status: In progress
-Last activity: 2026-03-17 — Phase 1 Plan 2 complete: SQL migrations 002-005 applied (summary, classification, document_tags, CHECK removal)
+Last activity: 2026-03-17 — Phase 1 Plan 3 complete: 8172 docs backfilled with summary+classification, FTS5 rebuilt; Phase 1 done
 
-Progress: [██░░░░░░░░] 14% (2 of ~14 estimated plans)
+Progress: [███░░░░░░░] 21% (3 of ~14 estimated plans)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 2
-- Average duration: 6m 51s
-- Total execution time: 13m 42s
+- Total plans completed: 3
+- Average duration: 9m 8s
+- Total execution time: 27m 42s
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 | ------- | ------- | ------- | ---------- |
-| Phase 1 | 2 | 13m 42s | 6m 51s |
+| Phase 1 | 3 | 27m 42s | 9m 14s |
 
 **Recent Trend:**
 
-- Last 5 plans: 01-01 (5m 18s), 01-02 (8m 24s)
-- Trend: slight increase (more migration SQL complexity)
+- Last 5 plans: 01-01 (5m 18s), 01-02 (8m 24s), 01-03 (14m 0s)
+- Trend: increase driven by live backfill against 8172-document corpus
 
 Updated after each plan completion
 
@@ -53,6 +66,9 @@ Recent decisions affecting current work:
 - [01-01]: Backup includes -wal and -shm files to ensure SQLite WAL consistency
 - [01-02]: PRAGMA foreign_keys omitted from migration 005 SQL — migrate.mjs sets it at startup; with 0 rows no FK checks fire during INSERT INTO ... SELECT *
 - [01-02]: document_graph view dropped and recreated inside migration 005 — SQLite validates dependent views on DROP TABLE; standard workaround
+- [01-03]: Backfill scripts accept open db instance (not self-managed) — migrate.mjs controls connection lifecycle; scripts reusable in scheduler context
+- [01-03]: JSON.parse() for frontmatter column (not gray-matter) — DB stores already-serialized JSON; gray-matter was used during initial indexing only
+- [01-03]: --backfill flag added to migrate.mjs — triggers backfill without re-applying already-applied migrations; covers Plan 03 bootstrap scenario
 
 ### Pending Todos
 
@@ -66,5 +82,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-17
-Stopped at: Phase 1 Plan 2 complete — migrations 002-005 applied; documents table has summary+classification; document_tags table with FTS5; doc_relationships CHECK removed
+Stopped at: Phase 1 Plan 3 complete — all 3 plans done; 8172 docs backfilled (summary+classification); FTS5 rebuilt; Phase 1 fully complete
 Resume file: None
