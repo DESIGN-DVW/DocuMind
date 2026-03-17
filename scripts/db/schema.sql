@@ -1,6 +1,8 @@
 -- DocuMind Database Schema
 -- SQLite database for intelligent documentation management
 -- Created: 2025-11-07
+-- Schema reflects migrations through: 005-remove-check-constraints
+-- To evolve this schema, add new files to scripts/db/migrations/
 
 -- =============================================================================
 -- DOCUMENTS TABLE
@@ -21,6 +23,8 @@ CREATE TABLE IF NOT EXISTS documents (
   content_hash TEXT NOT NULL, -- SHA-256 hash for change detection
   frontmatter TEXT, -- JSON blob
   content TEXT, -- Full content for searching
+  summary TEXT,          -- Generated summary (backfilled in Plan 03)
+  classification TEXT,   -- Materialized path format: e.g., engineering/architecture/adrs
   CONSTRAINT chk_path CHECK (length(path) > 0),
   CONSTRAINT chk_hash CHECK (length(content_hash) = 64)
 );
@@ -30,6 +34,7 @@ CREATE INDEX IF NOT EXISTS idx_documents_category ON documents(category);
 CREATE INDEX IF NOT EXISTS idx_documents_modified ON documents(modified_at DESC);
 CREATE INDEX IF NOT EXISTS idx_documents_hash ON documents(content_hash);
 CREATE INDEX IF NOT EXISTS idx_documents_repo_category ON documents(repository, category);
+CREATE INDEX IF NOT EXISTS idx_documents_classification ON documents(classification);
 
 -- =============================================================================
 -- LINTING ISSUES TABLE
@@ -319,16 +324,7 @@ CREATE TABLE IF NOT EXISTS doc_relationships (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   source_doc_id INTEGER NOT NULL,
   target_doc_id INTEGER NOT NULL,
-  relationship_type TEXT NOT NULL CHECK (relationship_type IN (
-    'imports',          -- doc A references/links to doc B
-    'parent_of',        -- folder hierarchy
-    'variant_of',       -- same content, different version
-    'supersedes',       -- doc A replaces doc B
-    'depends_on',       -- doc A requires doc B context
-    'related_to',       -- topical relationship
-    'generated_from',   -- auto-generated from source
-    'dispatched_to'     -- RootDispatcher dispatch relationship
-  )),
+  relationship_type TEXT NOT NULL,
   weight REAL DEFAULT 1.0,
   metadata TEXT,        -- JSON: { reason, auto_detected, confidence }
   created_at TEXT NOT NULL,
@@ -376,6 +372,47 @@ END;
 CREATE TRIGGER IF NOT EXISTS keywords_ad AFTER DELETE ON keywords BEGIN
   INSERT INTO keywords_fts(keywords_fts, rowid, keyword, category)
   VALUES('delete', old.id, old.keyword, old.category);
+END;
+
+-- =============================================================================
+-- DOCUMENT TAGS — v3.0
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS document_tags (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  document_id INTEGER NOT NULL,
+  tag TEXT NOT NULL,
+  source TEXT NOT NULL CHECK (source IN ('extracted', 'manual', 'inferred')),
+  confidence REAL NOT NULL DEFAULT 1.0 CHECK (confidence BETWEEN 0.0 AND 1.0),
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE,
+  CONSTRAINT unique_doc_tag UNIQUE (document_id, tag)
+);
+
+CREATE INDEX IF NOT EXISTS idx_doc_tags_document ON document_tags(document_id);
+CREATE INDEX IF NOT EXISTS idx_doc_tags_tag ON document_tags(tag);
+CREATE INDEX IF NOT EXISTS idx_doc_tags_confidence ON document_tags(confidence DESC);
+
+-- FTS5 virtual table for tag search
+CREATE VIRTUAL TABLE IF NOT EXISTS document_tags_fts USING fts5(
+  tag,
+  content='document_tags',
+  content_rowid='id'
+);
+
+-- Sync triggers to keep FTS index in sync with document_tags
+CREATE TRIGGER IF NOT EXISTS doc_tags_ai AFTER INSERT ON document_tags BEGIN
+  INSERT INTO document_tags_fts(rowid, tag) VALUES (new.id, new.tag);
+END;
+
+CREATE TRIGGER IF NOT EXISTS doc_tags_ad AFTER DELETE ON document_tags BEGIN
+  INSERT INTO document_tags_fts(document_tags_fts, rowid, tag)
+  VALUES('delete', old.id, old.tag);
+END;
+
+CREATE TRIGGER IF NOT EXISTS doc_tags_au AFTER UPDATE ON document_tags BEGIN
+  INSERT INTO document_tags_fts(document_tags_fts, rowid, tag)
+  VALUES('delete', old.id, old.tag);
+  INSERT INTO document_tags_fts(rowid, tag) VALUES (new.id, new.tag);
 END;
 
 -- =============================================================================
