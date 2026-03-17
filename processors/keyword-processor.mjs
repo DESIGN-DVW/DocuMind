@@ -170,5 +170,27 @@ export function indexKeywords(db, documentId, content, ctx) {
 
   batch(keywords);
 
+  // Also populate document_tags for per-document tag filtering
+  db.prepare('DELETE FROM document_tags WHERE document_id = ? AND source = ?').run(
+    documentId,
+    'extracted'
+  );
+
+  const insertTag = db.prepare(`
+    INSERT OR IGNORE INTO document_tags (document_id, tag, source, confidence, created_at)
+    VALUES (?, ?, 'extracted', ?, datetime('now'))
+  `);
+
+  const tagBatch = db.transaction(kws => {
+    for (const kw of kws) {
+      // Normalize TF-IDF score to 0-1 confidence range
+      // Max TF-IDF score is typically around 10-15 for these documents
+      const confidence = Math.min(1.0, Math.round((kw.score / 10) * 1000) / 1000);
+      insertTag.run(documentId, kw.keyword, confidence);
+    }
+  });
+
+  tagBatch(keywords);
+
   return keywords;
 }
