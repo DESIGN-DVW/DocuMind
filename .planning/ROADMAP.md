@@ -93,7 +93,12 @@ Plans:
   3. Calling `get_related` with a document ID returns its relationship graph up to the requested hop depth
   4. No `console.log` output appears on stdout during any tool call — all logging routes to stderr only
   5. The MCP server is registered in `ecosystem.config.cjs` and starts alongside the main daemon
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+
+- [ ] 04-01-PLAN.md — MCP server with all 6 read tools, SDK install, PM2 config
+- [ ] 04-02-PLAN.md — Claude Code MCP registration and Inspector verification
 
 ### Phase 5: MCP Server — Write Tools
 
@@ -119,5 +124,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 1. Schema Migration Foundation | 3/3 | Complete   | 2026-03-17 |
 | 2. Context Profile Loader | 2/2 | Complete   | 2026-03-17 |
 | 3. Orchestrator and Scheduler Wiring | 4/4 | Complete   | 2026-03-17 |
-| 4. MCP Server — Read Tools | 0/TBD | Not started | - |
+| 4. MCP Server — Read Tools | 0/2 | Not started | - |
 | 5. MCP Server — Write Tools | 0/TBD | Not started | - |
