@@ -36,11 +36,11 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 - [x] **INTL-01**: Auto-generate document summary from frontmatter description > first paragraph > title+keywords fallback
 - [x] **INTL-02**: Auto-classify documents using context profile classification rules (path match + frontmatter field match)
-- [ ] **INTL-03**: Auto-extract tags via TF-IDF keyword processor with confidence scores
+- [x] **INTL-03**: Auto-extract tags via TF-IDF keyword processor with confidence scores
 - [x] **INTL-04**: Populate document relationship graph via `buildRelationships()` with sibling edge cap (max 10 per folder)
-- [ ] **INTL-05**: Detect similar/duplicate documents across repos (Levenshtein + cosine, threshold 0.7)
-- [ ] **INTL-06**: Detect stale documents (content_hash changed in linked files but doc not updated)
-- [ ] **INTL-07**: Detect convention deviations (5 types: content_drift, structure_change, rule_violation, version_mismatch, metadata_inconsistency)
+- [x] **INTL-05**: Detect similar/duplicate documents across repos (Levenshtein + cosine, threshold 0.7)
+- [x] **INTL-06**: Detect stale documents (content_hash changed in linked files but doc not updated)
+- [x] **INTL-07**: Detect convention deviations (5 types: content_drift, structure_change, rule_violation, version_mismatch, metadata_inconsistency)
 
 ### MCP Server — Read Tools
 
@@ -115,11 +115,11 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | ORCH-06 | Phase 3 | Complete |
 | INTL-01 | Phase 3 | Complete |
 | INTL-02 | Phase 3 | Complete |
-| INTL-03 | Phase 3 | Pending |
+| INTL-03 | Phase 3 | Complete |
 | INTL-04 | Phase 3 | Complete |
-| INTL-05 | Phase 3 | Pending |
-| INTL-06 | Phase 3 | Pending |
-| INTL-07 | Phase 3 | Pending |
+| INTL-05 | Phase 3 | Complete |
+| INTL-06 | Phase 3 | Complete |
+| INTL-07 | Phase 3 | Complete |
 | MCPR-01 | Phase 4 | Pending |
 | MCPR-02 | Phase 4 | Pending |
 | MCPR-03 | Phase 4 | Pending |

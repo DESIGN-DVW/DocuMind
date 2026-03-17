@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-17T18:47:16.016Z"
+last_updated: "2026-03-16T19:00:00.000Z"
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 9
-  completed_plans: 8
+  completed_plans: 9
 ---
 
 # Project State
@@ -22,20 +22,20 @@ See: .planning/PROJECT.md (updated 2026-03-15)
 
 ## Current Position
 
-Phase: 3 of 5 (Orchestrator + Scheduler Wiring) — IN PROGRESS
-Plan: 3 of 4 in current phase — COMPLETE
-Status: Phase 3 Plan 3 complete
-Last activity: 2026-03-17 — Phase 3 Plan 3 complete: all four daemon entry points wired to orchestrator/indexMarkdown (scheduler crons, /scan, /index, watcher markdown, hooks post-write/post-commit/scan)
+Phase: 3 of 5 (Orchestrator + Scheduler Wiring) — COMPLETE
+Plan: 4 of 4 in current phase — COMPLETE
+Status: Phase 3 complete
+Last activity: 2026-03-16 — Phase 3 Plan 4 complete: TF-IDF similarity detection, staleness detection, deviation analysis, and document_tags population added; /stats returns stale_documents count
 
-Progress: [████████░░] 57% (8 of ~14 estimated plans)
+Progress: [█████████░] 64% (9 of ~14 estimated plans)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 8
-- Average duration: 5m 31s
-- Total execution time: 38m 40s
+- Total plans completed: 9
+- Average duration: 4m 44s
+- Total execution time: ~42m 40s
 
 **By Phase:**
 
@@ -43,12 +43,12 @@ Progress: [████████░░] 57% (8 of ~14 estimated plans)
 | ------- | ------- | ------- | ---------- |
 | Phase 1 | 3 | 27m 42s | 9m 14s |
 | Phase 2 | 2 | 8m 11s | 4m 5s |
-| Phase 3 | 3 | 6m 01s | 2m 00s |
+| Phase 3 | 4 | ~10m 01s | ~2m 30s |
 
 **Recent Trend:**
 
-- Last 5 plans: 02-02 (4m 14s), 03-01 (2m 0s), 03-02 (2m 3s), 03-03 (2m 58s)
-- Trend: Phase 3 wiring plans averaging ~2 min — tight scope with clear interfaces enables fast execution
+- Last 5 plans: 03-01 (2m 0s), 03-02 (2m 3s), 03-03 (2m 58s), 03-04 (~4m 0s)
+- Trend: Phase 3 complete — intelligence features plan took slightly longer due to schema constraint discovery and 5-type deviation analysis
 
 Updated after each plan completion
 
@@ -87,6 +87,11 @@ Recent decisions affecting current work:
 - [03-03]: CTX stored at module scope in watcher.mjs (alongside ROOT) — processPendingChanges is module-level, cannot receive ctx through initWatcher closure
 - [03-03]: deriveRepoName iterates ctx.repoRoots with startsWith then falls back to DVWDesign path segment — handles nested repos like FigmaAPI/FigmailAPP
 - [03-03]: post-commit case wrapped in {} braces — prevents let/const block-scoping conflict in switch/case
+- [03-04]: deviation_type='duplicate' used in content_similarities — schema CHECK does not include 'potential_duplicate'; correct value is 'duplicate'
+- [03-04]: deviations.severity mapped to schema values — 'medium' -> 'minor', 'low' -> 'info' (schema allows critical/major/minor/info only)
+- [03-04]: INSERT OR IGNORE for document_tags — avoids re-triggering FTS sync triggers on idempotent keyword runs with identical keywords
+- [03-04]: doc1_id < doc2_id enforced in similarity insert — content_similarities has CHECK constraint requiring ordered IDs
+- [03-04]: detected_at included explicitly in INSERT statements — both content_similarities and deviations have NOT NULL detected_at columns
 
 ### Pending Todos
 
@@ -99,6 +104,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-17
-Stopped at: Phase 3 Plan 3 complete — all four daemon entry points wired: scheduler (3 cron jobs), /scan and /index endpoints, watcher markdown handler, hooks post-write/post-commit/scan
+Last session: 2026-03-16
+Stopped at: Phase 3 Plan 4 complete — TF-IDF similarity detection, staleness detection via relationship graph, 5-type deviation analysis, document_tags population, and /stats stale_documents count all implemented
 Resume file: None

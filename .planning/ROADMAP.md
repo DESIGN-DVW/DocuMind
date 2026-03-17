@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Schema Migration Foundation** - Safe, versioned schema evolution that protects 8K live documents while adding classification, tags, and summary columns (completed 2026-03-17)
 - [x] **Phase 2: Context Profile Loader** - Externalize all hardcoded DVWDesign config into a portable, Zod-validated JSON profile that every subsystem reads from (completed 2026-03-17)
-- [ ] **Phase 3: Orchestrator and Scheduler Wiring** - Wire all processors into a single callable orchestrator and replace every scheduler TODO stub with real cron jobs
+- [x] **Phase 3: Orchestrator and Scheduler Wiring** - Wire all processors into a single callable orchestrator and replace every scheduler TODO stub with real cron jobs (completed 2026-03-17)
 - [ ] **Phase 4: MCP Server — Read Tools** - Expose DocuMind's intelligence layer as Claude-callable read tools over stdio transport
 - [ ] **Phase 5: MCP Server — Write Tools** - Add autonomous document maintenance tools (lint, fix, index, scan, relink) behind path-validated write operations
 
@@ -72,7 +72,7 @@ Plans:
   3. `GET /stats` shows a non-zero stale document count — staleness detection is running and surfacing results
   4. `POST /scan` triggers the orchestrator and completes without duplicating logic that already exists in `scheduler.mjs`
   5. Scheduler log shows hourly, daily, and weekly jobs firing (no TODO stubs remaining in `scheduler.mjs`)
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 
@@ -118,6 +118,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | ------- | ---------------- | -------- | ----------- |
 | 1. Schema Migration Foundation | 3/3 | Complete   | 2026-03-17 |
 | 2. Context Profile Loader | 2/2 | Complete   | 2026-03-17 |
-| 3. Orchestrator and Scheduler Wiring | 3/4 | In Progress|  |
+| 3. Orchestrator and Scheduler Wiring | 4/4 | Complete   | 2026-03-17 |
 | 4. MCP Server — Read Tools | 0/TBD | Not started | - |
 | 5. MCP Server — Write Tools | 0/TBD | Not started | - |
