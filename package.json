@@ -28,7 +28,7 @@
     "cron:stop": "node scripts/setup-cron.mjs --stop",
     "cron:list": "node scripts/setup-cron.mjs --list",
     "db:init": "node scripts/db/init-database.mjs",
-    "db:reset": "rm -f data/documind.db && npm run db:init",
+    "db:reset": "node scripts/db/reset-database.mjs",
     "scan:enhanced": "node scripts/scan/enhanced-scanner.mjs",
     "analyze:similarities": "node scripts/analysis/detect-similarities.mjs",
     "analyze:deviations": "node scripts/analysis/detect-deviations.mjs",
@@ -58,7 +58,7 @@
     "daemon:logs": "pm2 logs documind",
     "daemon:status": "pm2 show documind",
     "daemon:dev": "node daemon/server.mjs",
-    "db:migrate": "node scripts/db/init-database.mjs"
+    "db:migrate": "node scripts/db/migrate.mjs"
   },
   "lint-staged": {
     "!(.planning)/**/*.md": [
