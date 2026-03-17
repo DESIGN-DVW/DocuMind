@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-03-15)
 ## Current Position
 
 Phase: 4 of 5 (MCP Server — Read Tools) — IN PROGRESS
-Plan: 1 of 1 in current phase — COMPLETE
-Status: Phase 4 Plan 1 complete
-Last activity: 2026-03-16 — Phase 4 Plan 1 complete: MCP stdio server with 6 read tools (search_docs, get_related, get_keywords, get_tree, check_existing, get_diagrams); PM2 documind-mcp entry with out_file /dev/null
+Plan: 2 of 2 in current phase — AWAITING CHECKPOINT
+Status: Phase 4 Plan 2 Task 1 complete; awaiting human-verify checkpoint (MCP Inspector)
+Last activity: 2026-03-17 — Phase 4 Plan 2 Task 1 complete: .claude/mcp.json registered with documind stdio server entry; checkpoint awaiting MCP Inspector verification
 
-Progress: [██████████] 71% (10 of ~14 estimated plans)
+Progress: [███████████] 79% (11 of ~14 estimated plans)
 
 ## Performance Metrics
 
@@ -97,6 +97,8 @@ Recent decisions affecting current work:
 - [04-01]: DB opened readonly: true — MCP server is read-only by design; WAL pragma skipped on readonly connection
 - [04-01]: check_existing confidence formula: 1 - abs(rank)/20 — FTS5 rank is negative float; divisor of 20 is tunable baseline
 - [04-01]: findRelated sliced to 200 — safety cap prevents dense 3-hop graph traversal from producing unmanageable payloads
+- [04-02]: Absolute paths in mcp.json — Claude Code resolves from project root; other DVWDesign repos calling this MCP server have different CWD so relative paths would break
+- [04-02]: DOCUMIND_PROFILE env var passed in mcp.json — context profile shapes tool filtering; injecting at launch avoids a separate agent initialization call
 
 ### Pending Todos
 
@@ -109,6 +111,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-16
-Stopped at: Phase 4 Plan 1 complete — MCP stdio server with 6 read tools implemented; PM2 documind-mcp entry added with out_file /dev/null
+Last session: 2026-03-17
+Stopped at: Phase 4 Plan 2 Task 1 complete — .claude/mcp.json registered; awaiting MCP Inspector human-verify checkpoint
 Resume file: None

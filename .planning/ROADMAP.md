@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Schema Migration Foundation** - Safe, versioned schema evolution that protects 8K live documents while adding classification, tags, and summary columns (completed 2026-03-17)
 - [x] **Phase 2: Context Profile Loader** - Externalize all hardcoded DVWDesign config into a portable, Zod-validated JSON profile that every subsystem reads from (completed 2026-03-17)
 - [x] **Phase 3: Orchestrator and Scheduler Wiring** - Wire all processors into a single callable orchestrator and replace every scheduler TODO stub with real cron jobs (completed 2026-03-17)
-- [ ] **Phase 4: MCP Server — Read Tools** - Expose DocuMind's intelligence layer as Claude-callable read tools over stdio transport
+- [x] **Phase 4: MCP Server — Read Tools** - Expose DocuMind's intelligence layer as Claude-callable read tools over stdio transport (completed 2026-03-17)
 - [ ] **Phase 5: MCP Server — Write Tools** - Add autonomous document maintenance tools (lint, fix, index, scan, relink) behind path-validated write operations
 
 ## Phase Details
@@ -93,7 +93,7 @@ Plans:
   3. Calling `get_related` with a document ID returns its relationship graph up to the requested hop depth
   4. No `console.log` output appears on stdout during any tool call — all logging routes to stderr only
   5. The MCP server is registered in `ecosystem.config.cjs` and starts alongside the main daemon
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 
@@ -124,5 +124,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 1. Schema Migration Foundation | 3/3 | Complete   | 2026-03-17 |
 | 2. Context Profile Loader | 2/2 | Complete   | 2026-03-17 |
 | 3. Orchestrator and Scheduler Wiring | 4/4 | Complete   | 2026-03-17 |
-| 4. MCP Server — Read Tools | 1/2 | In Progress|  |
+| 4. MCP Server — Read Tools | 2/2 | Complete   | 2026-03-17 |
 | 5. MCP Server — Write Tools | 0/TBD | Not started | - |
