@@ -58,7 +58,9 @@
     "daemon:logs": "pm2 logs documind",
     "daemon:status": "pm2 show documind",
     "daemon:dev": "node daemon/server.mjs",
-    "db:migrate": "node scripts/db/migrate.mjs"
+    "db:migrate": "node scripts/db/migrate.mjs",
+    "mcp:dev": "node daemon/mcp-server.mjs",
+    "mcp:inspect": "npx @modelcontextprotocol/inspector node daemon/mcp-server.mjs"
   },
   "lint-staged": {
     "!(.planning)/**/*.md": [
@@ -79,6 +81,7 @@
   "author": "DESIGN-DVW",
   "license": "MIT",
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
     "better-sqlite3": "^12.6.2",
     "chalk": "^5.3.0",
     "chokidar": "^4.0.3",
@@ -99,7 +102,7 @@
     "string-similarity": "^4.0.4",
     "table": "^6.8.1",
     "turndown": "^7.2.2",
-    "zod": "^3.22.4"
+    "zod": "^3.25.0"
   },
   "devDependencies": {
     "@mermaid-js/mermaid-cli": "^11.12.0",
