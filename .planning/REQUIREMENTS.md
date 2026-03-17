@@ -44,14 +44,14 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### MCP Server — Read Tools
 
-- [ ] **MCPR-01**: `daemon/mcp-server.mjs` as separate entry point with stderr-only logging (no console.log to stdout)
-- [ ] **MCPR-02**: `search_docs` tool — full-text search with repo/category/classification filters
-- [ ] **MCPR-03**: `get_related` tool — graph traversal (doc ID + hops, returns paths and relationship types)
-- [ ] **MCPR-04**: `get_keywords` tool — keyword cloud for a repo with TF-IDF scores
-- [ ] **MCPR-05**: `get_tree` tool — folder hierarchy for a repo
-- [ ] **MCPR-06**: `check_existing` tool — "does a doc covering X already exist?" (search + scoring)
-- [ ] **MCPR-07**: `get_diagrams` tool — diagram registry with stale status
-- [ ] **MCPR-08**: stdio transport for Claude Code integration
+- [x] **MCPR-01**: `daemon/mcp-server.mjs` as separate entry point with stderr-only logging (no console.log to stdout)
+- [x] **MCPR-02**: `search_docs` tool — full-text search with repo/category/classification filters
+- [x] **MCPR-03**: `get_related` tool — graph traversal (doc ID + hops, returns paths and relationship types)
+- [x] **MCPR-04**: `get_keywords` tool — keyword cloud for a repo with TF-IDF scores
+- [x] **MCPR-05**: `get_tree` tool — folder hierarchy for a repo
+- [x] **MCPR-06**: `check_existing` tool — "does a doc covering X already exist?" (search + scoring)
+- [x] **MCPR-07**: `get_diagrams` tool — diagram registry with stale status
+- [x] **MCPR-08**: stdio transport for Claude Code integration
 
 ### MCP Server — Write Tools
 
@@ -120,14 +120,14 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | INTL-05 | Phase 3 | Complete |
 | INTL-06 | Phase 3 | Complete |
 | INTL-07 | Phase 3 | Complete |
-| MCPR-01 | Phase 4 | Pending |
-| MCPR-02 | Phase 4 | Pending |
-| MCPR-03 | Phase 4 | Pending |
-| MCPR-04 | Phase 4 | Pending |
-| MCPR-05 | Phase 4 | Pending |
-| MCPR-06 | Phase 4 | Pending |
-| MCPR-07 | Phase 4 | Pending |
-| MCPR-08 | Phase 4 | Pending |
+| MCPR-01 | Phase 4 | Complete |
+| MCPR-02 | Phase 4 | Complete |
+| MCPR-03 | Phase 4 | Complete |
+| MCPR-04 | Phase 4 | Complete |
+| MCPR-05 | Phase 4 | Complete |
+| MCPR-06 | Phase 4 | Complete |
+| MCPR-07 | Phase 4 | Complete |
+| MCPR-08 | Phase 4 | Complete |
 | MCPW-01 | Phase 5 | Pending |
 | MCPW-02 | Phase 5 | Pending |
 | MCPW-03 | Phase 5 | Pending |

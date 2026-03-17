@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-17T18:57:16.105Z"
+last_updated: "2026-03-16T00:00:00.000Z"
 progress:
-  total_phases: 3
+  total_phases: 5
   completed_phases: 3
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 10
+  completed_plans: 10
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-15)
 
 **Core value:** When you look at a document, you instantly see what it's connected to — what links to it, what duplicates it, and whether it's stale.
-**Current focus:** Phase 3 — Orchestrator + Scheduler Wiring
+**Current focus:** Phase 4 — MCP Server Read Tools
 
 ## Current Position
 
-Phase: 3 of 5 (Orchestrator + Scheduler Wiring) — COMPLETE
-Plan: 4 of 4 in current phase — COMPLETE
-Status: Phase 3 complete
-Last activity: 2026-03-16 — Phase 3 Plan 4 complete: TF-IDF similarity detection, staleness detection, deviation analysis, and document_tags population added; /stats returns stale_documents count
+Phase: 4 of 5 (MCP Server — Read Tools) — IN PROGRESS
+Plan: 1 of 1 in current phase — COMPLETE
+Status: Phase 4 Plan 1 complete
+Last activity: 2026-03-16 — Phase 4 Plan 1 complete: MCP stdio server with 6 read tools (search_docs, get_related, get_keywords, get_tree, check_existing, get_diagrams); PM2 documind-mcp entry with out_file /dev/null
 
-Progress: [█████████░] 64% (9 of ~14 estimated plans)
+Progress: [██████████] 71% (10 of ~14 estimated plans)
 
 ## Performance Metrics
 
@@ -44,11 +44,12 @@ Progress: [█████████░] 64% (9 of ~14 estimated plans)
 | Phase 1 | 3 | 27m 42s | 9m 14s |
 | Phase 2 | 2 | 8m 11s | 4m 5s |
 | Phase 3 | 4 | ~10m 01s | ~2m 30s |
+| Phase 4 | 1 | 5m 24s | 5m 24s |
 
 **Recent Trend:**
 
-- Last 5 plans: 03-01 (2m 0s), 03-02 (2m 3s), 03-03 (2m 58s), 03-04 (~4m 0s)
-- Trend: Phase 3 complete — intelligence features plan took slightly longer due to schema constraint discovery and 5-type deviation analysis
+- Last 5 plans: 03-02 (2m 3s), 03-03 (2m 58s), 03-04 (~4m 0s), 04-01 (5m 24s)
+- Trend: Phase 4 Plan 1 complete — self-contained MCP server in one pass; no deviations
 
 Updated after each plan completion
 
@@ -92,6 +93,10 @@ Recent decisions affecting current work:
 - [03-04]: INSERT OR IGNORE for document_tags — avoids re-triggering FTS sync triggers on idempotent keyword runs with identical keywords
 - [03-04]: doc1_id < doc2_id enforced in similarity insert — content_similarities has CHECK constraint requiring ordered IDs
 - [03-04]: detected_at included explicitly in INSERT statements — both content_similarities and deviations have NOT NULL detected_at columns
+- [04-01]: stdout redirect must be line 1 before all imports — console.log in relations.mjs would corrupt JSON-RPC wire without pre-import redirect
+- [04-01]: DB opened readonly: true — MCP server is read-only by design; WAL pragma skipped on readonly connection
+- [04-01]: check_existing confidence formula: 1 - abs(rank)/20 — FTS5 rank is negative float; divisor of 20 is tunable baseline
+- [04-01]: findRelated sliced to 200 — safety cap prevents dense 3-hop graph traversal from producing unmanageable payloads
 
 ### Pending Todos
 
@@ -105,5 +110,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-16
-Stopped at: Phase 3 Plan 4 complete — TF-IDF similarity detection, staleness detection via relationship graph, 5-type deviation analysis, document_tags population, and /stats stale_documents count all implemented
+Stopped at: Phase 4 Plan 1 complete — MCP stdio server with 6 read tools implemented; PM2 documind-mcp entry added with out_file /dev/null
 Resume file: None
