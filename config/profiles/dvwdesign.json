@@ -2,7 +2,7 @@
   "id": "dvwdesign-internal",
   "name": "DVWDesign Internal",
   "version": "1.0.0",
-  "repositoryRegistryPath": "../../RootDispatcher/config/repository-registry.json",
+  "repositoryRegistryPath": "../../../RootDispatcher/config/repository-registry.json",
   "classificationRules": [
     { "pattern": "\\/docs\\/api\\/", "classification": "engineering/api-docs" },
     { "pattern": "CLAUDE\\.md$", "classification": "engineering/architecture" },
