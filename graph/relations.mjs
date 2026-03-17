@@ -19,6 +19,14 @@ export function buildRelationships(db) {
   const docMap = new Map(docs.map(d => [d.path, d]));
   const docById = new Map(docs.map(d => [d.id, d]));
 
+  // Pre-compute sibling groups by directory for O(1) lookup and cap enforcement
+  const siblingsByDir = new Map();
+  for (const doc of docs) {
+    const dir = path.dirname(doc.path);
+    if (!siblingsByDir.has(dir)) siblingsByDir.set(dir, []);
+    siblingsByDir.get(dir).push(doc);
+  }
+
   let edgeCount = 0;
 
   const insertRel = db.prepare(`
@@ -28,6 +36,11 @@ export function buildRelationships(db) {
   `);
 
   const batch = db.transaction(() => {
+    // Clear auto-detected edges before rebuild (idempotent)
+    db.prepare(
+      'DELETE FROM doc_relationships WHERE metadata LIKE \'%"auto_detected":true%\''
+    ).run();
+
     for (const doc of docs) {
       // 1. Detect markdown links to other docs
       const linkPattern = /\[([^\]]*)\]\(([^)]+\.md)\)/g;
@@ -107,29 +120,31 @@ export function buildRelationships(db) {
         }
       }
 
-      // 4. Same-folder siblings = related_to (weak relationship)
+      // 4. Same-folder siblings = related_to (capped)
       const dirPath = path.dirname(doc.path);
-      const siblings = docs.filter(
-        d =>
-          d.id !== doc.id &&
-          d.id > doc.id && // prevent duplicate pairs
-          path.dirname(d.path) === dirPath
-      );
-      for (const sibling of siblings) {
-        insertRel.run(
-          doc.id,
-          sibling.id,
-          'related_to',
-          0.3,
-          JSON.stringify({ reason: 'same_folder', auto_detected: true }),
-          now
-        );
-        edgeCount++;
+      const siblingsInDir = siblingsByDir.get(dirPath) || [];
+      // Skip bulk directories (dispatch dirs with 50+ files) to avoid O(n²) edges
+      if (siblingsInDir.length <= 50) {
+        const siblings = siblingsInDir.filter(d => d.id !== doc.id && d.id > doc.id).slice(0, 10); // cap: max 10 sibling edges per doc
+        for (const sibling of siblings) {
+          insertRel.run(
+            doc.id,
+            sibling.id,
+            'related_to',
+            0.3,
+            JSON.stringify({ reason: 'same_folder', auto_detected: true }),
+            now
+          );
+          edgeCount++;
+        }
       }
     }
   });
 
   batch();
+
+  const skippedDirs = [...siblingsByDir.values()].filter(v => v.length > 50).length;
+  console.log(`[graph] Skipped ${skippedDirs} large directories (>50 docs)`);
   console.log(`[graph] Built ${edgeCount} relationships across ${docs.length} documents`);
   return edgeCount;
 }
