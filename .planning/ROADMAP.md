@@ -72,7 +72,14 @@ Plans:
   3. `GET /stats` shows a non-zero stale document count — staleness detection is running and surfacing results
   4. `POST /scan` triggers the orchestrator and completes without duplicating logic that already exists in `scheduler.mjs`
   5. Scheduler log shows hourly, daily, and weekly jobs firing (no TODO stubs remaining in `scheduler.mjs`)
-**Plans**: TBD
+**Plans:** 4 plans
+
+Plans:
+
+- [ ] 03-01-PLAN.md — Processor foundations: summary extraction, ctx-based classification, sibling edge cap
+- [ ] 03-02-PLAN.md — Create orchestrator.mjs with three scan modes (incremental/full/deep) and FTS5 rebuild
+- [ ] 03-03-PLAN.md — Wire scheduler, REST /scan, watcher, and hooks to orchestrator
+- [ ] 03-04-PLAN.md — Document intelligence: tags, similarity, staleness, and deviation detection
 
 ### Phase 4: MCP Server — Read Tools
 
@@ -111,6 +118,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | ------- | ---------------- | -------- | ----------- |
 | 1. Schema Migration Foundation | 3/3 | Complete   | 2026-03-17 |
 | 2. Context Profile Loader | 2/2 | Complete   | 2026-03-17 |
-| 3. Orchestrator and Scheduler Wiring | 0/TBD | Not started | - |
+| 3. Orchestrator and Scheduler Wiring | 0/4 | Not started | - |
 | 4. MCP Server — Read Tools | 0/TBD | Not started | - |
 | 5. MCP Server — Write Tools | 0/TBD | Not started | - |
