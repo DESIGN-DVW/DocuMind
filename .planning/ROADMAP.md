@@ -37,9 +37,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Plans:
 
-- [ ] 01-01-PLAN.md — Migration runner infrastructure and db:reset safety guard
-- [ ] 01-02-PLAN.md — SQL migration files (002-005) for columns, tables, and CHECK removal
-- [ ] 01-03-PLAN.md — Summary and classification backfill for all 8K documents
+- [x] 01-01-PLAN.md — Migration runner infrastructure and db:reset safety guard
+- [x] 01-02-PLAN.md — SQL migration files (002-005) for columns, tables, and CHECK removal
+- [x] 01-03-PLAN.md — Summary and classification backfill for all 8K documents
 
 ### Phase 2: Context Profile Loader
 
@@ -53,7 +53,12 @@ Plans:
   3. The classification tree is defined entirely in the profile JSON — no classification categories are hardcoded in any `.mjs` file
   4. The keyword taxonomies are defined entirely in the profile JSON — `keyword-processor.mjs` contains no hardcoded category lists
   5. `DOCUMIND_PROFILE` env var controls which profile is loaded — switching profiles switches all repo paths and classification behavior
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+
+- [ ] 02-01-PLAN.md — Zod schema, loader module, and dvwdesign.json reference profile
+- [ ] 02-02-PLAN.md — Wire all consumers to use ctx (server, watcher, keyword-processor, backfill-classifications, PM2)
 
 ### Phase 3: Orchestrator and Scheduler Wiring
 
@@ -105,7 +110,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 | ------- | ---------------- | -------- | ----------- |
 | 1. Schema Migration Foundation | 3/3 | Complete   | 2026-03-17 |
-| 2. Context Profile Loader | 0/TBD | Not started | - |
+| 2. Context Profile Loader | 0/2 | Not started | - |
 | 3. Orchestrator and Scheduler Wiring | 0/TBD | Not started | - |
 | 4. MCP Server — Read Tools | 0/TBD | Not started | - |
 | 5. MCP Server — Write Tools | 0/TBD | Not started | - |
