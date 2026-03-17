@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-17T18:00:53.822Z"
+last_updated: "2026-03-17T18:34:00Z"
 progress:
-  total_phases: 2
+  total_phases: 5
   completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 6
+  completed_plans: 6
 ---
 
 # Project State
@@ -18,24 +18,24 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-15)
 
 **Core value:** When you look at a document, you instantly see what it's connected to — what links to it, what duplicates it, and whether it's stale.
-**Current focus:** Phase 2 — Context Profile Loader
+**Current focus:** Phase 3 — Orchestrator + Scheduler Wiring
 
 ## Current Position
 
-Phase: 2 of 5 (Context Profile Loader) — COMPLETE
-Plan: 2 of 2 in current phase — COMPLETE
-Status: Phase 2 complete
-Last activity: 2026-03-17 — Phase 2 Plan 2 complete: all hardcoded constants removed from daemon/processor files; ctx threaded throughout; DOCUMIND_PROFILE in PM2 config
+Phase: 3 of 5 (Orchestrator + Scheduler Wiring) — IN PROGRESS
+Plan: 1 of 2 in current phase — COMPLETE
+Status: Phase 3 Plan 1 complete
+Last activity: 2026-03-17 — Phase 3 Plan 1 complete: 4-arg indexMarkdown with extractSummary + classifyPath; buildRelationships sibling cap (10/doc, skip >50); idempotent DELETE before rebuild
 
-Progress: [█████░░░░░] 36% (5 of ~14 estimated plans)
+Progress: [██████░░░░] 43% (6 of ~14 estimated plans)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 4
-- Average duration: 7m 27s
-- Total execution time: 31m 39s
+- Total plans completed: 6
+- Average duration: 6m 33s
+- Total execution time: 33m 39s
 
 **By Phase:**
 
@@ -43,11 +43,12 @@ Progress: [█████░░░░░] 36% (5 of ~14 estimated plans)
 | ------- | ------- | ------- | ---------- |
 | Phase 1 | 3 | 27m 42s | 9m 14s |
 | Phase 2 | 2 | 8m 11s | 4m 5s |
+| Phase 3 | 1 | 2m 00s | 2m 00s |
 
 **Recent Trend:**
 
-- Last 5 plans: 01-02 (8m 24s), 01-03 (14m 0s), 02-01 (3m 57s), 02-02 (4m 14s)
-- Trend: Phase 2 plans averaged ~4 min — consumer refactors are fast once infrastructure exists
+- Last 5 plans: 01-03 (14m 0s), 02-01 (3m 57s), 02-02 (4m 14s), 03-01 (2m 0s)
+- Trend: Phase 3 Plan 1 took ~2 min — processor changes are narrow and well-defined once ctx infrastructure exists
 
 Updated after each plan completion
 
@@ -76,6 +77,9 @@ Recent decisions affecting current work:
 - [02-02]: repoRegistry stores relative paths via path.relative(REPOS_ROOT, r.path) — PNG endpoint uses path.resolve(REPOS_ROOT, repoRegistry.get(repo)) so relative values required
 - [02-02]: REPOS_ROOT_RESOLVED at module scope in watcher.mjs — mirrors ROOT pattern; required for processPendingChanges closure outside initWatcher
 - [02-02]: registryPath kept in server.mjs for diagram relink endpoints — reads registry for per-repo sync (different purpose from REPOS_ROOT initialization)
+- [03-01]: processMarkdown retains simple frontmatter.category || 'other' fallback — adding ctx would break standalone callers; classification happens in indexMarkdown
+- [03-01]: siblingsByDir Map pre-computed before transaction — avoids repeated .filter() scans inside hot 8K-doc loop
+- [03-01]: supersedes edge volume (167K) is pre-existing behavior outside plan scope — sibling cap confirmed at 5,425 edges / max 10 per doc
 
 ### Pending Todos
 
@@ -84,10 +88,10 @@ None.
 ### Blockers/Concerns
 
 - [Phase 4]: MCP tool description quality affects model behavior — test with MCP Inspector before finalizing tool definitions
-- [Phase 3]: `buildRelationships()` scaling against 8K docs is untested — monitor `SELECT COUNT(*) FROM doc_relationships` as go/no-go gate after first run with sibling cap applied
+- [Phase 4]: Monitor `supersedes` edge growth — currently 167K; if it approaches 500K it will need the same skip/cap treatment as siblings
 
 ## Session Continuity
 
 Last session: 2026-03-17
-Stopped at: Phase 2 Plan 2 complete — all consumers refactored; hardcoded constants removed; ctx threaded throughout daemon and processor files
+Stopped at: Phase 3 Plan 1 complete — 4-arg indexMarkdown, extractSummary, classifyPath; buildRelationships sibling cap + idempotent DELETE
 Resume file: None

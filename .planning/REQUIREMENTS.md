@@ -34,10 +34,10 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Document Intelligence
 
-- [ ] **INTL-01**: Auto-generate document summary from frontmatter description > first paragraph > title+keywords fallback
-- [ ] **INTL-02**: Auto-classify documents using context profile classification rules (path match + frontmatter field match)
+- [x] **INTL-01**: Auto-generate document summary from frontmatter description > first paragraph > title+keywords fallback
+- [x] **INTL-02**: Auto-classify documents using context profile classification rules (path match + frontmatter field match)
 - [ ] **INTL-03**: Auto-extract tags via TF-IDF keyword processor with confidence scores
-- [ ] **INTL-04**: Populate document relationship graph via `buildRelationships()` with sibling edge cap (max 10 per folder)
+- [x] **INTL-04**: Populate document relationship graph via `buildRelationships()` with sibling edge cap (max 10 per folder)
 - [ ] **INTL-05**: Detect similar/duplicate documents across repos (Levenshtein + cosine, threshold 0.7)
 - [ ] **INTL-06**: Detect stale documents (content_hash changed in linked files but doc not updated)
 - [ ] **INTL-07**: Detect convention deviations (5 types: content_drift, structure_change, rule_violation, version_mismatch, metadata_inconsistency)
@@ -113,10 +113,10 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | ORCH-04 | Phase 3 | Pending |
 | ORCH-05 | Phase 3 | Pending |
 | ORCH-06 | Phase 3 | Pending |
-| INTL-01 | Phase 3 | Pending |
-| INTL-02 | Phase 3 | Pending |
+| INTL-01 | Phase 3 | Complete |
+| INTL-02 | Phase 3 | Complete |
 | INTL-03 | Phase 3 | Pending |
-| INTL-04 | Phase 3 | Pending |
+| INTL-04 | Phase 3 | Complete |
 | INTL-05 | Phase 3 | Pending |
 | INTL-06 | Phase 3 | Pending |
 | INTL-07 | Phase 3 | Pending |
