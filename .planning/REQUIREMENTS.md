@@ -26,10 +26,10 @@ Requirements for this milestone. Each maps to roadmap phases.
 ### Orchestrator & Scheduler
 
 - [x] **ORCH-01**: `orchestrator.mjs` consolidates scan pipeline (markdown indexing, keyword extraction, graph population, staleness detection) into a single callable function
-- [ ] **ORCH-02**: Scheduler hourly cron calls orchestrator for incremental scan (changed files only via content_hash)
-- [ ] **ORCH-03**: Scheduler daily cron calls orchestrator for full scan + deviation analysis
-- [ ] **ORCH-04**: Scheduler weekly cron calls orchestrator for keyword refresh + graph rebuild
-- [ ] **ORCH-05**: `/scan` REST endpoint calls orchestrator (not a separate implementation)
+- [x] **ORCH-02**: Scheduler hourly cron calls orchestrator for incremental scan (changed files only via content_hash)
+- [x] **ORCH-03**: Scheduler daily cron calls orchestrator for full scan + deviation analysis
+- [x] **ORCH-04**: Scheduler weekly cron calls orchestrator for keyword refresh + graph rebuild
+- [x] **ORCH-05**: `/scan` REST endpoint calls orchestrator (not a separate implementation)
 - [x] **ORCH-06**: FTS5 explicit rebuild after every bulk write operation
 
 ### Document Intelligence
@@ -108,10 +108,10 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | PROF-04 | Phase 2 | Complete |
 | PROF-05 | Phase 2 | Complete |
 | ORCH-01 | Phase 3 | Complete |
-| ORCH-02 | Phase 3 | Pending |
-| ORCH-03 | Phase 3 | Pending |
-| ORCH-04 | Phase 3 | Pending |
-| ORCH-05 | Phase 3 | Pending |
+| ORCH-02 | Phase 3 | Complete |
+| ORCH-03 | Phase 3 | Complete |
+| ORCH-04 | Phase 3 | Complete |
+| ORCH-05 | Phase 3 | Complete |
 | ORCH-06 | Phase 3 | Complete |
 | INTL-01 | Phase 3 | Complete |
 | INTL-02 | Phase 3 | Complete |

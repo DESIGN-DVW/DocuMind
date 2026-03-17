@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-17T18:39:37Z"
+last_updated: "2026-03-17T18:47:16.016Z"
 progress:
-  total_phases: 5
+  total_phases: 3
   completed_phases: 2
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 9
+  completed_plans: 8
 ---
 
 # Project State
@@ -23,19 +23,19 @@ See: .planning/PROJECT.md (updated 2026-03-15)
 ## Current Position
 
 Phase: 3 of 5 (Orchestrator + Scheduler Wiring) — IN PROGRESS
-Plan: 2 of 4 in current phase — COMPLETE
-Status: Phase 3 Plan 2 complete
-Last activity: 2026-03-17 — Phase 3 Plan 2 complete: orchestrator.mjs with runScan (incremental/full/deep), FTS5 batch rebuild, mtime-skip logic, keyword + graph wiring
+Plan: 3 of 4 in current phase — COMPLETE
+Status: Phase 3 Plan 3 complete
+Last activity: 2026-03-17 — Phase 3 Plan 3 complete: all four daemon entry points wired to orchestrator/indexMarkdown (scheduler crons, /scan, /index, watcher markdown, hooks post-write/post-commit/scan)
 
-Progress: [███████░░░] 50% (7 of ~14 estimated plans)
+Progress: [████████░░] 57% (8 of ~14 estimated plans)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 7
-- Average duration: 5m 58s
-- Total execution time: 35m 42s
+- Total plans completed: 8
+- Average duration: 5m 31s
+- Total execution time: 38m 40s
 
 **By Phase:**
 
@@ -43,12 +43,12 @@ Progress: [███████░░░] 50% (7 of ~14 estimated plans)
 | ------- | ------- | ------- | ---------- |
 | Phase 1 | 3 | 27m 42s | 9m 14s |
 | Phase 2 | 2 | 8m 11s | 4m 5s |
-| Phase 3 | 2 | 4m 03s | 2m 01s |
+| Phase 3 | 3 | 6m 01s | 2m 00s |
 
 **Recent Trend:**
 
-- Last 5 plans: 02-01 (3m 57s), 02-02 (4m 14s), 03-01 (2m 0s), 03-02 (2m 3s)
-- Trend: Phase 3 Plan 2 took ~2 min — orchestrator wiring is narrow once processors and ctx are solid
+- Last 5 plans: 02-02 (4m 14s), 03-01 (2m 0s), 03-02 (2m 3s), 03-03 (2m 58s)
+- Trend: Phase 3 wiring plans averaging ~2 min — tight scope with clear interfaces enables fast execution
 
 Updated after each plan completion
 
@@ -83,6 +83,10 @@ Recent decisions affecting current work:
 - [03-02]: fast-glob default import used (not named) — Node 24 ESM does not support named exports from CJS packages; `import fg from 'fast-glob'; const { glob } = fg`
 - [03-02]: runFullScan pre-loads existing paths Set at start to classify indexed files as added vs updated without extra per-file DB queries
 - [03-02]: runDeepScan passes startMs from runScan through to runFullScan — total durationMs reflects full elapsed time, not sub-phase only
+- [03-03]: setImmediate used for non-blocking scan trigger in /scan and /index endpoints — responds before scan runs to avoid HTTP timeout on large corpora
+- [03-03]: CTX stored at module scope in watcher.mjs (alongside ROOT) — processPendingChanges is module-level, cannot receive ctx through initWatcher closure
+- [03-03]: deriveRepoName iterates ctx.repoRoots with startsWith then falls back to DVWDesign path segment — handles nested repos like FigmaAPI/FigmailAPP
+- [03-03]: post-commit case wrapped in {} braces — prevents let/const block-scoping conflict in switch/case
 
 ### Pending Todos
 
@@ -96,5 +100,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-17
-Stopped at: Phase 3 Plan 2 complete — orchestrator.mjs runScan (incremental/full/deep); FTS5 batch rebuild; smoke test passed (28 docs, 1850ms)
+Stopped at: Phase 3 Plan 3 complete — all four daemon entry points wired: scheduler (3 cron jobs), /scan and /index endpoints, watcher markdown handler, hooks post-write/post-commit/scan
 Resume file: None
