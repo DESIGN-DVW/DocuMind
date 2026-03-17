@@ -22,6 +22,29 @@ module.exports = {
     log_date_format: 'YYYY-MM-DD HH:mm:ss',
     error_file: './data/logs/error.log',
     out_file: './data/logs/out.log',
-    merge_logs: true
+    merge_logs: true,
+  }, {
+    name: 'documind-mcp',
+    script: 'daemon/mcp-server.mjs',
+    exec_mode: 'fork',
+    instances: 1,
+    autorestart: true,
+    watch: false,
+    max_restarts: 10,
+    restart_delay: 5000,
+    env: {
+      NODE_ENV: 'production',
+      DOCUMIND_DB: './data/documind.db',
+      DOCUMIND_PROFILE: process.env.DOCUMIND_PROFILE || './config/profiles/dvwdesign.json',
+    },
+    env_development: {
+      NODE_ENV: 'development',
+      DOCUMIND_DB: './data/documind.db',
+      DOCUMIND_PROFILE: process.env.DOCUMIND_PROFILE || './config/profiles/dvwdesign.json',
+    },
+    log_date_format: 'YYYY-MM-DD HH:mm:ss',
+    error_file: './data/logs/mcp-error.log',
+    out_file: '/dev/null',
+    merge_logs: true,
   }]
 };
