@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-17T17:47:45.146Z"
+last_updated: "2026-03-17T17:54:35Z"
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 5
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State
@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-03-15)
 
 ## Current Position
 
-Phase: 2 of 5 (Context Profile Loader)
-Plan: 1 of 2 in current phase — COMPLETE
-Status: In progress
-Last activity: 2026-03-17 — Phase 2 Plan 1 complete: context/schema.mjs, context/loader.mjs, context/utils.mjs, config/profiles/dvwdesign.json created; loader proven end-to-end
+Phase: 2 of 5 (Context Profile Loader) — COMPLETE
+Plan: 2 of 2 in current phase — COMPLETE
+Status: Phase 2 complete
+Last activity: 2026-03-17 — Phase 2 Plan 2 complete: all hardcoded constants removed from daemon/processor files; ctx threaded throughout; DOCUMIND_PROFILE in PM2 config
 
-Progress: [████░░░░░░] 29% (4 of ~14 estimated plans)
+Progress: [█████░░░░░] 36% (5 of ~14 estimated plans)
 
 ## Performance Metrics
 
@@ -42,12 +42,12 @@ Progress: [████░░░░░░] 29% (4 of ~14 estimated plans)
 | Phase | Plans | Total | Avg/Plan |
 | ------- | ------- | ------- | ---------- |
 | Phase 1 | 3 | 27m 42s | 9m 14s |
-| Phase 2 | 1 | 3m 57s | 3m 57s |
+| Phase 2 | 2 | 8m 11s | 4m 5s |
 
 **Recent Trend:**
 
-- Last 5 plans: 01-01 (5m 18s), 01-02 (8m 24s), 01-03 (14m 0s), 02-01 (3m 57s)
-- Trend: Phase 2 plans are faster — infrastructure-only, no live DB backfill
+- Last 5 plans: 01-02 (8m 24s), 01-03 (14m 0s), 02-01 (3m 57s), 02-02 (4m 14s)
+- Trend: Phase 2 plans averaged ~4 min — consumer refactors are fast once infrastructure exists
 
 Updated after each plan completion
 
@@ -73,6 +73,9 @@ Recent decisions affecting current work:
 - [02-01]: repositoryRegistryPath uses 3 levels up (../../../) from config/profiles/ — research doc measured from DocuMind root (2 levels), actual path from the profile file requires one more level
 - [02-01]: path.resolve() applied to profilePath before dirname() — relative profile paths require resolution before dirname() to avoid CWD-anchored registry lookups
 - [02-01]: Tech keyword count is 53 unique — source TECH_KEYWORDS Set had duplicate 'supabase'; actual unique count is 53, not 67/68 as plan estimated
+- [02-02]: repoRegistry stores relative paths via path.relative(REPOS_ROOT, r.path) — PNG endpoint uses path.resolve(REPOS_ROOT, repoRegistry.get(repo)) so relative values required
+- [02-02]: REPOS_ROOT_RESOLVED at module scope in watcher.mjs — mirrors ROOT pattern; required for processPendingChanges closure outside initWatcher
+- [02-02]: registryPath kept in server.mjs for diagram relink endpoints — reads registry for per-repo sync (different purpose from REPOS_ROOT initialization)
 
 ### Pending Todos
 
@@ -86,5 +89,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-17
-Stopped at: Phase 2 Plan 1 complete — context/schema.mjs, context/loader.mjs, context/utils.mjs, config/profiles/dvwdesign.json created and verified
+Stopped at: Phase 2 Plan 2 complete — all consumers refactored; hardcoded constants removed; ctx threaded throughout daemon and processor files
 Resume file: None

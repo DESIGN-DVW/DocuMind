@@ -20,8 +20,8 @@ Requirements for this milestone. Each maps to roadmap phases.
 - [x] **PROF-01**: Context profile JSON schema validated by Zod at startup
 - [x] **PROF-02**: `context/loader.mjs` loads active profile and exposes `ctx` object (repo paths, classification tree, relationship types, keyword taxonomies, lint rules)
 - [x] **PROF-03**: `dvwdesign.json` reference profile that reproduces current hardcoded behavior
-- [ ] **PROF-04**: Classification tree defined in profile, not in database schema
-- [ ] **PROF-05**: Keyword taxonomies defined in profile, not hardcoded in processor
+- [x] **PROF-04**: Classification tree defined in profile, not in database schema
+- [x] **PROF-05**: Keyword taxonomies defined in profile, not hardcoded in processor
 
 ### Orchestrator & Scheduler
 
@@ -105,8 +105,8 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | PROF-01 | Phase 2 | Complete |
 | PROF-02 | Phase 2 | Complete |
 | PROF-03 | Phase 2 | Complete |
-| PROF-04 | Phase 2 | Pending |
-| PROF-05 | Phase 2 | Pending |
+| PROF-04 | Phase 2 | Complete |
+| PROF-05 | Phase 2 | Complete |
 | ORCH-01 | Phase 3 | Pending |
 | ORCH-02 | Phase 3 | Pending |
 | ORCH-03 | Phase 3 | Pending |
