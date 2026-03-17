@@ -122,6 +122,9 @@ try {
     process.exit(0);
   }
 
+  // Check for --backfill flag (forces backfill even when no new migrations applied)
+  const forceBackfill = process.argv.includes('--backfill');
+
   // Step 6: Apply pending migrations
   let appliedCount = 0;
   let skippedCount = 0;
@@ -155,7 +158,25 @@ try {
     appliedCount++;
   }
 
-  // Step 7: Summary
+  // Step 7: Post-migration backfill (runs when new migrations applied, or --backfill forced)
+  if (appliedCount > 0 || forceBackfill) {
+    console.log(chalk.blue('\nRunning post-migration backfill...'));
+
+    const { backfillSummaries } = await import('./backfill/backfill-summaries.mjs');
+    const summaryCount = backfillSummaries(db);
+    console.log(chalk.green(`  Backfilled ${summaryCount} document summaries`));
+
+    const { backfillClassifications } = await import('./backfill/backfill-classifications.mjs');
+    const classCount = backfillClassifications(db);
+    console.log(chalk.green(`  Backfilled ${classCount} document classifications`));
+
+    // FTS5 rebuild after bulk writes (mandatory — prevents stale index after bulk UPDATEs)
+    console.log(chalk.blue('  Rebuilding FTS5 index...'));
+    db.exec("INSERT INTO documents_fts(documents_fts) VALUES('rebuild')");
+    console.log(chalk.green('  FTS5 index rebuilt'));
+  }
+
+  // Step 8: Summary
   console.log('');
   console.log('  ' + '━'.repeat(58));
   if (appliedCount > 0) {
@@ -166,6 +187,9 @@ try {
   }
   if (appliedCount === 0 && skippedCount === 0) {
     console.log(chalk.gray('  No migrations to apply'));
+  }
+  if (forceBackfill) {
+    console.log(chalk.blue('  Mode:    --backfill (forced)'));
   }
   if (backupPath) {
     console.log(chalk.gray(`  Backup:  ${path.basename(backupPath)}`));
