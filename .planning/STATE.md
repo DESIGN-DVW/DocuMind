@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-17T18:34:00Z"
+last_updated: "2026-03-17T18:39:37Z"
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 7
+  completed_plans: 7
 ---
 
 # Project State
@@ -23,19 +23,19 @@ See: .planning/PROJECT.md (updated 2026-03-15)
 ## Current Position
 
 Phase: 3 of 5 (Orchestrator + Scheduler Wiring) — IN PROGRESS
-Plan: 1 of 2 in current phase — COMPLETE
-Status: Phase 3 Plan 1 complete
-Last activity: 2026-03-17 — Phase 3 Plan 1 complete: 4-arg indexMarkdown with extractSummary + classifyPath; buildRelationships sibling cap (10/doc, skip >50); idempotent DELETE before rebuild
+Plan: 2 of 4 in current phase — COMPLETE
+Status: Phase 3 Plan 2 complete
+Last activity: 2026-03-17 — Phase 3 Plan 2 complete: orchestrator.mjs with runScan (incremental/full/deep), FTS5 batch rebuild, mtime-skip logic, keyword + graph wiring
 
-Progress: [██████░░░░] 43% (6 of ~14 estimated plans)
+Progress: [███████░░░] 50% (7 of ~14 estimated plans)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 6
-- Average duration: 6m 33s
-- Total execution time: 33m 39s
+- Total plans completed: 7
+- Average duration: 5m 58s
+- Total execution time: 35m 42s
 
 **By Phase:**
 
@@ -43,12 +43,12 @@ Progress: [██████░░░░] 43% (6 of ~14 estimated plans)
 | ------- | ------- | ------- | ---------- |
 | Phase 1 | 3 | 27m 42s | 9m 14s |
 | Phase 2 | 2 | 8m 11s | 4m 5s |
-| Phase 3 | 1 | 2m 00s | 2m 00s |
+| Phase 3 | 2 | 4m 03s | 2m 01s |
 
 **Recent Trend:**
 
-- Last 5 plans: 01-03 (14m 0s), 02-01 (3m 57s), 02-02 (4m 14s), 03-01 (2m 0s)
-- Trend: Phase 3 Plan 1 took ~2 min — processor changes are narrow and well-defined once ctx infrastructure exists
+- Last 5 plans: 02-01 (3m 57s), 02-02 (4m 14s), 03-01 (2m 0s), 03-02 (2m 3s)
+- Trend: Phase 3 Plan 2 took ~2 min — orchestrator wiring is narrow once processors and ctx are solid
 
 Updated after each plan completion
 
@@ -80,6 +80,9 @@ Recent decisions affecting current work:
 - [03-01]: processMarkdown retains simple frontmatter.category || 'other' fallback — adding ctx would break standalone callers; classification happens in indexMarkdown
 - [03-01]: siblingsByDir Map pre-computed before transaction — avoids repeated .filter() scans inside hot 8K-doc loop
 - [03-01]: supersedes edge volume (167K) is pre-existing behavior outside plan scope — sibling cap confirmed at 5,425 edges / max 10 per doc
+- [03-02]: fast-glob default import used (not named) — Node 24 ESM does not support named exports from CJS packages; `import fg from 'fast-glob'; const { glob } = fg`
+- [03-02]: runFullScan pre-loads existing paths Set at start to classify indexed files as added vs updated without extra per-file DB queries
+- [03-02]: runDeepScan passes startMs from runScan through to runFullScan — total durationMs reflects full elapsed time, not sub-phase only
 
 ### Pending Todos
 
@@ -93,5 +96,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-17
-Stopped at: Phase 3 Plan 1 complete — 4-arg indexMarkdown, extractSummary, classifyPath; buildRelationships sibling cap + idempotent DELETE
+Stopped at: Phase 3 Plan 2 complete — orchestrator.mjs runScan (incremental/full/deep); FTS5 batch rebuild; smoke test passed (28 docs, 1850ms)
 Resume file: None
