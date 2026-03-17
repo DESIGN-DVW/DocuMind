@@ -1,0 +1,24 @@
+// markdownlint-cli2 configuration
+// Auto-discovered by: CLI, VSCode extension, lint-staged
+// Combines standard rules + DVW custom rules with auto-fix support
+{
+  // Standard markdownlint rules
+  "config": {
+    "extends": "./config/.markdownlint.json"
+  },
+
+  // Custom rules with fixInfo (auto-fixable via --fix)
+  "customRules": [
+    "./config/rules/table-separator-spacing.cjs"
+  ],
+
+  // Paths to ignore
+  "ignores": [
+    "node_modules",
+    "index",
+    ".git",
+    "dist",
+    "build",
+    ".planning"
+  ]
+}

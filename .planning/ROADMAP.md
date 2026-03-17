@@ -33,7 +33,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. The `documents` table has `summary`, `classification`, and tag-related columns visible via `.schema documents` in SQLite
   4. `db:reset` is explicitly blocked or warns loudly — it no longer silently destroys the 8K document corpus
   5. FTS5 search still returns results after migration (FTS5 rebuild was run as part of migration)
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+
+- [ ] 01-01-PLAN.md — Migration runner infrastructure and db:reset safety guard
+- [ ] 01-02-PLAN.md — SQL migration files (002-005) for columns, tables, and CHECK removal
+- [ ] 01-03-PLAN.md — Summary and classification backfill for all 8K documents
 
 ### Phase 2: Context Profile Loader
 
@@ -98,7 +104,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 | ------- | ---------------- | -------- | ----------- |
-| 1. Schema Migration Foundation | 0/TBD | Not started | - |
+| 1. Schema Migration Foundation | 0/3 | Planned | - |
 | 2. Context Profile Loader | 0/TBD | Not started | - |
 | 3. Orchestrator and Scheduler Wiring | 0/TBD | Not started | - |
 | 4. MCP Server — Read Tools | 0/TBD | Not started | - |

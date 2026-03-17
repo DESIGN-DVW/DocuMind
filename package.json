@@ -17,8 +17,8 @@
     "scan:report": "node scripts/scan-all-repos.mjs --report",
     "index": "node scripts/index-markdown.mjs",
     "index:update": "node scripts/index-markdown.mjs --update",
-    "lint": "markdownlint-cli2 '**/*.md' '#node_modules' '#index' --config config/.markdownlint.json",
-    "lint:fix": "markdownlint-cli2 '**/*.md' '#node_modules' '#index' --config config/.markdownlint.json --fix",
+    "lint": "markdownlint-cli2 '**/*.md'",
+    "lint:fix": "markdownlint-cli2 --fix '**/*.md'",
     "fix": "node scripts/fix-markdown.mjs",
     "fix:all": "node scripts/fix-markdown.mjs --all",
     "validate": "node scripts/validate-timestamps.mjs",
@@ -61,8 +61,8 @@
     "db:migrate": "node scripts/db/init-database.mjs"
   },
   "lint-staged": {
-    "**/*.md": [
-      "markdownlint-cli2 --fix --config config/.markdownlint.json"
+    "!(.planning)/**/*.md": [
+      "markdownlint-cli2 --fix"
     ],
     "**/*.{js,mjs,json}": [
       "prettier --write"
