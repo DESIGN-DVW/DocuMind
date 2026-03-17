@@ -15,6 +15,7 @@ import {
   propagateRelinkAllRepos,
 } from '../processors/relink-processor.mjs';
 import { commonDir } from '../context/utils.mjs';
+import { indexMarkdown } from '../processors/markdown-processor.mjs';
 
 const IGNORE_PATTERNS = [
   '**/node_modules/**',
@@ -29,6 +30,7 @@ const IGNORE_PATTERNS = [
 
 const DEBOUNCE_MS = 5000;
 let ROOT = null;
+let CTX = null;
 let REPOS_ROOT_RESOLVED = null;
 let debounceTimer = null;
 const pendingChanges = new Set();
@@ -40,6 +42,7 @@ const pendingChanges = new Set();
  */
 export function initWatcher(db, root, ctx) {
   ROOT = root;
+  CTX = ctx;
   REPOS_ROOT_RESOLVED = commonDir(ctx.repoRoots.map(r => r.path));
 
   const WATCH_PATTERNS = [
@@ -193,8 +196,12 @@ async function processPendingChanges(db) {
               }
             }
           } else {
-            // TODO: trigger markdown-processor re-index for this file
-            console.log(`[watcher] Queued markdown re-index: ${change.path} (repo: ${repoMatch})`);
+            try {
+              await indexMarkdown(db, change.path, repoMatch, CTX);
+              console.log(`[watcher] Indexed: ${change.path} (repo: ${repoMatch})`);
+            } catch (err) {
+              console.error(`[watcher] Index error for ${change.path}:`, err.message);
+            }
           }
           break;
         }

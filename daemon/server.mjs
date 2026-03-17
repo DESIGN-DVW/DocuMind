@@ -245,7 +245,7 @@ app.post('/convert', (req, res) => {
 app.post('/hook', async (req, res) => {
   const { event, file, repo } = req.body;
   console.log(`[hook] ${event} — ${file || repo || 'unknown'}`);
-  const result = await processHook(db, req.body);
+  const result = await processHook(db, req.body, ctx);
   res.json({ status: 'received', event, ...(result || {}) });
 });
 

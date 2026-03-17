@@ -12,6 +12,24 @@ import {
   propagateRelinkAllRepos,
   syncRegistryFromDb,
 } from '../processors/relink-processor.mjs';
+import { indexMarkdown } from '../processors/markdown-processor.mjs';
+import { runScan } from '../orchestrator.mjs';
+
+/**
+ * Derive repository name from file path using ctx.repoRoots
+ * @param {string} filePath - Absolute file path
+ * @param {object} ctx - Context profile object from loadProfile()
+ * @returns {string} Repository name
+ */
+function deriveRepoName(filePath, ctx) {
+  for (const root of ctx.repoRoots) {
+    if (filePath.startsWith(root.path)) return root.name;
+  }
+  // Fallback: extract from path segments
+  const segments = filePath.split('/');
+  const dvwIdx = segments.indexOf('DVWDesign');
+  return dvwIdx >= 0 ? segments[dvwIdx + 1] : 'unknown';
+}
 
 /**
  * Process an incoming hook event
@@ -24,30 +42,55 @@ import {
  * @param {string} [event.name] - Diagram name (for diagram-curated)
  * @param {string} [event.curatedUrl] - Curated FigJam URL (for diagram-curated)
  * @param {string} [event.registryPath] - Path to repository-registry.json
+ * @param {object} ctx - Context profile object from loadProfile()
  */
-export async function processHook(db, event) {
+export async function processHook(db, event, ctx) {
   const { event: type, file, repo, files, name, curatedUrl, registryPath } = event;
 
   switch (type) {
     case 'post-write':
       if (file && file.endsWith('.md')) {
         console.log(`[hooks] post-write: re-indexing ${file}`);
-        // TODO: trigger single-file re-index + lint check
+        try {
+          const repoName = deriveRepoName(file, ctx);
+          await indexMarkdown(db, file, repoName, ctx);
+          return { status: 'indexed', file };
+        } catch (err) {
+          console.error(`[hooks] post-write index error:`, err.message);
+          return { status: 'error', error: err.message };
+        }
       }
       break;
 
-    case 'post-commit':
+    case 'post-commit': {
       const mdFiles = (files || []).filter(f => f.endsWith('.md'));
       if (mdFiles.length > 0) {
         console.log(`[hooks] post-commit: re-indexing ${mdFiles.length} markdown file(s)`);
-        // TODO: trigger batch re-index
+        let indexed = 0;
+        for (const f of mdFiles) {
+          try {
+            const repoName = deriveRepoName(f, ctx);
+            await indexMarkdown(db, f, repoName, ctx);
+            indexed++;
+          } catch (err) {
+            console.error(`[hooks] post-commit index error for ${f}:`, err.message);
+          }
+        }
+        return { status: 'indexed', count: indexed };
       }
       break;
+    }
 
     case 'scan':
-      console.log(`[hooks] manual scan trigger for ${repo || 'all repos'}`);
-      // TODO: trigger scan-all-repos or single-repo scan
-      break;
+      console.log(`[hooks] scan trigger for ${repo || 'all repos'}`);
+      setImmediate(async () => {
+        try {
+          await runScan(db, ctx, { mode: 'incremental', repo: repo || null });
+        } catch (err) {
+          console.error('[hooks] scan error:', err.message);
+        }
+      });
+      return { status: 'queued', repo: repo || 'all' };
 
     case 'convert':
       console.log(`[hooks] conversion requested: ${file}`);
