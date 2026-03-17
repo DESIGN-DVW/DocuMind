@@ -10,30 +10,30 @@ See: .planning/PROJECT.md (updated 2026-03-15)
 ## Current Position
 
 Phase: 1 of 5 (Schema Migration Foundation)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-03-17 — Phase 1 Plan 1 complete: migration runner + db:reset guard
+Last activity: 2026-03-17 — Phase 1 Plan 2 complete: SQL migrations 002-005 applied (summary, classification, document_tags, CHECK removal)
 
-Progress: [█░░░░░░░░░] 7% (1 of ~14 estimated plans)
+Progress: [██░░░░░░░░] 14% (2 of ~14 estimated plans)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 1
-- Average duration: 5m 18s
-- Total execution time: 5m 18s
+- Total plans completed: 2
+- Average duration: 6m 51s
+- Total execution time: 13m 42s
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 | ------- | ------- | ------- | ---------- |
-| Phase 1 | 1 | 5m 18s | 5m 18s |
+| Phase 1 | 2 | 13m 42s | 6m 51s |
 
 **Recent Trend:**
 
-- Last 5 plans: 01-01 (5m 18s)
-- Trend: —
+- Last 5 plans: 01-01 (5m 18s), 01-02 (8m 24s)
+- Trend: slight increase (more migration SQL complexity)
 
 Updated after each plan completion
 
@@ -51,6 +51,8 @@ Recent decisions affecting current work:
 - [01-01]: Migration runner is separate from init-database.mjs — init creates fresh DB; migrate evolves existing DB
 - [01-01]: Bootstrap schema_migrations created inline in migrate.mjs before reading applied versions (avoids chicken-and-egg ordering)
 - [01-01]: Backup includes -wal and -shm files to ensure SQLite WAL consistency
+- [01-02]: PRAGMA foreign_keys omitted from migration 005 SQL — migrate.mjs sets it at startup; with 0 rows no FK checks fire during INSERT INTO ... SELECT *
+- [01-02]: document_graph view dropped and recreated inside migration 005 — SQLite validates dependent views on DROP TABLE; standard workaround
 
 ### Pending Todos
 
@@ -64,5 +66,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-17
-Stopped at: Phase 1 Plan 1 complete — migration runner infrastructure built, schema_migrations table active in live DB
+Stopped at: Phase 1 Plan 2 complete — migrations 002-005 applied; documents table has summary+classification; document_tags table with FTS5; doc_relationships CHECK removed
 Resume file: None

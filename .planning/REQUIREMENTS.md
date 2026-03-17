@@ -10,10 +10,10 @@ Requirements for this milestone. Each maps to roadmap phases.
 ### Schema & Migration
 
 - [x] **SCHM-01**: Schema migration system with versioned SQL files and a `schema_migrations` table (protects 8K live docs from destructive db:reset)
-- [ ] **SCHM-02**: Add `summary TEXT` column to documents table with FTS5 rebuild
-- [ ] **SCHM-03**: Add `classification TEXT` column to documents table (materialized path format: `engineering/architecture/adrs`)
-- [ ] **SCHM-04**: Create `document_tags` table (document_id, tag, source, confidence) with FTS5
-- [ ] **SCHM-05**: Remove hardcoded CHECK constraints from schema that enumerate DVWDesign-specific values
+- [x] **SCHM-02**: Add `summary TEXT` column to documents table with FTS5 rebuild
+- [x] **SCHM-03**: Add `classification TEXT` column to documents table (materialized path format: `engineering/architecture/adrs`)
+- [x] **SCHM-04**: Create `document_tags` table (document_id, tag, source, confidence) with FTS5
+- [x] **SCHM-05**: Remove hardcoded CHECK constraints from schema that enumerate DVWDesign-specific values
 
 ### Context Profiles
 
@@ -98,10 +98,10 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | Requirement | Phase | Status |
 | --- | --- | --- |
 | SCHM-01 | Phase 1 | Complete |
-| SCHM-02 | Phase 1 | Pending |
-| SCHM-03 | Phase 1 | Pending |
-| SCHM-04 | Phase 1 | Pending |
-| SCHM-05 | Phase 1 | Pending |
+| SCHM-02 | Phase 1 | Complete |
+| SCHM-03 | Phase 1 | Complete |
+| SCHM-04 | Phase 1 | Complete |
+| SCHM-05 | Phase 1 | Complete |
 | PROF-01 | Phase 2 | Pending |
 | PROF-02 | Phase 2 | Pending |
 | PROF-03 | Phase 2 | Pending |
