@@ -90,6 +90,12 @@ app.get('/stats', (_req, res) => {
     .prepare('SELECT scan_completed FROM scan_history ORDER BY scan_completed DESC LIMIT 1')
     .get();
 
+  // Stale documents count (written by detectStaleness during deep scan)
+  const staleRow = db
+    .prepare("SELECT stat_value FROM statistics WHERE stat_name = 'stale_documents'")
+    .get();
+  const staleDocuments = staleRow ? Number(staleRow.stat_value) : 0;
+
   // Pending relinks + stale diagrams
   let pendingRelinks = 0;
   let staleDiagrams = 0;
@@ -115,6 +121,7 @@ app.get('/stats', (_req, res) => {
     diagrams: diagramCount,
     pending_relinks: pendingRelinks,
     stale_diagrams: staleDiagrams,
+    stale_documents: staleDocuments,
     last_scan: lastScan?.scan_completed || null,
     uptime: process.uptime(),
   });
