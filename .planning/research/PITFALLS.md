@@ -74,8 +74,6 @@ Remove same-folder sibling edges from the bulk build. They add noise more than s
 **Phase to address:**
 Graph population phase — cap or remove sibling edges before running `buildRelationships` against the live 8K document corpus.
 
----
-
 ### Pitfall 4: MCP stdout Pollution Kills the Protocol
 
 **What goes wrong:**
@@ -96,8 +94,6 @@ From the first line of the MCP server entry point, replace `console.log` with a 
 
 **Phase to address:**
 MCP server phase — audit and redirect all console.log in processor modules before exposing them as MCP tools. This is a prerequisite, not an afterthought.
-
----
 
 ### Pitfall 5: Context Profile Schema Couples Product to DVWDesign Internals
 
@@ -120,8 +116,6 @@ Design the profile schema from the consumer's perspective first: what would a do
 **Phase to address:**
 Context profiles phase — design the schema from a generic user's perspective before implementing the DVWDesign profile as the first instance.
 
----
-
 ## Technical Debt Patterns
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
@@ -132,8 +126,6 @@ Context profiles phase — design the schema from a generic user's perspective b
 | `INSERT OR IGNORE` for relationship edges | Prevents duplicate key errors | Masks logic bugs where duplicate detection should be explicit | Acceptable for idempotent builders only |
 | `batch()` transaction wrapping entire graph build | Correct atomic semantics | Holds write lock for duration of build; blocks all other writes for minutes | Acceptable if graph build runs during a maintenance window or off-peak cron |
 | `console.log` for all daemon output | Fast to write | Breaks MCP stdio transport; no log levels; can't silence in production | Never in MCP server context |
-
----
 
 ## Integration Gotchas
 
@@ -147,8 +139,6 @@ Context profiles phase — design the schema from a generic user's perspective b
 | better-sqlite3 WAL | Copying `documind.db` with `fs.copyFile()` for backup | Use `db.backup()` method or `VACUUM INTO 'backup.db'` — raw file copy in WAL mode can produce a corrupt backup |
 | Chokidar on macOS | Relying solely on watcher for freshness | Run hourly scan as authoritative source; treat watcher events as acceleration, not the source of truth |
 
----
-
 ## Performance Traps
 
 | Trap | Symptoms | Prevention | When It Breaks |
@@ -159,8 +149,6 @@ Context profiles phase — design the schema from a generic user's perspective b
 | Keyword extraction on full document corpus without batching | Keyword processor runs for >10 minutes, blocking the event loop | Run keyword extraction in batches; commit per batch; use `setImmediate` yields | ~3K+ documents in a single run |
 | No index on `(source_doc_id, relationship_type)` in `doc_relationships` | Graph queries degrade as edge count grows | Add compound index before populating graph; the schema includes `idx_rel_source` but verify it covers relationship_type too | >100K edges |
 
----
-
 ## Security Mistakes
 
 | Mistake | Risk | Prevention |
@@ -170,8 +158,6 @@ Context profiles phase — design the schema from a generic user's perspective b
 | `documind.db` at default Unix 644 permissions | Any local process can read all indexed document content | Set `umask(0o077)` before DB creation; `chmod 600` on existing DB file |
 | No rate limiting on MCP write tools | A runaway agent loop calls `lint:fix` on all repos continuously | Add a per-minute call count per tool in the MCP server; return error after threshold |
 
----
-
 ## "Looks Done But Isn't" Checklist
 
 - [ ] **Schema migration:** `schema.sql` updated AND live DB migrated AND FTS5 rebuilt — verify with `PRAGMA table_info(documents)` and a search for newly-indexed field content
@@ -180,8 +166,6 @@ Context profiles phase — design the schema from a generic user's perspective b
 - [ ] **MCP server:** Tool returns structured JSON error on invalid input (not a raw thrown exception) — verify by passing malformed parameters to each tool
 - [ ] **Context profiles:** DVWDesign profile loads AND a hypothetical second profile (different repo roots, different classification tree) also loads without code changes — verify by creating a `test-profile.json` with different values
 - [ ] **Keyword extraction:** Keywords table populated AND `/keywords` returns results AND keywords survive a daemon restart (persisted, not in-memory)
-
----
 
 ## Recovery Strategies
 
@@ -193,8 +177,6 @@ Context profiles phase — design the schema from a generic user's perspective b
 | MCP server producing protocol errors due to stdout pollution | LOW | Add stderr redirect at top of MCP entry point; restart; no data loss |
 | Context profile schema too DVW-specific to port | HIGH | Redesign schema generically; migrate DVWDesign config onto new schema; re-validate all processors against new profile shape |
 
----
-
 ## Pitfall-to-Phase Mapping
 
 | Pitfall | Prevention Phase | Verification |
@@ -205,8 +187,6 @@ Context profiles phase — design the schema from a generic user's perspective b
 | MCP stdout pollution | MCP server phase — prerequisite step | All processor `console.log` calls audited; MCP tool call completes without protocol error |
 | Context profile coupling to DVW internals | Context profiles phase — design step before implementation | A synthetic second profile with different repoRoots and categories loads and validates without errors |
 | Keyword extraction blocking event loop | Keyword processor wiring phase | Keyword extraction completes without Node.js warning about long microtask queue; daemon remains responsive to API requests during extraction |
-
----
 
 ## Sources
 
@@ -222,8 +202,6 @@ Context profiles phase — design the schema from a generic user's perspective b
 - MCP transport standards: [MCP Transports spec](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports) — HIGH confidence; stdio + Streamable HTTP are the two current standards; SSE deprecated
 - MCP tool count limits: [Cursor hard limit of 40 tools](https://www.truefoundry.com/blog/mcp-servers-in-cursor-setup-configuration-and-security-guide) — MEDIUM confidence; design DocuMind MCP to stay well under this
 - Config anti-patterns: [Environment variables and configuration anti-patterns — Liran Tal](https://lirantal.com/blog/environment-variables-configuration-anti-patterns-node-js-applications) — MEDIUM confidence
-
----
 
 *Pitfalls research for: DocuMind v3.0 — documentation intelligence platform*
 *Researched: 2026-03-15*

@@ -494,38 +494,14 @@ Questions? Check docs/GLOSSIAAPP-MIGRATION-GUIDE.md
 ## Timeline
 
 | Task | Duration | When |
-|------|----------|------|
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
+| ------ | ---------- | ------ |
 | **Commit local changes** | 5 min | Now |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
 | **Create backup** | 2 min | Before transfer |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
 | **Transfer on GitHub** | 5 min | When ready |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
 | **Update local remote** | 3 min | After transfer |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
 | **Verify migration** | 5 min | After update |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
 | **Invite guillaume** | 5 min | After migration |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
 | **Grant repo access** | 5-10 min | After acceptance |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
 | **Total** | **~30-35 min active work** | Single session |
 
 (User acceptance of invitation happens asynchronously)

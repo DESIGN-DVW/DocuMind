@@ -21,17 +21,17 @@ affects: [keyword-processor, orchestrator-deep-scan, orchestrator-full-scan, sta
 tech-stack:
   added: []
   patterns:
-    - "cosineSimilarity over TF-IDF keyword Map pairs — O(n^2) but bounded to same-repo pairs only"
-    - "Statistics table UPSERT pattern — INSERT ... ON CONFLICT(stat_name) DO UPDATE for stale_documents"
-    - "INSERT OR IGNORE for document_tags — handles UNIQUE(document_id, tag) constraint gracefully"
-    - "All detection functions are idempotent — clear auto-detected records before re-running"
+  - "cosineSimilarity over TF-IDF keyword Map pairs — O(n^2) but bounded to same-repo pairs only"
+  - "Statistics table UPSERT pattern — INSERT ... ON CONFLICT(stat_name) DO UPDATE for stale_documents"
+  - "INSERT OR IGNORE for document_tags — handles UNIQUE(document_id, tag) constraint gracefully"
+  - "All detection functions are idempotent — clear auto-detected records before re-running"
 
 key-files:
   created: []
   modified:
-    - processors/keyword-processor.mjs
-    - orchestrator.mjs
-    - daemon/server.mjs
+  - processors/keyword-processor.mjs
+  - orchestrator.mjs
+  - daemon/server.mjs
 
 key-decisions:
   - "deviation_type in content_similarities must be 'duplicate' not 'potential_duplicate' — schema CHECK constraint only allows duplicate/variant/outdated/partial"

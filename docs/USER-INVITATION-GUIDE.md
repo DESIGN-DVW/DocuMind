@@ -20,16 +20,10 @@
 
 ### Current Situation
 
-| Organization | Has Access? | Repositories |
-|-------------|-------------|--------------|
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| **DVW-Design** | ✅ YES | GlossiaApp only |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| **DESIGN-DVW** | ❌ NO | All other repos (Figma-Plug-ins, DocuMind, etc.) |
+| Organization   | Has Access? | Repositories                                     |
+| -------------- | ----------- | ------------------------------------------------ |
+| **DVW-Design** | ✅ YES       | GlossiaApp only                                  |
+| **DESIGN-DVW** | ❌ NO        | All other repos (Figma-Plug-ins, DocuMind, etc.) |
 
 ### The Problem
 
@@ -235,50 +229,26 @@ If you plan to invite multiple users with similar permissions:
 
 ### For External Consultants (like <guillaume@aigenconsulting.com>)
 
-| Repository | Recommended Permission | Reason |
-|-----------|----------------------|--------|
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| Figma-Plug-ins | **Read** | Can view BUSINESS-ANALYSIS.md and other docs |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| DocuMind | **Read** | Can view documentation |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| FigmailAPP | **Write** (if working on it) | Can contribute code |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| FigmaDSController | **Write** (if working on it) | Can contribute code |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| All Others | **Read** or None | Access based on need |
+| Repository        | Recommended Permission       | Reason                                       |
+| ----------------- | ---------------------------- | -------------------------------------------- |
+| Figma-Plug-ins    | **Read**                     | Can view BUSINESS-ANALYSIS.md and other docs |
+| DocuMind          | **Read**                     | Can view documentation                       |
+| FigmailAPP        | **Write** (if working on it) | Can contribute code                          |
+| FigmaDSController | **Write** (if working on it) | Can contribute code                          |
+| All Others        | **Read** or None             | Access based on need                         |
 
 ### For Full-Time Team Members
 
-| Repository | Recommended Permission | Reason |
-|-----------|----------------------|--------|
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| All Repositories | **Write** | Can contribute to all projects |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| Critical Repos | **Maintain** | Can manage issues and PRs |
+| Repository       | Recommended Permission | Reason                         |
+| ---------------- | ---------------------- | ------------------------------ |
+| All Repositories | **Write**              | Can contribute to all projects |
+| Critical Repos   | **Maintain**           | Can manage issues and PRs      |
 
 ### For Organization Admins
 
-| Repository | Recommended Permission | Reason |
-|-----------|----------------------|--------|
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| All Repositories | **Admin** | Full control |
+| Repository       | Recommended Permission | Reason       |
+| ---------------- | ---------------------- | ------------ |
+| All Repositories | **Admin**              | Full control |
 
 ## Verification
 

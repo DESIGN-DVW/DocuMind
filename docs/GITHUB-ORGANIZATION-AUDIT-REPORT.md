@@ -26,85 +26,37 @@ This causes:
 
 ### Organization: DESIGN-DVW (Primary)
 
-| Repository | Location | Status |
-|-----------|----------|--------|
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| Aprimo | `https://github.com/DESIGN-DVW/Aprimo.git` | ✅ Active |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| CampaignManager | `https://github.com/DESIGN-DVW/CampaignManager.git` | ✅ Active |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| DocuMind | `https://github.com/DESIGN-DVW/DocuMind.git` | ✅ Active |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| Figma-Plug-ins | `https://github.com/DESIGN-DVW/Figma-Plug-ins.git` | ✅ Active |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
+| Repository          | Location                                                | Status   |
+| ------------------- | ------------------------------------------------------- | -------- |
+| Aprimo              | `https://github.com/DESIGN-DVW/Aprimo.git`              | ✅ Active |
+| CampaignManager     | `https://github.com/DESIGN-DVW/CampaignManager.git`     | ✅ Active |
+| DocuMind            | `https://github.com/DESIGN-DVW/DocuMind.git`            | ✅ Active |
+| Figma-Plug-ins      | `https://github.com/DESIGN-DVW/Figma-Plug-ins.git`      | ✅ Active |
 | LibraryAssetManager | `https://github.com/DESIGN-DVW/LibraryAssetManager.git` | ✅ Active |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| RootDispatcher | `https://github.com/DESIGN-DVW/RootDispatcher.git` | ✅ Active |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| FigmaDSController | `https://github.com/DESIGN-DVW/FigmaDSController.git` | ✅ Active |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| FigmailAPP | `https://github.com/DESIGN-DVW/FigmailAPP` | ✅ Active |
+| RootDispatcher      | `https://github.com/DESIGN-DVW/RootDispatcher.git`      | ✅ Active |
+| FigmaDSController   | `https://github.com/DESIGN-DVW/FigmaDSController.git`   | ✅ Active |
+| FigmailAPP          | `https://github.com/DESIGN-DVW/FigmailAPP`              | ✅ Active |
 
 **Total:** 8 repositories
 
 ### Organization: DVW-Design (Legacy)
 
-| Repository | Location | Status |
-|-----------|----------|--------|
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
+| Repository | Location                                       | Status           |
+| ---------- | ---------------------------------------------- | ---------------- |
 | GlossiaApp | `https://github.com/DVW-Design/GlossiaApp.git` | ⚠️ Different Org |
 
 **Total:** 1 repository
 
 ### Local Only (No GitHub Remote)
 
-| Repository | Local Path | Status |
-|-----------|-----------|--------|
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| @figma-agents | `/Users/Shared/htdocs/github/DVWDesign/@figma-agents` | 📍 Local |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| @figma-core | `/Users/Shared/htdocs/github/DVWDesign/@figma-core` | 📍 Local |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| FigmaAPI/@figma-core | `/Users/Shared/htdocs/github/DVWDesign/FigmaAPI/@figma-core` | 📍 Local |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| FigmaAPI/@figma-docs | `/Users/Shared/htdocs/github/DVWDesign/FigmaAPI/@figma-docs` | 📍 Local |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| RandD | `/Users/Shared/htdocs/github/DVWDesign/RandD` | 📍 Local |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| mjml-dev-mode | `/Users/Shared/htdocs/github/DVWDesign/mjml-dev-mode` | 📍 Local |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
+| Repository             | Local Path                                                     | Status   |
+| ---------------------- | -------------------------------------------------------------- | -------- |
+| @figma-agents          | `/Users/Shared/htdocs/github/DVWDesign/@figma-agents`          | 📍 Local |
+| @figma-core            | `/Users/Shared/htdocs/github/DVWDesign/@figma-core`            | 📍 Local |
+| FigmaAPI/@figma-core   | `/Users/Shared/htdocs/github/DVWDesign/FigmaAPI/@figma-core`   | 📍 Local |
+| FigmaAPI/@figma-docs   | `/Users/Shared/htdocs/github/DVWDesign/FigmaAPI/@figma-docs`   | 📍 Local |
+| RandD                  | `/Users/Shared/htdocs/github/DVWDesign/RandD`                  | 📍 Local |
+| mjml-dev-mode          | `/Users/Shared/htdocs/github/DVWDesign/mjml-dev-mode`          | 📍 Local |
 | mjml-dev-mode-proposal | `/Users/Shared/htdocs/github/DVWDesign/mjml-dev-mode-proposal` | 📍 Local |
 
 **Total:** 7 local-only repositories
@@ -309,7 +261,7 @@ gh api \
   -f role='member'
 ```
 
-#### Option C: Add to Specific Repository
+## Option C: Add to Specific Repository
 
 If you don't want to add them to the whole organization:
 
@@ -358,36 +310,15 @@ Once confirmed, I will:
 
 ## Summary
 
-| Aspect | Current State | Target State |
-|--------|--------------|--------------|
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| **Primary Organization** | DESIGN-DVW | DESIGN-DVW |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| **Legacy Organization** | DVW-Design | Migrate to DESIGN-DVW |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| **Documentation References** | DVWDesign (wrong) | DESIGN-DVW (correct) |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| **Local Folder** | DVWDesign | DVWDesign (unchanged) |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| **Total Repositories** | 16 (8 GitHub, 1 legacy, 7 local) | 16 (9 GitHub, 7 local) |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| **Incorrect URLs** | 134+ | 0 |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
-| **Organizations to Manage** | 2 | 1 |
+| Aspect                       | Current State                    | Target State           |
+| ---------------------------- | -------------------------------- | ---------------------- |
+| **Primary Organization**     | DESIGN-DVW                       | DESIGN-DVW             |
+| **Legacy Organization**      | DVW-Design                       | Migrate to DESIGN-DVW  |
+| **Documentation References** | DVWDesign (wrong)                | DESIGN-DVW (correct)   |
+| **Local Folder**             | DVWDesign                        | DVWDesign (unchanged)  |
+| **Total Repositories**       | 16 (8 GitHub, 1 legacy, 7 local) | 16 (9 GitHub, 7 local) |
+| **Incorrect URLs**           | 134+                             | 0                      |
+| **Organizations to Manage**  | 2                                | 1                      |
 
 **Status:** ⚠️ Awaiting user confirmation on preferred solution
 **Priority:** High - Currently blocking user access

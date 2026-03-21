@@ -22,7 +22,7 @@ The most important implementation constraint is the **sibling edge cap** in `bui
 ## Phase Requirements
 
 | ID | Description | Research Support |
-|----|-------------|-----------------|
+| ---- | ------------- | ----------------- |
 | ORCH-01 | `orchestrator.mjs` consolidates scan pipeline (markdown indexing, keyword extraction, graph population, staleness detection) into a single callable function | Orchestrator pattern: each entry point calls one of three modes (incremental/full/deep); all processor imports centralized here |
 | ORCH-02 | Scheduler hourly cron calls orchestrator for incremental scan (changed files only via content_hash) | Hourly cron at line 32 of scheduler.mjs has a TODO stub; content_hash delta detection needs a `WHERE content_hash != ?` or `WHERE last_scanned < modified_at` approach |
 | ORCH-03 | Scheduler daily cron calls orchestrator for full scan + deviation analysis | Daily cron at line 66 of scheduler.mjs is a pure TODO stub; full scan = scan all repos regardless of hash; deviation = populate deviations table |
@@ -55,8 +55,6 @@ The most important implementation constraint is the **sibling edge cap** in `bui
 ### No New Dependencies Needed
 
 Phase 3 requires zero new npm packages. All required libraries are already installed and in use. The phase is purely wiring and incremental logic additions to existing processor functions.
-
----
 
 ## Architecture Patterns
 
@@ -204,8 +202,6 @@ DocuMind/
 └── (no new processors needed)
 ```
 
----
-
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
@@ -215,8 +211,6 @@ DocuMind/
 | Similarity detection | Custom Levenshtein implementation | `natural.js` already provides `LevenshteinDistance`; or use cosine on TF-IDF vectors already computed | `natural` is already installed for TF-IDF |
 | Cron scheduling | Custom timer loop | `node-cron` already in use in scheduler.mjs | Already installed, already registering 5 jobs |
 | FTS5 query planning | Custom tokenizer | SQLite FTS5 `MATCH` operator and `rebuild` virtual command | Already in use for search endpoint |
-
----
 
 ## Common Pitfalls
 
@@ -259,8 +253,6 @@ DocuMind/
 **What goes wrong:** The watcher TODO stub at line 196 (`// TODO: trigger markdown-processor re-index for this file`) needs to call `indexMarkdown(db, filePath, repository, ctx)`. But `ctx` is a parameter of `initWatcher(db, root, ctx)` — it's in closure scope. The watcher already has ctx in scope. No structural change needed beyond filling the stub. However, if the call is made without ctx (the old 3-arg signature), it silently produces wrong classification.
 
 **How to avoid:** Fill the stub with `await indexMarkdown(db, change.path, repoMatch, ctx)` — four args including ctx.
-
----
 
 ## Code Examples
 
@@ -366,8 +358,6 @@ function rebuildKeywordsFTS(db) {
 }
 ```
 
----
-
 ## Implementation Order (Recommended)
 
 Phase 3 has internal dependencies that dictate implementation order:
@@ -400,8 +390,6 @@ Wave 4 — Document Intelligence (fills tables):
   4d. Implement deviation detection call in orchestrator full mode (INTL-07)
 ```
 
----
-
 ## State of the Art
 
 | Old Approach | Current Approach | When Changed | Impact |
@@ -412,8 +400,6 @@ Wave 4 — Document Intelligence (fills tables):
 | scheduler.mjs receives (db, root) | scheduler.mjs must receive (db, root, ctx) | Phase 3 change | One-line server.mjs update required |
 
 **Key finding:** `scan-all-repos.mjs` (scripts/scan-all-repos.mjs) still has hardcoded `BASE_PATH` and `REPOS` constant at the module top — it was not refactored in Phase 2 because it is a CLI script, not a daemon module. The orchestrator should NOT import this file. Instead, it should build its own scan loop using `ctx.repoRoots` and `fast-glob`, calling `indexMarkdown()` directly.
-
----
 
 ## Open Questions
 
@@ -432,8 +418,6 @@ Wave 4 — Document Intelligence (fills tables):
    - What's unclear: For files not yet in the DB, `last_scanned` doesn't exist — need to glob all repo files and compare against DB
    - Recommendation: `SELECT path, content_hash, last_scanned FROM documents` into a Map; glob all repo files; for each file on disk, stat → if not in Map, add; if in Map and file mtime > last_scanned, re-hash and compare content_hash
 
----
-
 ## Validation Architecture
 
 nyquist_validation is not in config.json — the `workflow` key only has `research`, `plan_check`, and `verifier`. No test framework is configured. Verification is done via the gsd-verifier agent using live observable state (SQL queries, log output, API responses).
@@ -444,11 +428,9 @@ nyquist_validation is not in config.json — the `workflow` key only has `resear
 | --- | --- | --- |
 | GET /graph returns actual edges | `SELECT COUNT(*) FROM doc_relationships` > 0 | After first deep scan |
 | GET /keywords returns TF-IDF scores | `SELECT COUNT(*) FROM keywords` > 0 | After weekly cron or manual /scan?mode=deep |
-| GET /stats shows non-zero stale count | `curl localhost:9000/stats \| jq .stale` > 0 | Requires graph to be populated first |
-| POST /scan triggers orchestrator | `pm2 logs documind \| grep '\[orchestrator\]'` | Check for orchestrator log output |
-| Scheduler logs show all jobs firing | `pm2 logs documind \| grep '\[scheduler\]'` | All 3 cron stubs replaced, no TODO lines remaining |
-
----
+|  GET /stats shows non-zero stale count  |  `curl localhost:9000/stats \ |  jq .stale` > 0  |
+|  POST /scan triggers orchestrator  |  `pm2 logs documind \ |  grep '\[orchestrator\]'`  |
+|  Scheduler logs show all jobs firing  |  `pm2 logs documind \ |  grep '\[scheduler\]'`  |
 
 ## Sources
 
@@ -468,8 +450,6 @@ nyquist_validation is not in config.json — the `workflow` key only has `resear
 - `.planning/phases/02-context-profile-loader/02-VERIFICATION.md` — confirmed ctx object structure: 16 repoRoots, 12 classificationRules (RegExp), 53 tech keywords, 17 action keywords, 8 relationshipTypes
 - `.planning/REQUIREMENTS.md` — confirmed all 13 Phase 3 requirement IDs and descriptions
 - `.planning/research/PITFALLS.md` — O(n²) sibling edge pitfall documented; FTS5 rebuild requirement documented
-
----
 
 ## Metadata
 

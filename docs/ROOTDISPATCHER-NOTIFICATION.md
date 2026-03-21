@@ -197,22 +197,15 @@ All repositories now have access to:
 
 ## Statistics
 
-| Repository | Files Processed | Files Fixed | Broken Links |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| DocuMind | 30 | 22 | 5 |
-| --- | --- | --- | --- |
-| RootDispatcher | 55 | 49 | 16 |
-| --- | --- | --- | --- |
-| Figma-Plug-ins | TBD | TBD | TBD |
-| --- | --- | --- | --- |
-| LibraryAssetManager | TBD | TBD | TBD |
-| --- | --- | --- | --- |
-| GlossiaApp | TBD | TBD | TBD |
-| --- | --- | --- | --- |
-| FigmaAPI/FigmailAPP | TBD | TBD | TBD |
-| --- | --- | --- | --- |
-| FigmaAPI/FigmaDSController | TBD | TBD | TBD |
+| Repository                 | Files Processed | Files Fixed | Broken Links |
+| -------------------------- | --------------- | ----------- | ------------ |
+| DocuMind                   | 30              | 22          | 5            |
+| RootDispatcher             | 55              | 49          | 16           |
+| Figma-Plug-ins             | TBD             | TBD         | TBD          |
+| LibraryAssetManager        | TBD             | TBD         | TBD          |
+| GlossiaApp                 | TBD             | TBD         | TBD          |
+| FigmaAPI/FigmailAPP        | TBD             | TBD         | TBD          |
+| FigmaAPI/FigmaDSController | TBD             | TBD         | TBD          |
 
 ## Integration Notes
 

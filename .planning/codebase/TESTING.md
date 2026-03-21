@@ -158,7 +158,7 @@ npm run fix:custom
 npm run lint
 ```
 
-### Scenario 2: Test Database Operations
+## Scenario 2: Test Database Operations
 
 Manual testing via Express API:
 
@@ -176,7 +176,7 @@ curl "http://localhost:9000/graph?repo=DocuMind"
 curl "http://localhost:9000/stats"
 ```
 
-### Scenario 3: Test File Scanning
+## Scenario 3: Test File Scanning
 
 ```bash
 # Full scan with report
@@ -189,7 +189,7 @@ npm run scan:enhanced
 npm run validate
 ```
 
-### Scenario 4: Test Keyword Extraction
+## Scenario 4: Test Keyword Extraction
 
 ```bash
 # Extract keywords from docs

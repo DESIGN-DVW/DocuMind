@@ -67,8 +67,6 @@ literature (neo4j.com, Medium/knowledge-graph-systems-2025); MCP write tools pat
 MCP spec and absence of write-capable doc MCP servers in the ecosystem (github.com/modelcontextprotocol/servers);
 context profiles pattern confirmed by codebase-context-spec (github.com/Agentic-Insights) and opencode issue tracker.
 
----
-
 ### Anti-Features (Commonly Requested, Often Problematic)
 
 | Feature | Why Requested | Why Problematic | Alternative |
@@ -80,8 +78,6 @@ context profiles pattern confirmed by codebase-context-spec (github.com/Agentic-
 | Push notifications / webhooks outbound | "Notify me when staleness detected" | DocuMind is a pull-based daemon; adding push requires subscriber registry, retry logic, failure handling | Poll `/stats` endpoint; add PM2 log alerts; use cron-triggered Slack message if needed |
 | Full DOCX editing / roundtrip | "Edit in Word, sync back to Markdown" | DocuMind converts inbound (DOCX→MD); roundtrip editing is a full authoring workflow problem — out of scope | Convert once on ingest; store canonical as Markdown; discard DOCX |
 | LLM-generated summaries (API calls per doc) | "Auto-summarize every document on index" | Requires OpenAI/Anthropic API call per doc on every re-index; costs, latency, rate limits; 620+ docs = expensive; stale summaries on content change | Use TF-IDF extractive summary (top 3 sentences by keyword density); or manual summary field in frontmatter |
-
----
 
 ## Feature Dependencies
 
@@ -135,8 +131,6 @@ context profiles pattern confirmed by codebase-context-spec (github.com/Agentic-
 - **MCP write tools depend on existing CLI scripts**: The write MCP tools are wrappers around `fix-markdown.mjs`, `scan-all-repos.mjs`, etc. Those scripts already exist — write tools are primarily wiring, not new logic.
 - **Summary field is low-cost but unlocks agent triage**: Adding a `summary` column to the `documents` table costs almost nothing; it enables agents to triage 50 results without reading full content. Prioritize early.
 
----
-
 ## MVP Definition
 
 DocuMind v3.0 MVP = Step #1 (internal tool fully working) + Step #2 (MCP server callable by agents).
@@ -168,8 +162,6 @@ DocuMind v3.0 MVP = Step #1 (internal tool fully working) + Step #2 (MCP server 
 - [ ] SQLite-per-tenant via Turso — required for SaaS path; defer until multi-tenant demand confirmed
 - [ ] Web dashboard — deferred per PROJECT.md until Step #3; build only if solo CLI proves insufficient for stakeholder demos
 
----
-
 ## Feature Prioritization Matrix
 
 | Feature | User Value | Implementation Cost | Priority |
@@ -195,8 +187,6 @@ DocuMind v3.0 MVP = Step #1 (internal tool fully working) + Step #2 (MCP server 
 - P2: Add once core is proven working
 - P3: Future consideration — not before Step #3
 
----
-
 ## Competitor Feature Analysis
 
 DocuMind does not compete with general DMS platforms (Confluence, Notion, SharePoint). Its peer set
@@ -220,8 +210,6 @@ queryable by AI agents via MCP, (2) write-capable MCP tools that allow autonomou
 in the developer tooling space offers all three. The context profile portability is the commercial
 differentiator for Step #3.
 
----
-
 ## Sources
 
 - MCP Tools specification (official, HIGH confidence): [modelcontextprotocol.io/specification/2025-06-18/server/tools](https://modelcontextprotocol.io/specification/2025-06-18/server/tools)
@@ -233,8 +221,6 @@ differentiator for Step #3.
 - AI documentation trends 2026 (MEDIUM confidence): [document360.com — Major AI Documentation Trends for 2026](https://document360.com/blog/ai-documentation-trends/)
 - Obsidian graph and backlinks (MEDIUM confidence): [deepwiki.com — Internal Links and Graph View](https://deepwiki.com/obsidianmd/obsidian-help/4.2-internal-links-and-graph-view)
 - TF-IDF keyword extraction (HIGH confidence, well-established technique): [geeksforgeeks.org — TF-IDF](https://www.geeksforgeeks.org/machine-learning/understanding-tf-idf-term-frequency-inverse-document-frequency/)
-
----
 
 *Feature research for: Documentation Intelligence Platform (DocuMind v3.0)*
 *Researched: 2026-03-15*

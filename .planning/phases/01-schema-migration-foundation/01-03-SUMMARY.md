@@ -20,18 +20,18 @@ affects: [phase-02-document-graph, phase-03-context-profiles, phase-04-mcp-serve
 tech-stack:
   added: []
   patterns:
-    - "Backfill scripts accept open db instance (caller controls connection lifecycle)"
-    - "Idempotent backfill using WHERE IS NULL predicate"
-    - "db.transaction() batching in chunks of 500 for bulk UPDATE performance"
-    - "FTS5 rebuild via INSERT INTO documents_fts(documents_fts) VALUES('rebuild') after bulk writes"
-    - "forceBackfill flag pattern for migrators that need re-run capability"
+  - "Backfill scripts accept open db instance (caller controls connection lifecycle)"
+  - "Idempotent backfill using WHERE IS NULL predicate"
+  - "db.transaction() batching in chunks of 500 for bulk UPDATE performance"
+  - "FTS5 rebuild via INSERT INTO documents_fts(documents_fts) VALUES('rebuild') after bulk writes"
+  - "forceBackfill flag pattern for migrators that need re-run capability"
 
 key-files:
   created:
-    - scripts/db/backfill/backfill-summaries.mjs
-    - scripts/db/backfill/backfill-classifications.mjs
+  - scripts/db/backfill/backfill-summaries.mjs
+  - scripts/db/backfill/backfill-classifications.mjs
   modified:
-    - scripts/db/migrate.mjs
+  - scripts/db/migrate.mjs
 
 key-decisions:
   - "Backfill scripts accept open db instance rather than opening their own connection — migrate.mjs controls the lifecycle"

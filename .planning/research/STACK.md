@@ -105,8 +105,6 @@ server.tool('search', 'Full-text search across all indexed documents', {
 
 The existing `zod` dependency in DocuMind covers this — no separate install needed after the version bump.
 
----
-
 ## Document Classification and Tagging — Schema Pattern
 
 ### Approach: Two-Level System in SQLite
@@ -159,8 +157,6 @@ CREATE INDEX idx_tags_name ON tags(name);
 Do NOT use the Nested Set Model (left/right integers). Insertions and moves require recalculating all left/right values — expensive for a live-indexed system where documents are added continuously. The Adjacency List + CTE pattern that already exists in `graph/queries.mjs` is the right choice.
 
 Do NOT use a Closure Table for classification at this scale. Closure Tables precompute every ancestor-descendant pair — valuable when you have thousands of tree traversals per second. DocuMind's classification is read occasionally; the overhead is not justified.
-
----
 
 ## Context Profiles — Schema and File Pattern
 
@@ -231,8 +227,6 @@ No external library needed — native `JSON.parse` + `fs.readFile`. Validate the
 
 **Confidence:** MEDIUM — pattern derived from multi-tenant Node.js SaaS conventions and MCP specification's use of JSON Schema 2020-12. No specific library exists for this pattern; it is intentionally hand-rolled.
 
----
-
 ## Graph Population — No New Libraries Needed
 
 The `graph/relations.mjs` module (`buildRelationships`) exists but is never called from the scheduler. The `doc_relationships` table schema exists. No new library is needed — the gap is wiring, not technology.
@@ -240,8 +234,6 @@ The `graph/relations.mjs` module (`buildRelationships`) exists but is never call
 The existing `fast-levenshtein` and `string-similarity` packages cover similarity scoring. The existing `natural` package covers TF-IDF for keyword extraction. The existing recursive CTE support in better-sqlite3 covers graph traversal.
 
 Action: wire `buildRelationships()` into the hourly cron job in `daemon/scheduler.mjs`.
-
----
 
 ## What NOT to Use
 
@@ -253,8 +245,6 @@ Action: wire `buildRelationships()` into the hourly cron job in `daemon/schedule
 | Closure Table for classification | Overkill at DocuMind scale; precomputes every ancestor pair, adds write overhead. | Adjacency List path strings |
 | Separate MCP daemon process | Running MCP as a separate PM2 process adds coordination overhead. Mount on existing Express server. | `StreamableHTTPServerTransport` on existing Express port 9000 |
 | TypeScript migration for MCP | DocuMind is `.mjs` (ES modules, plain JavaScript). The SDK works with plain JS — TypeScript is optional. Migrating for MCP alone is not justified. | Plain `.mjs` with JSDoc types |
-
----
 
 ## Installation
 
@@ -268,8 +258,6 @@ npm install @modelcontextprotocol/sdk
 npm install
 ```
 
----
-
 ## Alternatives Considered
 
 | Recommended | Alternative | When to Use Alternative |
@@ -279,8 +267,6 @@ npm install
 | Adjacency List path strings for classification | Foreign key taxonomy table | If classification tree needs to be queried hierarchically at high frequency. Not the case here — profiles define the tree, not DocuMind's tables. |
 | JSON file + SQLite for context profiles | Database-only profiles | The file fallback enables CLI workflows without the daemon running. Both are needed. |
 
----
-
 ## Version Compatibility
 
 | Package | Compatible With | Notes |
@@ -288,8 +274,6 @@ npm install
 | `@modelcontextprotocol/sdk@^1.27.1` | `zod@>=3.25.0` | SDK internally uses `zod/v4` compat layer. Peer dep floor is 3.25. Current DocuMind zod `^3.22.4` must be bumped. |
 | `@modelcontextprotocol/sdk@^1.27.1` | `express@5.x` | No conflict. MCP HTTP transport uses raw Node `http.IncomingMessage` / `http.ServerResponse` — compatible with Express 5 handlers. |
 | `@modelcontextprotocol/sdk@^1.27.1` | `node@>=18` | SDK requires Node 18+. DocuMind already requires Node 20+. No issue. |
-
----
 
 ## Sources
 
@@ -301,8 +285,6 @@ npm install
 - [Closure Tables in SQL 2025](https://www.vibepanda.io/resources/guide/handling-hierarchical-data-closure-tables-sql) — Confirmed Closure Table is read-optimized, not write-optimized (MEDIUM confidence)
 - [Integrating MCP into Express](https://dev.to/udarabibile/integrating-mcp-tools-into-express-with-minimal-changes-28e6) — `POST /mcp` mount pattern confirmed (MEDIUM confidence — community article, not official docs)
 - [MCP 2026 security audit (43% command injection)](https://atlan.com/know/mcp-server-implementation-guide/) — Zod validation on all tool inputs is non-optional (MEDIUM confidence)
-
----
 
 *Stack research for: DocuMind v3.0 — MCP server + classification + context profiles*
 *Researched: 2026-03-15*

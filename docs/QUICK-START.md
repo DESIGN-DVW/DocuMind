@@ -242,46 +242,16 @@ npm install
 ## Quick Reference
 
 | Task | Command |
-|------|---------|
-| --- | --- |
-| --- | --- |
-| --- | --- |
+| ------ | --------- |
 | Scan repositories | `npm run scan:report` |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | Create index | `npm run index` |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | Validate timestamps | `npm run validate` |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | Check linting | `npm run lint` |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | Fix linting | `npm run lint:fix` |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | Watch for changes | `npm run watch` |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | Install cron | `npm run cron:setup` |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | Stop cron | `npm run cron:stop` |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | List cron jobs | `npm run cron:list` |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | View logs | `tail -f logs/cron-*.log` |
 
 **Version:** 1.0.0

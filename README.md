@@ -212,28 +212,13 @@ npm run lint
 
 All outputs are in `index/` (gitignored):
 
-| File | Description |
-|------|-------------|
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| `all-markdown-files.json` | Complete scan data with metadata |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| `scan-report.md` | Repository breakdown, largest files, statistics |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| `organized-index.md` | Categorized file list with links |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| `categories.json` | JSON categories for programmatic access |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| `validation-report.md` | Missing timestamps/versions report |
+| File                      | Description                                     |
+| ------------------------- | ----------------------------------------------- |
+| `all-markdown-files.json` | Complete scan data with metadata                |
+| `scan-report.md`          | Repository breakdown, largest files, statistics |
+| `organized-index.md`      | Categorized file list with links                |
+| `categories.json`         | JSON categories for programmatic access         |
+| `validation-report.md`    | Missing timestamps/versions report              |
 
 ## 🤖 Claude Code Integration
 

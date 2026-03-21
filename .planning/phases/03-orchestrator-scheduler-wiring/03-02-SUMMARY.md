@@ -19,13 +19,13 @@ affects: [scheduler-wiring, hooks-wiring, rest-scan-endpoint, watcher-wiring]
 tech-stack:
   added: []
   patterns:
-    - "fast-glob used via default import (CJS compat) — named ESM export not supported on Node 24"
-    - "rebuildFTS called once per scan batch end — never per-file"
-    - "getRepoFiles filters ctx.repoRoots by name when repo arg provided"
+  - "fast-glob used via default import (CJS compat) — named ESM export not supported on Node 24"
+  - "rebuildFTS called once per scan batch end — never per-file"
+  - "getRepoFiles filters ctx.repoRoots by name when repo arg provided"
 
 key-files:
   created:
-    - orchestrator.mjs
+  - orchestrator.mjs
   modified: []
 
 key-decisions:

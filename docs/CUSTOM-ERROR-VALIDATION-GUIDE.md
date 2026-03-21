@@ -89,11 +89,7 @@ Files with broken links: 1
 
 | Command | Description | Output |
 | --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
 | `npm run validate:custom` | Validate current repository | Console report |
-| --- | --- | --- |
-| --- | --- | --- |
 | `npm run validate:custom:all` | Validate all repositories | Cross-repo report |
 
 **Validation Flags:**
@@ -108,14 +104,8 @@ node scripts/validate-custom-errors.mjs --severity=error
 
 | Command | Description | Action |
 | --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
 | `npm run fix:custom:dry-run` | Preview fixes without changing files | Read-only |
-| --- | --- | --- |
-| --- | --- | --- |
 | `npm run fix:custom` | Apply fixes to current repository | Modifies files |
-| --- | --- | --- |
-| --- | --- | --- |
 | `npm run fix:custom:all` | Apply fixes to all repositories | Modifies all repos |
 
 **Fix Flags:**

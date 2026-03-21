@@ -75,8 +75,6 @@ The `db:reset` guard and the `schema_migrations` table are the two deliverables 
 
 **Primary recommendation:** Build `scripts/db/migrate.mjs` as the migration runner before writing any migration SQL files. The runner applies the `schema_migrations` table itself on first run (bootstrapping), then applies numbered SQL files in order, each in a transaction. Backfill logic for summary and classification is called from JavaScript after the SQL migrations complete, using gray-matter + existing processors.
 
----
-
 ## Live Database State (Verified)
 
 Confirmed by direct inspection of `/Users/Shared/htdocs/github/DVWDesign/DocuMind/data/documind.db`:
@@ -93,8 +91,6 @@ Confirmed by direct inspection of `/Users/Shared/htdocs/github/DVWDesign/DocuMin
 | v2.0 tables (doc_relationships, keywords, folder_nodes, diagrams) | Tables exist, all 0 rows |
 
 The `category` values are DVWDesign-specific string labels, not materialized path format. They come from the markdown-processor's path-detection heuristic (line pattern matching). The new `classification` column is a separate addition — `category` is NOT being renamed; both fields coexist, with `classification` being the canonical new field from Phase 2+ profile rules.
-
----
 
 ## Standard Stack
 
@@ -116,8 +112,6 @@ The `category` values are DVWDesign-specific string labels, not materialized pat
 | Hand-written migration runner | `db-migrate`, `knex migrations`, `typeorm migrations` | Project is ESM + better-sqlite3 + no ORM; adding a migration framework adds abstraction with no benefit for a single-DB project |
 | SQL-only migration files | Node.js migration scripts (`.mjs`) | Backfill requires gray-matter parsing and path logic — pure SQL cannot extract frontmatter `description:` fields |
 | `VACUUM INTO 'backup.db'` for backup | `fs.copyFileSync` | VACUUM INTO creates a clean compacted copy but requires opening the DB; pre-migration backup should be file-level copy BEFORE the DB is opened (simpler, faster, no risk of partial write) |
-
----
 
 ## Architecture Patterns
 
@@ -449,8 +443,6 @@ if (!process.argv.includes('--force')) {
 - **Running `PRAGMA foreign_keys = OFF` at connection level during table rebuild:** better-sqlite3 pragma applies at connection level. In `migrate.mjs`, set `db.pragma('foreign_keys = OFF')` before the rebuild migration, then `db.pragma('foreign_keys = ON')` after.
 - **Applying migrations in parallel:** Migrations must run sequentially in version order. No concurrency.
 
----
-
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
@@ -458,8 +450,6 @@ if (!process.argv.includes('--force')) {
 | Gray-matter frontmatter parsing in backfill | Custom YAML parser | `gray-matter` (already installed) | Handles edge cases: multi-line values, colons in strings, nested objects |
 | Batch transaction pattern | Ad-hoc loop with individual commits | `db.transaction(fn)` from better-sqlite3 | Atomic, auto-rollback, dramatically faster than per-row commits (100x+ on 8K rows) |
 | File-level backup | Custom copy logic | `fs.copyFileSync()` | WAL mode files need all three files copied (.db, .db-shm, .db-wal) if WAL is active; but for a pre-migration backup, opening the DB first (which checkpoints WAL) then copying is also valid |
-
----
 
 ## Common Pitfalls
 
@@ -522,8 +512,6 @@ The INSERT INTO new_table SELECT * from old preserves any existing data.
 
 **What goes wrong:** `package.json` has `"db:migrate": "node scripts/db/init-database.mjs"` — this is the same as `db:init`. After Phase 1, `db:migrate` must point to the new `migrate.mjs` runner. The existing mapping is incorrect and must be updated.
 
----
-
 ## Code Examples
 
 Verified patterns from codebase + better-sqlite3 synchronous API:
@@ -583,8 +571,6 @@ ALTER TABLE documents ADD COLUMN summary TEXT;
 ALTER TABLE documents ADD COLUMN classification TEXT;
 ```
 
----
-
 ## State of the Art
 
 | Old Approach | Current Approach | Impact for Phase 1 |
@@ -593,8 +579,6 @@ ALTER TABLE documents ADD COLUMN classification TEXT;
 | `rm -f data/documind.db` for reset | `--force` flag guard + loud warning | Phase 1 adds the guard |
 | Single `schema.sql` with all DDL | `schema.sql` + `migrations/` directory | Both maintained: schema.sql reflects target state; migrations are the diffs |
 | `init-database.mjs` handles both init and migrate | `init-database.mjs` (fresh DB) + `migrate.mjs` (evolve existing DB) | Phase 1 separates these concerns |
-
----
 
 ## Open Questions
 
@@ -610,8 +594,6 @@ ALTER TABLE documents ADD COLUMN classification TEXT;
 
 3. **Tag extraction threshold and max count**
    - Claude's Discretion from CONTEXT.md — decided in this research: minimum TF-IDF score 0.1, maximum 15 tags per document. However, tag backfill is NOT required in Phase 1 (only the `document_tags` table must be created — SCHM-04 says "create table", not "backfill"). Tag population is a processor-level concern wired in Phase 3 (INTL-03).
-
----
 
 ## Sources
 
@@ -632,8 +614,6 @@ ALTER TABLE documents ADD COLUMN classification TEXT;
 ### Tertiary (LOW confidence)
 
 - None
-
----
 
 ## Metadata
 

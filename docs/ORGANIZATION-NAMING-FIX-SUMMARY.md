@@ -148,109 +148,37 @@ export const NPM_SCOPE = '@design-dvw';
 
 ### Files Modified by Repository
 
-| Repository | Files Scanned | Files Modified | Replacements |
-|-----------|--------------|---------------|-------------|
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| DocuMind | 34 | 2 | 7 |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| RootDispatcher | 29 | 6 | 9 |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| Figma-Plug-ins | 223 | 4 | 5 |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| LibraryAssetManager | 47 | 2 | 3 |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| Aprimo | 7 | 0 | 0 |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| CampaignManager | 64 | 1 | 1 |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| GlossiaApp | 65 | 2 | 2 |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| FigmaAPI/@figma-core | 14 | 2 | 4 |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| FigmaAPI/@figma-docs | 22 | 3 | 6 |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| FigmaAPI/FigmailAPP | 1,141 | 15 | 43 |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| FigmaAPI/FigmaDSController | 250 | 0 | 0 |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| **Total** | **1,704** | **38** | **81** |
+| Repository                 | Files Scanned | Files Modified | Replacements |
+| -------------------------- | ------------- | -------------- | ------------ |
+| DocuMind                   | 34            | 2              | 7            |
+| RootDispatcher             | 29            | 6              | 9            |
+| Figma-Plug-ins             | 223           | 4              | 5            |
+| LibraryAssetManager        | 47            | 2              | 3            |
+| Aprimo                     | 7             | 0              | 0            |
+| CampaignManager            | 64            | 1              | 1            |
+| GlossiaApp                 | 65            | 2              | 2            |
+| FigmaAPI/@figma-core       | 14            | 2              | 4            |
+| FigmaAPI/@figma-docs       | 22            | 3              | 6            |
+| FigmaAPI/FigmailAPP        | 1,141         | 15             | 43           |
+| FigmaAPI/FigmaDSController | 250           | 0              | 0            |
+| **Total**                  | **1,704**     | **38**         | **81**       |
 
 ### Replacements by Type
 
-| Type | Count |
-|------|-------|
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| Fix DVWDesign → DESIGN-DVW in URLs | 52 |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| Fix "DVWDesign organization" → "DESIGN-DVW organization" | 6 |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| Fix FigmaAPI/FigmailAPP → FigmailAPP | 4 |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| Fix FigmaAPI/@figma-docs → @figma-docs | 4 |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| Fix "for DVWDesign" → "for DESIGN-DVW" | 4 |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| Fix FigmaAPI/@figma-core → @figma-core | 3 |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| Fix @DVWDesign → @DESIGN-DVW (in links) | 2 |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| Fix "of DVWDesign" → "of DESIGN-DVW" | 2 |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| Fix FigmaAPI/FigmaDSController → FigmaDSController | 1 |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| Fix FigmaAPI/Figma-DAM → Figma-DAM | 1 |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| Fix FigmaAPI/Figma-Plug-ins → Figma-Plug-ins | 1 |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| Remove orphaned FigmaAPI references | 1 |
+| Type                                                     | Count |
+| -------------------------------------------------------- | ----- |
+| Fix DVWDesign → DESIGN-DVW in URLs                       | 52    |
+| Fix "DVWDesign organization" → "DESIGN-DVW organization" | 6     |
+| Fix FigmaAPI/FigmailAPP → FigmailAPP                     | 4     |
+| Fix FigmaAPI/@figma-docs → @figma-docs                   | 4     |
+| Fix "for DVWDesign" → "for DESIGN-DVW"                   | 4     |
+| Fix FigmaAPI/@figma-core → @figma-core                   | 3     |
+| Fix @DVWDesign → @DESIGN-DVW (in links)                  | 2     |
+| Fix "of DVWDesign" → "of DESIGN-DVW"                     | 2     |
+| Fix FigmaAPI/FigmaDSController → FigmaDSController       | 1     |
+| Fix FigmaAPI/Figma-DAM → Figma-DAM                       | 1     |
+| Fix FigmaAPI/Figma-Plug-ins → Figma-Plug-ins             | 1     |
+| Remove orphaned FigmaAPI references                      | 1     |
 
 ## Repository Organization Structure
 

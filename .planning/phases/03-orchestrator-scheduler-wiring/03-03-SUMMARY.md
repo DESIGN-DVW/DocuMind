@@ -21,17 +21,17 @@ affects: [scheduler-cron, rest-scan-endpoint, rest-index-endpoint, watcher-markd
 tech-stack:
   added: []
   patterns:
-    - "setImmediate used for non-blocking scan trigger in /scan and /index endpoints — responds before scan runs"
-    - "Module-level CTX variable pattern in watcher.mjs mirrors existing ROOT pattern — captured in initWatcher closure"
-    - "post-commit hook iterates mdFiles with per-file error handling — single file failure does not abort batch"
+  - "setImmediate used for non-blocking scan trigger in /scan and /index endpoints — responds before scan runs"
+  - "Module-level CTX variable pattern in watcher.mjs mirrors existing ROOT pattern — captured in initWatcher closure"
+  - "post-commit hook iterates mdFiles with per-file error handling — single file failure does not abort batch"
 
 key-files:
   created: []
   modified:
-    - daemon/scheduler.mjs
-    - daemon/server.mjs
-    - daemon/watcher.mjs
-    - daemon/hooks.mjs
+  - daemon/scheduler.mjs
+  - daemon/server.mjs
+  - daemon/watcher.mjs
+  - daemon/hooks.mjs
 
 key-decisions:
   - "setImmediate chosen over fire-and-forget promise for /scan and /index — ensures response is sent before scan begins"

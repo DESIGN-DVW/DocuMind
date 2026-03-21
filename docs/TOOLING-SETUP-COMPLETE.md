@@ -244,32 +244,14 @@ See: [RECOMMENDED-TOOLING-ADDITIONS.md](RECOMMENDED-TOOLING-ADDITIONS.md) for fu
 
 ## 🔧 Configuration Files Created
 
-| File | Purpose |
-|------|---------|
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| `.husky/pre-commit` | Git pre-commit hook |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| `.prettierrc.json` | Prettier code formatting rules |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| `config/.markdown-link-check.json` | Link checker configuration |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| `.vscode/tasks.json` | VS Code auto-run tasks |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| `docs/diagrams/documind-workflow.mmd` | Sample Mermaid diagram |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| `docs/diagrams/documind-workflow.png` | Generated diagram PNG |
+| File                                  | Purpose                        |
+| ------------------------------------- | ------------------------------ |
+| `.husky/pre-commit`                   | Git pre-commit hook            |
+| `.prettierrc.json`                    | Prettier code formatting rules |
+| `config/.markdown-link-check.json`    | Link checker configuration     |
+| `.vscode/tasks.json`                  | VS Code auto-run tasks         |
+| `docs/diagrams/documind-workflow.mmd` | Sample Mermaid diagram         |
+| `docs/diagrams/documind-workflow.png` | Generated diagram PNG          |
 
 ## 🧪 Testing the Setup
 
@@ -323,34 +305,13 @@ ls -lh docs/diagrams/my-diagram.png
 ## 📊 Statistics
 
 | Metric | Value |
-|--------|-------|
-| --- | --- |
-| --- | --- |
-| --- | --- |
+| -------- | ------- |
 | **New Dependencies** | 5 packages |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | **New DevDependencies** | 5 packages |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | **New NPM Scripts** | 2 scripts |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | **Configuration Files** | 4 files |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | **VS Code Tasks** | 5 tasks |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | **Setup Time** | ~15 minutes |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | **Impact** | 🔥🔥🔥 High |
 
 ## 🎉 Success Indicators

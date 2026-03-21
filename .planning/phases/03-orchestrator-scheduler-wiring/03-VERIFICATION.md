@@ -37,8 +37,6 @@ re_verification: false
 
 **Score:** 13/13 truths verified
 
----
-
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
@@ -51,8 +49,6 @@ re_verification: false
 | `daemon/watcher.mjs` | indexMarkdown import; CTX module-level; markdown case wired | VERIFIED | Import at line 18; `let CTX = null` at line 33; `CTX = ctx` at line 45; call at line 200 |
 | `daemon/hooks.mjs` | processHook(db, event, ctx); post-write/post-commit/scan wired; deriveRepoName helper | VERIFIED | 3-arg signature; all 3 cases implemented; `deriveRepoName` at lines 24-32 |
 | `processors/keyword-processor.mjs` | indexKeywords writes to both keywords and document_tags | VERIFIED | Double-write confirmed; INSERT OR IGNORE semantics for idempotency |
-
----
 
 ### Key Link Verification
 
@@ -71,8 +67,6 @@ re_verification: false
 | `daemon/watcher.mjs` | `processors/markdown-processor.mjs` | `import indexMarkdown` for markdown re-index | WIRED | `indexMarkdown(db, change.path, repoMatch, CTX)` at line 200 |
 | `daemon/server.mjs` | `documents + statistics` | stale_documents query in /stats | WIRED | Query at lines 94-97; field in response at line 124 |
 | `daemon/server.mjs` | `daemon/hooks.mjs` | processHook called with ctx | WIRED | `processHook(db, req.body, ctx)` at line 255 |
-
----
 
 ### Requirements Coverage
 
@@ -94,8 +88,6 @@ re_verification: false
 
 All 13 requirement IDs accounted for. No orphaned requirements found.
 
----
-
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
@@ -105,13 +97,9 @@ All 13 requirement IDs accounted for. No orphaned requirements found.
 
 No blocker anti-patterns found. The two remaining TODOs are for file conversion functionality explicitly deferred to later phases and do not affect any Phase 3 requirements.
 
----
-
 ### Human Verification Required
 
 None required — all Phase 3 goals are verifiable programmatically from static analysis and code structure inspection.
-
----
 
 ## Gaps Summary
 
@@ -124,8 +112,6 @@ The phase goal is fully achieved:
 - No duplicate scan logic — all routes delegate to `runScan` or `indexMarkdown` directly
 - Intelligence tables populated: `document_tags`, `content_similarities`, `deviations`, `statistics`
 - Commits for all tasks confirmed present: f670dc3, 1404588, 0d005f3, d098313, 0858316, be44a9b, 0c5bb8f
-
----
 
 _Verified: 2026-03-17T19:15:00Z_
 _Verifier: Claude (gsd-verifier)_

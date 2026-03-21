@@ -193,28 +193,13 @@ All in `logs/` (gitignored):
 
 ## 📚 Documentation
 
-| Document | Purpose |
-|----------|---------|
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| [README.md](README.md) | Main documentation |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| [CLAUDE.md](CLAUDE.md) | Comprehensive usage guide |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| [docs/QUICK-START.md](docs/QUICK-START.md) | 5-minute setup guide |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| [docs/CRON-SETUP.md](docs/CRON-SETUP.md) | Cron automation guide |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| [.claude/agents/markdown-fixer.md](.claude/agents/markdown-fixer.md) | Agent documentation |
+| Document                                                             | Purpose                   |
+| -------------------------------------------------------------------- | ------------------------- |
+| [README.md](README.md)                                               | Main documentation        |
+| [CLAUDE.md](CLAUDE.md)                                               | Comprehensive usage guide |
+| [docs/QUICK-START.md](docs/QUICK-START.md)                           | 5-minute setup guide      |
+| [docs/CRON-SETUP.md](docs/CRON-SETUP.md)                             | Cron automation guide     |
+| [.claude/agents/markdown-fixer.md](.claude/agents/markdown-fixer.md) | Agent documentation       |
 
 ## 🎓 Next Steps
 

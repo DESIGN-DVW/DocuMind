@@ -242,58 +242,19 @@ getGlobalStats();
 **Automatic categorization based on file path:**
 
 | Path Pattern | Category |
-|--------------|----------|
-| --- | --- |
-| --- | --- |
-| --- | --- |
+| -------------- | ---------- |
 | `/.claude/agents/` | agents |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | `/docs/01-agents/` | agents |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | `/docs/02-backend/` | backend |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | `/docs/03-frontend/` | frontend |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | `/docs/04-architecture/` | architecture |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | `/docs/05-guides/` | guides |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | `/docs/06-issues/` | issues |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | `/docs/99-shared/` | shared |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | `/docs/00-references/` | references |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | `README.md` | readme |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | `CLAUDE.md` | claude-instructions |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | `/docs/*` | documentation |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | Other | other |
 
 ## Workflows

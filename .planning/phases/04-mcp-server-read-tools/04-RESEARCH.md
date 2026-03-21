@@ -68,8 +68,6 @@ npm install @modelcontextprotocol/sdk
 npm install
 ```
 
----
-
 ## Architecture Patterns
 
 ### Recommended Project Structure
@@ -233,8 +231,6 @@ module.exports = {
 - **Returning raw objects from tool handlers:** MCP SDK requires the `content` array shape. Returning a plain object causes a schema validation error in the SDK.
 - **Tool count over 20:** Cursor has a hard limit of 40 MCP tools total across all servers; design DocuMind Phase 4 with 7 tools, well within limits and leaving room for Phase 5 write tools.
 
----
-
 ## What Already Exists (Don't Re-Build)
 
 Every query the MCP tools need is already written in `daemon/server.mjs`. Extract, don't invent:
@@ -251,8 +247,6 @@ Every query the MCP tools need is already written in `daemon/server.mjs`. Extrac
 The `findRelated(db, docId, maxDepth)` function in `graph/relations.mjs` is the direct implementation for `get_related` — import and call it directly.
 
 **Key insight:** Don't hand-roll graph traversal. `findRelated()` with recursive CTE is already implemented, tested (verified in Phase 3), and capped correctly.
-
----
 
 ## Tool Specifications
 
@@ -337,8 +331,6 @@ Direct wrapper around `findRelated(db, docId, maxDepth)`.
 { "count": 8, "diagrams": [{ "name": "auth-flow", "repository": "DocuMind", "stale": false, "figjam_url": "...", "curated_url": "...", "png_url": "/diagrams/png/DocuMind/auth-flow.png" }] }
 ```
 
----
-
 ## Common Pitfalls
 
 ### Pitfall 1: stdout Pollution Kills the Protocol
@@ -388,8 +380,6 @@ Direct wrapper around `findRelated(db, docId, maxDepth)`.
 **Why it happens:** WAL mode must be set per-connection. Opening `new Database(DB_PATH)` without `db.pragma('journal_mode = WAL')` defaults to DELETE mode, which conflicts with an existing WAL-mode database.
 
 **How to avoid:** Set `db.pragma('journal_mode = WAL')` and `db.pragma('foreign_keys = ON')` at MCP server startup, same as `server.mjs` does. The MCP server is read-only (Phase 4) so it can also set `db.pragma('query_only = true')` as an additional safety guard.
-
----
 
 ## Code Examples
 
@@ -475,8 +465,6 @@ server.tool(
 }
 ```
 
----
-
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
@@ -486,16 +474,12 @@ server.tool(
 | MCP protocol framing | Custom JSON-RPC serializer | `@modelcontextprotocol/sdk` | Protocol is complex (streaming, batching, error codes); SDK handles it all |
 | FTS5 ranking | Custom scoring | SQLite `rank` column from FTS5 query | FTS5 BM25 rank is provided automatically in ORDER BY rank; more accurate than hand-rolled scoring |
 
----
-
 ## State of the Art
 
 | Old Approach | Current Approach | When Changed | Impact |
 | --- | --- | --- | --- |
 | SSE transport (deprecated) | `StdioServerTransport` + `StreamableHTTPServerTransport` | MCP spec 2025-11-25 | SSE is removed from spec; do not use `SSEServerTransport` |
 | `Server` class from SDK | `McpServer` high-level class | SDK v1.x | `McpServer` is the recommended API; `Server` is lower-level and requires more boilerplate |
-
----
 
 ## Open Questions
 
@@ -514,8 +498,6 @@ server.tool(
    - What's unclear: Which descriptions will cause Claude to under-use or misuse tools
    - Recommendation: Write initial descriptions with example use cases; defer tuning to post-Phase-4 observation
 
----
-
 ## Sources
 
 ### Primary (HIGH confidence)
@@ -533,8 +515,6 @@ server.tool(
 - MCP TypeScript SDK GitHub releases — v1.27.1 confirmed (verified in STACK.md)
 - MCP official build-server docs — `McpServer`, `StdioServerTransport` API patterns (cited in STACK.md)
 - Cursor 40-tool hard limit — design for well under this ceiling (cited in PITFALLS.md)
-
----
 
 ## Metadata
 

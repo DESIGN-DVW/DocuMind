@@ -22,7 +22,7 @@ The existing `repository-registry.json` (owned by RootDispatcher) already define
 ## Phase Requirements
 
 | ID | Description | Research Support |
-|----|-------------|-----------------|
+| ---- | ------------- | ----------------- |
 | PROF-01 | Context profile JSON schema validated by Zod at startup | Zod already in package.json at `^3.22.4`; needs bump to `^3.25.0` for MCP SDK compatibility (Phase 4), but validation works at current version. Schema covers: repositories/registryPath, classificationRules, keywordTaxonomy, lintRules, relationshipTypes. |
 | PROF-02 | `context/loader.mjs` loads active profile and exposes `ctx` object (repo paths, classification tree, relationship types, keyword taxonomies, lint rules) | Pure async module pattern; `DOCUMIND_PROFILE` env var → file path → `fs.readFile` → `JSON.parse` → Zod validate → freeze → export. No external libraries needed beyond Zod. |
 | PROF-03 | `dvwdesign.json` reference profile that reproduces current hardcoded behavior | All three hardcoded sources mapped (see Code Examples section). Profile shape defined in Architecture Patterns. |
@@ -57,8 +57,6 @@ The existing `repository-registry.json` (owned by RootDispatcher) already define
 | Plain `JSON.parse` + manual checks | Zod | Manual checks do not produce structured errors; Zod gives field-level messages useful for the crash log |
 
 **Installation:** No new packages needed. Zod is already installed. No version bump required for Phase 2 (version bump to `^3.25.0` is a Phase 4 prerequisite).
-
----
 
 ## Architecture Patterns
 
@@ -263,19 +261,15 @@ async function buildCtx(validated, profilePath) {
 - **Absorbing repository-registry.json into the profile:** RootDispatcher owns the repo list. The profile should reference the registry file path, not duplicate 14 repo entries. Duplication creates drift.
 - **Recompiling regex patterns on every document:** Compile `classificationRules[].pattern` strings into `RegExp` objects once in `buildCtx()`, not on every `classifyPath()` call.
 
----
-
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
 | ------- | ----------- | ----------- | --- |
 | Schema validation with useful error messages | Custom type-check function | Zod `schema.parse()` | ZodError includes path to failing field, expected type, received value — all needed for crash log |
-| Env var fallback chain | Custom env resolution | `process.env.DOCUMIND_PROFILE \|\| DEFAULT_PROFILE` | Simple ternary; no library needed at this scale |
-| Profile freezing / immutability | Deep clone on every read | `Object.freeze(ctx)` | Shallow freeze prevents accidental mutation of the `ctx` object; deep freeze of nested arrays is not needed since processors only read, not write |
+|  Env var fallback chain  |  Custom env resolution  |  `process.env.DOCUMIND_PROFILE \ | \ |
+|   Profile freezing / immutability   |   Deep clone on every read   |   `Object.freeze(ctx)`   |   Shallow freeze prevents accidental mutation of the `ctx` object; deep freeze of nested arrays is not needed since processors only read, not write   |   |   |
 
 **Key insight:** The profile loader is intentionally thin. Its only job is read-validate-freeze. Complexity belongs in the schema definition and the subsystems that consume `ctx`, not in the loader itself.
-
----
 
 ## Common Pitfalls
 
@@ -331,8 +325,6 @@ env: {
   DOCUMIND_PROFILE: process.env.DOCUMIND_PROFILE || './config/profiles/dvwdesign.json'
 }
 ```
-
----
 
 ## Code Examples
 
@@ -427,8 +419,6 @@ initWatcher(db, ROOT, ctx);
 initScheduler(db, ctx);
 ```
 
----
-
 ## State of the Art
 
 | Old Approach | Current Approach | When Changed | Impact |
@@ -437,8 +427,6 @@ initScheduler(db, ctx);
 | Repository paths in `config/constants.mjs` | `repository-registry.json` (already in place) + profile reference | Existing (v2.0) | Already solved; Phase 2 just wires `ctx.repoRoots` from the registry |
 | `TECH_KEYWORDS` Set hardcoded in processor | `ctx.keywordTaxonomy.technology` array from profile | Phase 2 | Keyword vocabulary tunable per deployment without code change |
 | `CLASSIFICATION_RULES` array in backfill script | `ctx.classificationRules` from profile | Phase 2 | Classification behavior changes by swapping profile, not editing code |
-
----
 
 ## Open Questions
 
@@ -462,13 +450,9 @@ initScheduler(db, ctx);
    - What's unclear: Whether using a type outside the profile should be an error or just a warning
    - Recommendation: Pass `ctx` to `buildRelationships()` but do not validate for Phase 2 — the relationship type strings are inference-detected from content patterns, not user-provided. Add validation in Phase 3 when the orchestrator is wired.
 
----
-
 ## Validation Architecture
 
 > `workflow.nyquist_validation` is not set in `.planning/config.json` (key absent — treat as false). Skipping this section.
-
----
 
 ## Sources
 
@@ -488,8 +472,6 @@ initScheduler(db, ctx);
 ### Tertiary (LOW confidence)
 
 - None
-
----
 
 ## Metadata
 

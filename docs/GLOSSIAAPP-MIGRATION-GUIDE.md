@@ -355,30 +355,12 @@ After migration, verify:
 ## Migration Timeline
 
 | Step | Estimated Time | When to Do |
-|------|---------------|------------|
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
+| ------ | --------------- | ------------ |
 | Pre-migration checklist | 15 minutes | Before migration |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
 | GitHub transfer | 2 minutes | During migration |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
 | Update local remotes | 5 minutes | Immediately after |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
 | Invite collaborators | 10 minutes | Immediately after |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
 | Verification | 15 minutes | Immediately after |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
 | **Total** | **~45 minutes** | **Single session** |
 
 ## Contact Information

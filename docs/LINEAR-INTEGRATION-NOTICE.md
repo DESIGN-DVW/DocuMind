@@ -425,26 +425,11 @@ Cycle: Documentation Sprint 2025-W47
 ### Recommended Decision Matrix
 
 | Scenario | Recommendation |
-|----------|----------------|
-| --- | --- |
-| --- | --- |
-| --- | --- |
+| ---------- | ---------------- |
 | Few docs, mostly research | Use RandD team |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | Infra/ops documentation | Use Infrastructure team |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | Product documentation hub | Create DocuMind team |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | Cross-functional docs | Create DocuMind team |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | High volume (15+/week) | Create DocuMind team |
 
 ## Resources

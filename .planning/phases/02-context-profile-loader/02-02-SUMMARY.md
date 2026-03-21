@@ -24,21 +24,21 @@ affects:
 tech-stack:
   added: []
   patterns:
-    - "Crash-on-startup pattern: loadProfile() called before Express/DB init; process.exit(1) on failure"
-    - "ctx threading: passed as explicit function parameter, never via module-scope globals or side effects"
-    - "Sets from profile: new Set(ctx.keywordTaxonomy.technology) created inside extractKeywords() call, not at module scope"
-    - "REPOS_ROOT derived: commonDir(ctx.repoRoots.map(r => r.path)) in both server.mjs and watcher.mjs"
-    - "repoRegistry uses relative paths: path.relative(REPOS_ROOT, r.path) preserves PNG endpoint behavior"
+  - "Crash-on-startup pattern: loadProfile() called before Express/DB init; process.exit(1) on failure"
+  - "ctx threading: passed as explicit function parameter, never via module-scope globals or side effects"
+  - "Sets from profile: new Set(ctx.keywordTaxonomy.technology) created inside extractKeywords() call, not at module scope"
+  - "REPOS_ROOT derived: commonDir(ctx.repoRoots.map(r => r.path)) in both server.mjs and watcher.mjs"
+  - "repoRegistry uses relative paths: path.relative(REPOS_ROOT, r.path) preserves PNG endpoint behavior"
 
 key-files:
   created: []
   modified:
-    - daemon/server.mjs
-    - daemon/watcher.mjs
-    - processors/keyword-processor.mjs
-    - scripts/db/backfill/backfill-classifications.mjs
-    - scripts/db/migrate.mjs
-    - ecosystem.config.cjs
+  - daemon/server.mjs
+  - daemon/watcher.mjs
+  - processors/keyword-processor.mjs
+  - scripts/db/backfill/backfill-classifications.mjs
+  - scripts/db/migrate.mjs
+  - ecosystem.config.cjs
 
 key-decisions:
   - "repoRegistry stores relative paths (path.relative(REPOS_ROOT, r.path)) — PNG endpoint does path.resolve(REPOS_ROOT, repoRegistry.get(repo)) so relative values are required"

@@ -353,7 +353,7 @@ Count pipes per line
 
 ```markdown
 | Col1 | Col2 |
-|------|------|
+| ------ | ------ |
 | A | B | C |  # ERROR: 3 columns in data, 2 in header
 ```
 
@@ -361,10 +361,7 @@ Count pipes per line
 
 ```markdown
 | Col1 | Col2 | Col3 |
-|------|------|------|
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
+| ------ | ------ | ------ |
 | A    | B    | C    |
 ```
 
@@ -397,10 +394,7 @@ awk -F'|' '/^\|/ {print NF, $0}' file.md | awk '{if(NF!=prev && NR>1) print "Lin
 
 ```markdown
 | Header 1 | Header 2 |
-|----------|----------|
-| --- | --- |
-| --- | --- |
-| --- | --- |
+| ---------- | ---------- |
 | Data 1   | Data 2   |
 ```
 
@@ -648,62 +642,20 @@ sed '/^---$/N;/^---\n$/d' file.md
 ## Detection Strategy Matrix
 
 | Error Type | Detection Method | Fix Method | Priority |
-|-----------|------------------|------------|----------|
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
+| ----------- | ------------------ | ------------ | ---------- |
 | **Context Numbering** | Regex + parsing | AI-assisted | High |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
 | **Heading Hierarchy** | Regex | Automated | High |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
 | **Code Block Nesting** | State machine | Automated | High |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
 | **Missing Language** | Regex | Automated | High |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
 | **Undefined References** | Grep + comm | AI-assisted | Medium |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
 | **Broken Links** | Grep + file check | Automated | High |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
 | **Table Alignment** | Awk column count | Automated | Medium |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
 | **Missing Separator** | Regex | Automated | Medium |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
 | **Indentation** | Regex | Automated | Low |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
 | **Trailing Spaces** | Regex | Automated | Low |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
 | **YAML Frontmatter** | YAML parser | AI-assisted | Medium |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
 | **Missing Metadata** | Grep | Automated | Medium |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
 | **Over-Formatting** | Regex + context | AI-assisted | Low |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
 | **Excessive Rules** | Count threshold | Automated | Low |
 
 ## Command-Line Tool Combinations

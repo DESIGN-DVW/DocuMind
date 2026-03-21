@@ -12,12 +12,12 @@ tech_stack:
   patterns: [sqlite-table-rebuild, fts5-sync-triggers, alter-table-add-column]
 key_files:
   created:
-    - scripts/db/migrations/002-add-summary.sql
-    - scripts/db/migrations/003-add-classification.sql
-    - scripts/db/migrations/004-add-document-tags.sql
-    - scripts/db/migrations/005-remove-check-constraints.sql
+  - scripts/db/migrations/002-add-summary.sql
+  - scripts/db/migrations/003-add-classification.sql
+  - scripts/db/migrations/004-add-document-tags.sql
+  - scripts/db/migrations/005-remove-check-constraints.sql
   modified:
-    - scripts/db/schema.sql
+  - scripts/db/schema.sql
 decisions:
   - PRAGMA foreign_keys omitted from 005 SQL — migrate.mjs sets foreign_keys=ON at startup; with 0 rows in doc_relationships no FK checks fire during INSERT INTO ... SELECT *; cleaner than in-SQL toggling
   - document_graph view dropped and recreated inside migration 005 — SQLite validates dependent views when a base table is dropped; this is the standard workaround

@@ -17,55 +17,22 @@ cat /Users/Shared/htdocs/github/DVWDesign/RootDispatcher/config/port-registry.js
 ## Critical Services (DO NOT KILL without team notification)
 
 | Port | Service | Team | Notes |
-|------|---------|------|-------|
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
+| ------ | --------- | ------ | ------- |
 | 6006 | Storybook - FigmailAPP | Design System Team | ⚠️ DO NOT KILL |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
 | 6007 | Storybook - CampaignManager | Design System Team | ⚠️ DO NOT KILL |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
 | 6008 | Storybook - Figma-Plug-ins | Design System Team | ⚠️ DO NOT KILL |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
 | 5432 | PostgreSQL | Backend Team | ⚠️ DATABASE |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
 | 27017 | MongoDB | Backend Team | ⚠️ DATABASE |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
 | 3001 | Uptime Kuma | DevOps | ⚠️ MONITORING |
 
 ## Port Ranges
 
 | Range | Purpose | Examples |
-|-------|---------|----------|
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
+| ------- | --------- | ---------- |
 | 3000-3999 | Web servers | Dev servers, frontend apps |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
 | 4000-4999 | APIs | Backend services |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
 | 5000-5999 | Databases | PostgreSQL, MongoDB |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
 | 6000-6099 | Storybook | Component development |
-| --- | --- | --- |
-| --- | --- | --- |
-| --- | --- | --- |
 | 9000-9999 | Monitoring | Uptime Kuma, Grafana |
 
 ## Available Ports (This Repository)

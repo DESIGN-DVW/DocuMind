@@ -30,22 +30,10 @@ npm run cron:stop
 The system installs the following cron jobs:
 
 | Job | Schedule | Frequency | Command | Log File |
-|-----|----------|-----------|---------|----------|
-| --- | --- | --- | --- | --- |
-| --- | --- | --- | --- | --- |
-| --- | --- | --- | --- | --- |
+| ----- | ---------- | ----------- | --------- | ---------- |
 | **Scan** | `0 * * * *` | Every hour | `npm run scan:report` | `logs/cron-markdown-scan-hourly.log` |
-| --- | --- | --- | --- | --- |
-| --- | --- | --- | --- | --- |
-| --- | --- | --- | --- | --- |
 | **Index** | `5 * * * *` | Every hour (+5min) | `npm run index` | `logs/cron-markdown-index-hourly.log` |
-| --- | --- | --- | --- | --- |
-| --- | --- | --- | --- | --- |
-| --- | --- | --- | --- | --- |
 | **Validate** | `0 9 * * *` | Daily at 9:00 AM | `npm run validate` | `logs/cron-markdown-validate-daily.log` |
-| --- | --- | --- | --- | --- |
-| --- | --- | --- | --- | --- |
-| --- | --- | --- | --- | --- |
 | **Lint** | `0 10 * * *` | Daily at 10:00 AM | `npm run lint` | `logs/cron-markdown-lint-daily.log` |
 
 ### Schedule Explanation
@@ -458,54 +446,18 @@ All cron commands redirect to log files. Never rely on email output.
 ## Quick Reference
 
 | Task | Command |
-|------|---------|
-| --- | --- |
-| --- | --- |
-| --- | --- |
+| ------ | --------- |
 | Install cron jobs | `npm run cron:setup` |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | Remove cron jobs | `npm run cron:stop` |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | List jobs | `node scripts/setup-cron.mjs --list` |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | View crontab | `crontab -l` |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | Edit crontab manually | `crontab -e` |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | View all logs | `tail -f logs/cron-*.log` |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | View scan log | `tail -f logs/cron-markdown-scan-hourly.log` |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | Archive logs | `mv logs/*.log logs/archive/` |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | Test scan | `npm run scan:report` |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | Test index | `npm run index` |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | Test validate | `npm run validate` |
-| --- | --- |
-| --- | --- |
-| --- | --- |
 | Test lint | `npm run lint` |
 
 **Version:** 1.0.0

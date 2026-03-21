@@ -755,6 +755,4 @@ Build in phases:
 - Better agent experience
 - Future-proof (MCP is growing standard)
 
----
-
 **End of Design Document**

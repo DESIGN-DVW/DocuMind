@@ -11,11 +11,11 @@ tech-stack:
   patterns: [numbered-sql-migrations, transaction-per-migration, timestamped-backup]
 key-files:
   created:
-    - scripts/db/migrate.mjs
-    - scripts/db/migrations/001-schema-migrations-table.sql
-    - scripts/db/reset-database.mjs
+  - scripts/db/migrate.mjs
+  - scripts/db/migrations/001-schema-migrations-table.sql
+  - scripts/db/reset-database.mjs
   modified:
-    - package.json
+  - package.json
 decisions:
   - "Migration runner is separate from init-database.mjs — init creates fresh DB from schema.sql; migrate evolves existing DB"
   - "Bootstrap schema_migrations table is created inline in migrate.mjs before reading applied versions, not from the SQL file, to avoid chicken-and-egg problem"

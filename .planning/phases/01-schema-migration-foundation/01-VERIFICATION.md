@@ -35,8 +35,6 @@ re_verification: false
 
 **Score:** 11/11 truths verified
 
----
-
 ### Required Artifacts
 
 | Artifact | Provides | Min Lines | Actual Lines | Status |
@@ -54,8 +52,6 @@ re_verification: false
 
 All artifacts exist, are substantive (above minimum line thresholds), and are wired into the migration pipeline.
 
----
-
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
@@ -67,8 +63,6 @@ All artifacts exist, are substantive (above minimum line thresholds), and are wi
 | `scripts/db/migrate.mjs` | `scripts/db/backfill/*.mjs` | dynamic import after SQL migrations complete | WIRED | Lines 165, 169: `await import('./backfill/backfill-summaries.mjs')` and `backfill-classifications.mjs` |
 | `scripts/db/backfill/backfill-summaries.mjs` | documents table | `UPDATE documents SET summary = ? WHERE id = ?` | WIRED | Line 92: `db.prepare('UPDATE documents SET summary = ? WHERE id = ?')` |
 | `scripts/db/backfill/backfill-classifications.mjs` | documents table | `UPDATE documents SET classification = ? WHERE id = ?` | WIRED | Line 73: `db.prepare('UPDATE documents SET classification = ? WHERE id = ?')` |
-
----
 
 ### Requirements Coverage
 
@@ -82,8 +76,6 @@ All artifacts exist, are substantive (above minimum line thresholds), and are wi
 
 All 5 requirements satisfied. No orphaned requirements.
 
----
-
 ### Anti-Patterns Found
 
 No anti-patterns detected in phase artifacts:
@@ -92,8 +84,6 @@ No anti-patterns detected in phase artifacts:
 - No stub implementations (empty handlers, `return null`, `return {}`)
 - No console.log-only implementations
 - No empty code blocks or missing connections
-
----
 
 ### Human Verification Required
 
@@ -109,13 +99,9 @@ No anti-patterns detected in phase artifacts:
 **Expected:** Summaries look like meaningful descriptions of their documents, not just filenames
 **Why human:** Whether extractive summaries are semantically reasonable requires human judgment; zero-NULL count confirms coverage but not quality
 
----
-
 ## Summary
 
 Phase 1 goal is fully achieved. The live 8172-document database evolved safely through 5 sequential SQL migrations — all tracked in the `schema_migrations` table, each backed by a timestamped DB snapshot before execution. The migration runner is idempotent, the reset guard is armed, new columns (`summary`, `classification`) are populated for all documents, `document_tags` is ready for Phase 3 tag extraction, and the `doc_relationships` CHECK constraint has been removed. FTS5 search continues to return results. All 5 SCHM requirements are satisfied.
-
----
 
 _Verified: 2026-03-16_
 _Verifier: Claude (gsd-verifier)_

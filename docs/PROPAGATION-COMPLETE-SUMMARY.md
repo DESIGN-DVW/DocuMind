@@ -69,87 +69,33 @@ Updated in 7 repositories:
 
 ## Repositories Updated
 
-| Repository | Files Copied | Package Updated | Status |
-|-----------|--------------|-----------------|--------|
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| RootDispatcher | 6 | Already correct | ✅ |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| Figma-Plug-ins | 6 | Yes | ✅ |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| LibraryAssetManager | 6 | Yes | ✅ |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| Aprimo | 6 | Yes | ✅ |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| CampaignManager | 6 | Yes | ✅ |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| GlossiaApp | 6 | Yes | ✅ |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| FigmaAPI/FigmaDSController | 6 | Yes | ✅ |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| FigmaAPI/FigmailAPP | 6 | Yes | ✅ |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| **Total** | **48 files** | **7 updated** | **8/8 success** |
+| Repository                 | Files Copied | Package Updated | Status          |
+| -------------------------- | ------------ | --------------- | --------------- |
+| RootDispatcher             | 6            | Already correct | ✅               |
+| Figma-Plug-ins             | 6            | Yes             | ✅               |
+| LibraryAssetManager        | 6            | Yes             | ✅               |
+| Aprimo                     | 6            | Yes             | ✅               |
+| CampaignManager            | 6            | Yes             | ✅               |
+| GlossiaApp                 | 6            | Yes             | ✅               |
+| FigmaAPI/FigmaDSController | 6            | Yes             | ✅               |
+| FigmaAPI/FigmailAPP        | 6            | Yes             | ✅               |
+| **Total**                  | **48 files** | **7 updated**   | **8/8 success** |
 
 ## GitHub URL Verification
 
 ### Current State (Verified 2025-11-13)
 
-| Repository | Local Path | GitHub URL | Organization | Status |
-|-----------|-----------|-----------|-------------|--------|
-| --- | --- | --- | --- | --- |
-| --- | --- | --- | --- | --- |
-| --- | --- | --- | --- | --- |
-| DocuMind | `DVWDesign/DocuMind` | `DESIGN-DVW/DocuMind` | DESIGN-DVW | ✅ |
-| --- | --- | --- | --- | --- |
-| --- | --- | --- | --- | --- |
-| --- | --- | --- | --- | --- |
-| RootDispatcher | `DVWDesign/RootDispatcher` | `DESIGN-DVW/RootDispatcher` | DESIGN-DVW | ✅ |
-| --- | --- | --- | --- | --- |
-| --- | --- | --- | --- | --- |
-| --- | --- | --- | --- | --- |
-| Figma-Plug-ins | `DVWDesign/Figma-Plug-ins` | `DESIGN-DVW/Figma-Plug-ins` | DESIGN-DVW | ✅ |
-| --- | --- | --- | --- | --- |
-| --- | --- | --- | --- | --- |
-| --- | --- | --- | --- | --- |
-| LibraryAssetManager | `DVWDesign/LibraryAssetManager` | `DESIGN-DVW/LibraryAssetManager` | DESIGN-DVW | ✅ |
-| --- | --- | --- | --- | --- |
-| --- | --- | --- | --- | --- |
-| --- | --- | --- | --- | --- |
-| Aprimo | `DVWDesign/Aprimo` | `DESIGN-DVW/Aprimo` | DESIGN-DVW | ✅ |
-| --- | --- | --- | --- | --- |
-| --- | --- | --- | --- | --- |
-| --- | --- | --- | --- | --- |
-| CampaignManager | `DVWDesign/CampaignManager` | `DESIGN-DVW/CampaignManager` | DESIGN-DVW | ✅ |
-| --- | --- | --- | --- | --- |
-| --- | --- | --- | --- | --- |
-| --- | --- | --- | --- | --- |
-| GlossiaApp | `DVWDesign/GlossiaApp` | `DVW-Design/GlossiaApp` | DVW-Design | ⚠️ Pending migration |
-| --- | --- | --- | --- | --- |
-| --- | --- | --- | --- | --- |
-| --- | --- | --- | --- | --- |
-| FigmaDSController | `DVWDesign/FigmaAPI/FigmaDSController` | `DESIGN-DVW/FigmaDSController` | DESIGN-DVW | ✅ |
-| --- | --- | --- | --- | --- |
-| --- | --- | --- | --- | --- |
-| --- | --- | --- | --- | --- |
-| FigmailAPP | `DVWDesign/FigmaAPI/FigmailAPP` | `DESIGN-DVW/FigmailAPP` | DESIGN-DVW | ✅ |
+| Repository          | Local Path                             | GitHub URL                       | Organization | Status               |
+| ------------------- | -------------------------------------- | -------------------------------- | ------------ | -------------------- |
+| DocuMind            | `DVWDesign/DocuMind`                   | `DESIGN-DVW/DocuMind`            | DESIGN-DVW   | ✅                    |
+| RootDispatcher      | `DVWDesign/RootDispatcher`             | `DESIGN-DVW/RootDispatcher`      | DESIGN-DVW   | ✅                    |
+| Figma-Plug-ins      | `DVWDesign/Figma-Plug-ins`             | `DESIGN-DVW/Figma-Plug-ins`      | DESIGN-DVW   | ✅                    |
+| LibraryAssetManager | `DVWDesign/LibraryAssetManager`        | `DESIGN-DVW/LibraryAssetManager` | DESIGN-DVW   | ✅                    |
+| Aprimo              | `DVWDesign/Aprimo`                     | `DESIGN-DVW/Aprimo`              | DESIGN-DVW   | ✅                    |
+| CampaignManager     | `DVWDesign/CampaignManager`            | `DESIGN-DVW/CampaignManager`     | DESIGN-DVW   | ✅                    |
+| GlossiaApp          | `DVWDesign/GlossiaApp`                 | `DVW-Design/GlossiaApp`          | DVW-Design   | ⚠️ Pending migration |
+| FigmaDSController   | `DVWDesign/FigmaAPI/FigmaDSController` | `DESIGN-DVW/FigmaDSController`   | DESIGN-DVW   | ✅                    |
+| FigmailAPP          | `DVWDesign/FigmaAPI/FigmailAPP`        | `DESIGN-DVW/FigmailAPP`          | DESIGN-DVW   | ✅                    |
 
 ### Key Points
 
@@ -172,24 +118,12 @@ Updated in 7 repositories:
 
 ### Naming Convention Clarification
 
-| Level | Name | Purpose | Example |
-|-------|------|---------|---------|
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| **GitHub Organization** | DESIGN-DVW | Primary organization | `github.com/DESIGN-DVW` |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| **Local Base Folder** | DVWDesign | Local workspace folder | `/Users/Shared/htdocs/github/DVWDesign/` |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| **Local Subfolder** | FigmaAPI | Local grouping only | `DVWDesign/FigmaAPI/` |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| --- | --- | --- | --- |
-| **Repository** | FigmailAPP | Actual git repository | `DESIGN-DVW/FigmailAPP` |
+| Level                   | Name       | Purpose                | Example                                  |
+| ----------------------- | ---------- | ---------------------- | ---------------------------------------- |
+| **GitHub Organization** | DESIGN-DVW | Primary organization   | `github.com/DESIGN-DVW`                  |
+| **Local Base Folder**   | DVWDesign  | Local workspace folder | `/Users/Shared/htdocs/github/DVWDesign/` |
+| **Local Subfolder**     | FigmaAPI   | Local grouping only    | `DVWDesign/FigmaAPI/`                    |
+| **Repository**          | FigmailAPP | Actual git repository  | `DESIGN-DVW/FigmailAPP`                  |
 
 **Important:** The local folder structure does NOT mirror GitHub organization structure!
 
@@ -344,44 +278,17 @@ Expected output: All should show `@design-dvw/*` not `@dvwdesign/*`
 
 ## Statistics
 
-| Metric | Value |
-|--------|-------|
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| **Repositories Updated** | 9 (including DocuMind) |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| **Files Propagated** | 48 across 8 repositories |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| **Package.json Updated** | 7 repositories |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| **Total Files Modified** | 86 (38 from initial fix + 48 propagated) |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| **Scripts Created** | 2 (fix + propagate) |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| **Documentation Created** | 6 guides |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| **GitHub References Fixed** | 81 incorrect references |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| **Organizations Involved** | 2 (DESIGN-DVW, DVW-Design) |
-| --- | --- |
-| --- | --- |
-| --- | --- |
-| **Target Organization** | 1 (DESIGN-DVW after migration) |
+| Metric                      | Value                                    |
+| --------------------------- | ---------------------------------------- |
+| **Repositories Updated**    | 9 (including DocuMind)                   |
+| **Files Propagated**        | 48 across 8 repositories                 |
+| **Package.json Updated**    | 7 repositories                           |
+| **Total Files Modified**    | 86 (38 from initial fix + 48 propagated) |
+| **Scripts Created**         | 2 (fix + propagate)                      |
+| **Documentation Created**   | 6 guides                                 |
+| **GitHub References Fixed** | 81 incorrect references                  |
+| **Organizations Involved**  | 2 (DESIGN-DVW, DVW-Design)               |
+| **Target Organization**     | 1 (DESIGN-DVW after migration)           |
 
 ## Success Criteria
 

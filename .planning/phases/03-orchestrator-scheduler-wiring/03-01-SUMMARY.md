@@ -17,15 +17,15 @@ affects: [03-02-orchestrator, scheduler-wiring, graph-rebuild-cron]
 tech-stack:
   added: []
   patterns:
-    - "ctx passed as last arg to indexMarkdown — processMarkdown remains ctx-free for standalone callers"
-    - "siblingsByDir pre-computed Map for O(1) directory group lookup before main loop"
-    - "AUTO-DETECTED edges cleared before rebuild via metadata LIKE filter — preserves manual edges"
+  - "ctx passed as last arg to indexMarkdown — processMarkdown remains ctx-free for standalone callers"
+  - "siblingsByDir pre-computed Map for O(1) directory group lookup before main loop"
+  - "AUTO-DETECTED edges cleared before rebuild via metadata LIKE filter — preserves manual edges"
 
 key-files:
   created: []
   modified:
-    - processors/markdown-processor.mjs
-    - graph/relations.mjs
+  - processors/markdown-processor.mjs
+  - graph/relations.mjs
 
 key-decisions:
   - "processMarkdown retains simple frontmatter.category || 'other' fallback — adding ctx would break standalone callers"
