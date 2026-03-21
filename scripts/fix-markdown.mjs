@@ -35,6 +35,7 @@ const CONFIG = {
   },
 
   // Code block language detection
+  // Order matters: specific languages first, then defaults (md → diagram → text)
   languageDetection: {
     javascript: ['const ', 'let ', 'var ', 'function ', 'import ', 'export ', '=>', 'console.log'],
     typescript: ['interface ', 'type ', ': string', ': number', 'as ', 'enum '],
@@ -44,7 +45,22 @@ const CONFIG = {
     yaml: ['---', 'version:', 'name:'],
     css: ['{', '}', ';', 'color:', 'display:'],
     html: ['<div', '<span', '<p>', '<!DOCTYPE'],
-    markdown: ['# ', '## ', '- ', '* '],
+    diagram: [
+      'graph ',
+      'flowchart ',
+      'sequenceDiagram',
+      'classDiagram',
+      'stateDiagram',
+      'erDiagram',
+      'gantt',
+      'pie ',
+      'journey',
+      'mindmap',
+      'timeline',
+      'gitGraph',
+      'C4Context',
+    ],
+    md: ['# ', '## ', '- ', '* ', '> ', '[', '**', '__'],
   },
 
   defaultLanguage: 'text',

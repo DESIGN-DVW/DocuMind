@@ -88,32 +88,30 @@ npm run daemon:status       # pm2 show documind
 npm run daemon:logs         # pm2 logs documind
 ```
 
-### API Endpoints (port 9000)
+## API Endpoints (port 9000)
 
-| Endpoint | Method | Description |
-| -------- | ------ | ----------- |
-| `/health` | GET | Health check + version |
-| `/stats` | GET | Dashboard statistics |
-| `/search?q=` | GET | Full-text search via FTS5 |
-| `/graph` | GET | Document relationship graph |
-| `/tree/:repo` | GET | Folder hierarchy + diagrams |
-| `/keywords` | GET | Keyword cloud data |
-| `/diagrams` | GET | Diagram registry |
-| `/scan` | POST | Trigger scan (optional: `{ repo }`) |
-| `/index` | POST | Reindex documents |
-| `/convert` | POST | Convert file (DOCX/RTF/PDF) |
-| `/hook` | POST | Claude hook receiver |
+| Endpoint      | Method | Description                         |
+| ------------- | ------ | ----------------------------------- |
+| `/health`     | GET    | Health check + version              |
+| `/stats`      | GET    | Dashboard statistics                |
+| `/search?q=`  | GET    | Full-text search via FTS5           |
+| `/graph`      | GET    | Document relationship graph         |
+| `/tree/:repo` | GET    | Folder hierarchy + diagrams         |
+| `/keywords`   | GET    | Keyword cloud data                  |
+| `/diagrams`   | GET    | Diagram registry                    |
+| `/scan`       | POST   | Trigger scan (optional: `{ repo }`) |
+| `/index`      | POST   | Reindex documents                   |
+| `/convert`    | POST   | Convert file (DOCX/RTF/PDF)         |
+| `/hook`       | POST   | Claude hook receiver                |
 
 ### Scheduled Tasks
 
-| Schedule | Task |
-| -------- | ---- |
-| Every 15 min | File watcher heartbeat check |
-| Every hour | Incremental scan (changed files only, via content_hash) |
-| Daily 2 AM | Full scan + similarity detection + deviation analysis |
-| Weekly Sun | PDF re-index + keyword refresh + graph rebuild |
-
----
+| Schedule     | Task                                                    |
+| ------------ | ------------------------------------------------------- |
+| Every 15 min | File watcher heartbeat check                            |
+| Every hour   | Incremental scan (changed files only, via content_hash) |
+| Daily 2 AM   | Full scan + similarity detection + deviation analysis   |
+| Weekly Sun   | PDF re-index + keyword refresh + graph rebuild          |
 
 ## Database Schema (SQLite + FTS5)
 
@@ -150,8 +148,6 @@ npm run db:reset            # Drop and recreate (destructive!)
 npm run db:migrate          # Apply migrations only
 ```
 
----
-
 ## Processors
 
 ### Markdown Processor
@@ -178,8 +174,6 @@ Walks repository directories, classifies folders (docs, source, config, tests, s
 
 Generates .mmd diagram files, registers in diagrams table with staleness detection via source_hash comparison. Inserts FigJam links into markdown files.
 
----
-
 ## Graph Queries
 
 Document relationships support recursive CTE traversal:
@@ -193,8 +187,6 @@ curl "http://localhost:9000/graph"
 ```
 
 Relationship types: `imports`, `parent_of`, `variant_of`, `supersedes`, `depends_on`, `related_to`, `generated_from`, `dispatched_to`
-
----
 
 ## CLI Commands (Legacy + New)
 
@@ -260,8 +252,6 @@ npm run docs:jsdoc          # Generate JSDoc documentation
 npm run docs:jsdoc:serve    # Serve JSDoc on local server
 ```
 
----
-
 ## Markdown Standards
 
 Configuration: `config/.markdownlint.json`
@@ -284,12 +274,53 @@ CORRECT:
 
 WRONG:
 | Column | Column |
-|--------|--------|
+| -------- | -------- |
 ```
 
 Rule: one space between pipe and dashes on each side.
+Alignment markers are allowed: `| :--- | :---: | ---: |`
 
----
+Auto-fixed by `npm run fix:custom` (pattern `table-3`).
+
+### Fenced Code Block Identifiers
+
+**Every** fenced code block **MUST** have a language identifier. No empty ` ``` ` blocks.
+
+When the content language is obvious, use the specific identifier (`javascript`, `bash`, `json`, `python`, `css`, `html`, `yaml`, `typescript`, etc.).
+
+When no specific language applies, use this **default hierarchy**:
+
+1. **`md`** — if the content is markdown (headings, lists, links, emphasis)
+2. **`diagram`** — if the content is a diagram (Mermaid, FigJam, flowcharts)
+3. **`text`** — last resort for plain text / non-code content
+
+```text
+✅ CORRECT:
+` ` `javascript
+const x = 1;
+` ` `
+
+` ` `md
+## Section Title
+- Item one
+` ` `
+
+` ` `diagram
+graph TD
+    A --> B
+` ` `
+
+` ` `text
+Some plain text output
+` ` `
+
+❌ WRONG:
+` ` `
+const x = 1;
+` ` `
+```
+
+Enforced by MD040 (markdownlint) + auto-detected by `fix-markdown.mjs`.
 
 ## Dependencies
 
@@ -315,8 +346,6 @@ Rule: one space between pipe and dashes on each side.
 - `prettier` — Code formatting
 - `husky` + `lint-staged` — Pre-commit hooks
 - `jsdoc` — API documentation generation
-
----
 
 ## Integration Points
 
@@ -344,8 +373,6 @@ Rule: one space between pipe and dashes on each side.
 - Monitors file changes via chokidar watcher
 - Provides full-text search across entire ecosystem
 
----
-
 ## RootDispatcher Integration
 
 **Version:** 1.0 | **Last updated:** 2026-03-10
@@ -365,8 +392,6 @@ This repo is part of the DVWDesign ecosystem coordinated by RootDispatcher.
 2. Move applied dispatches to `dispatches/applied/`
 3. Append to `RootDispatcher/memory/changelog.jsonl`
 4. Log significant decisions to `RootDispatcher/memory/decisions.jsonl`
-
----
 
 **Status:** Active (PM2 daemon on port 9000)
 **Engine:** Node.js >= 20.0.0

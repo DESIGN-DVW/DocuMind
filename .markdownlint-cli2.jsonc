@@ -9,7 +9,8 @@
 
   // Custom rules with fixInfo (auto-fixable via --fix)
   "customRules": [
-    "./config/rules/table-separator-spacing.cjs"
+    "./config/rules/table-separator-spacing.cjs",
+    "./config/rules/force-align-table-columns.cjs"
   ],
 
   // Paths to ignore

@@ -129,10 +129,16 @@
     }
   },
 
-  // Markdownlint configuration
+  // Markdownlint configuration (rules loaded from .markdownlint-cli2.jsonc)
   "markdownlint.config": {
     "extends": "./config/.markdownlint.json"
   },
+
+  // Custom rules with inline auto-fix support
+  "markdownlint.customRules": [
+    "./config/rules/table-separator-spacing.cjs",
+    "./config/rules/force-align-table-columns.cjs"
+  ],
 
   // ============================================================================
   // JavaScript/Node.js Configuration

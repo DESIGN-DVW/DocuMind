@@ -149,82 +149,59 @@ function fixTableSeparators(content) {
   let changed = false;
   const lines = content.split('\n');
   const fixed = [];
+  let inTable = false;
+  let hasSeparator = false;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    fixed.push(line);
+    const isTableRow = /^\|(.+\|)+$/.test(line);
+    const isSeparator = isTableRow && /^\|[\s\-:|]+\|$/.test(line);
 
-    // Check if this is a table header (starts with |, contains |, ends with |)
-    if (/^\|(.+\|)+$/.test(line)) {
+    if (!isTableRow) {
+      // Exiting table context
+      inTable = false;
+      hasSeparator = false;
+      fixed.push(line);
+      continue;
+    }
+
+    if (isSeparator) {
+      if (hasSeparator) {
+        // Already have a separator in this table — drop extra ones
+        changed = true;
+        continue;
+      }
+      hasSeparator = true;
+      inTable = true;
+      fixed.push(line);
+      continue;
+    }
+
+    // It's a data/header row
+    if (!inTable) {
+      // First row of a new table (the header)
+      inTable = true;
+      fixed.push(line);
+
       const nextLine = lines[i + 1];
-
-      // Check if next line is NOT a separator
-      if (nextLine && !/^\|[-:\s]+\|/.test(nextLine) && /^\|(.+\|)+$/.test(nextLine)) {
-        // Count columns in header
-        const columns = line.split('|').length - 2; // Remove empty first/last
+      if (nextLine && !/^\|[\s\-:|]+\|$/.test(nextLine) && /^\|(.+\|)+$/.test(nextLine)) {
+        // Next line is data with no separator — insert one
+        const columns = line.split('|').length - 2;
         const separator = '|' + ' --- |'.repeat(columns);
-
         fixed.push(separator);
+        hasSeparator = true;
         changed = true;
       }
-    }
-  }
-
-  return { content: fixed.join('\n'), changed };
-}
-
-/**
- * Fix table column alignment
- * Ensures all rows have same number of columns as header
- */
-function fixTableAlignment(content) {
-  let changed = false;
-  const lines = content.split('\n');
-  const fixed = [];
-  let inTable = false;
-  let expectedColumns = 0;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-
-    if (/^\|(.+\|)+$/.test(line)) {
-      const columns = line.split('|').filter(c => c.trim()).length;
-
-      // Start of table or separator
-      if (!inTable || /^\|[-:\s]+\|/.test(line)) {
-        inTable = true;
-        expectedColumns = columns;
-        fixed.push(line);
-      } else {
-        // Data row - check column count
-        if (columns !== expectedColumns) {
-          // Pad or trim to match expected
-          const cells = line.split('|').filter(c => c.trim());
-          if (cells.length < expectedColumns) {
-            // Add empty cells
-            while (cells.length < expectedColumns) {
-              cells.push(' ');
-            }
-          } else {
-            // Trim excess cells
-            cells.splice(expectedColumns);
-          }
-          const fixedLine = '| ' + cells.join(' | ') + ' |';
-          fixed.push(fixedLine);
-          changed = true;
-        } else {
-          fixed.push(line);
-        }
-      }
     } else {
-      inTable = false;
-      expectedColumns = 0;
       fixed.push(line);
     }
   }
 
   return { content: fixed.join('\n'), changed };
 }
+
+// fixTableAlignment — REMOVED: replaced by markdownlint-rule-force-align-table-columns (MD060A)
+// Handles column alignment + padding via markdownlint --fix, idempotent and integrated with VSCode/lint-staged.
 
 /**
  * Fix skipped heading levels
@@ -397,7 +374,6 @@ async function fixFile(filePath, dryRun = false) {
       { name: 'List Indentation', fn: fixListIndentation },
       { name: 'Table Separators', fn: fixTableSeparators },
       { name: 'Table Separator Spacing', fn: fixTableSeparatorSpacing },
-      { name: 'Table Alignment', fn: fixTableAlignment },
       { name: 'Skipped Heading Levels', fn: fixSkippedHeadingLevels },
       { name: 'Nested Code Blocks', fn: fixNestedCodeBlocks },
       { name: 'Excessive Horizontal Rules', fn: fixExcessiveHorizontalRules },
