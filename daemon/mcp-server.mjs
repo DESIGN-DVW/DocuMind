@@ -505,7 +505,94 @@ server.tool(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Tool 8: index_file — Re-index a single markdown file (MCPW-01)
+// Tool 8: get_deviations — Convention deviations across documentation (MCPI-02)
+// ─────────────────────────────────────────────────────────────────────────────
+server.tool(
+  'get_deviations',
+  'Get convention deviations detected across documentation. Returns deviation type, severity, affected document path, and description. Covers all 5 types: content_drift, structure_change, rule_violation, version_mismatch, metadata_inconsistency.',
+  {
+    repo: z.string().optional().describe('Filter by repository name'),
+    deviation_type: z
+      .enum([
+        'content_drift',
+        'structure_change',
+        'rule_violation',
+        'version_mismatch',
+        'metadata_inconsistency',
+      ])
+      .optional()
+      .describe('Filter by deviation type'),
+    severity: z
+      .enum(['critical', 'major', 'minor', 'info'])
+      .optional()
+      .describe('Filter by severity level'),
+    include_resolved: z.boolean().default(false).describe('Include resolved deviations'),
+    limit: z.number().int().min(1).max(200).default(50).describe('Maximum results (1-200)'),
+  },
+  async ({ repo, deviation_type, severity, include_resolved, limit }) => {
+    try {
+      const conditions = [];
+      const params = [];
+
+      if (repo) {
+        conditions.push('d.repository = ?');
+        params.push(repo);
+      }
+      if (deviation_type) {
+        conditions.push('dev.deviation_type = ?');
+        params.push(deviation_type);
+      }
+      if (severity) {
+        conditions.push('dev.severity = ?');
+        params.push(severity);
+      }
+      if (!include_resolved) {
+        conditions.push('dev.resolved_at IS NULL');
+      }
+
+      const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+      params.push(limit);
+
+      const sql = `
+        SELECT dev.id, dev.deviation_type, dev.severity, dev.description,
+               dev.detected_at, dev.resolved_at, dev.resolution_action,
+               d.path as file_path, d.repository,
+               rd.path as related_doc_path
+        FROM deviations dev
+        JOIN documents d ON dev.document_id = d.id
+        LEFT JOIN documents rd ON dev.related_doc_id = rd.id
+        ${whereClause}
+        ORDER BY
+          CASE dev.severity
+            WHEN 'critical' THEN 1
+            WHEN 'major' THEN 2
+            WHEN 'minor' THEN 3
+            ELSE 4
+          END,
+          dev.detected_at DESC
+        LIMIT ?
+      `;
+
+      const deviations = db.prepare(sql).all(...params);
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({ total: deviations.length, deviations }, null, 2),
+          },
+        ],
+      };
+    } catch (err) {
+      return {
+        content: [{ type: 'text', text: JSON.stringify({ error: err.message }) }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tool 9: index_file — Re-index a single markdown file (MCPW-01)
 // ─────────────────────────────────────────────────────────────────────────────
 server.tool(
   'index_file',
@@ -555,7 +642,7 @@ server.tool(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Tool 9: lint_file — Lint a markdown file (MCPW-02)
+// Tool 10: lint_file — Lint a markdown file (MCPW-02)
 // ─────────────────────────────────────────────────────────────────────────────
 server.tool(
   'lint_file',
@@ -631,7 +718,7 @@ server.tool(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Tool 10: fix_file — Auto-fix markdown issues (MCPW-03)
+// Tool 11: fix_file — Auto-fix markdown issues (MCPW-03)
 // ─────────────────────────────────────────────────────────────────────────────
 server.tool(
   'fix_file',
@@ -743,7 +830,7 @@ server.tool(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Tool 11: trigger_scan — Trigger documentation scan (MCPW-04)
+// Tool 12: trigger_scan — Trigger documentation scan (MCPW-04)
 // ─────────────────────────────────────────────────────────────────────────────
 server.tool(
   'trigger_scan',
@@ -790,7 +877,7 @@ server.tool(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Tool 12: curate_diagram — Set curated FigJam URL and propagate (MCPW-05)
+// Tool 13: curate_diagram — Set curated FigJam URL and propagate (MCPW-05)
 // ─────────────────────────────────────────────────────────────────────────────
 server.tool(
   'curate_diagram',
