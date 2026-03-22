@@ -9,8 +9,8 @@ Requirements for v3.1 Polish & Propagation. Closes v3.0 tech debt and propagates
 
 ### MCP Intelligence Tools
 
-- [ ] **MCPI-01**: `get_similarities` tool — returns similar/duplicate document pairs with scores for a given repo or across all repos
-- [ ] **MCPI-02**: `get_deviations` tool — returns convention deviations (5 types) with severity and affected file paths
+- [x] **MCPI-01**: `get_similarities` tool — returns similar/duplicate document pairs with scores for a given repo or across all repos
+- [x] **MCPI-02**: `get_deviations` tool — returns convention deviations (5 types) with severity and affected file paths
 
 ### Slash Command Updates
 
@@ -58,8 +58,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase    | Status  |
 | ----------- | -------- | ------- |
-| MCPI-01     | Phase 6  | Pending |
-| MCPI-02     | Phase 6  | Pending |
+| MCPI-01     | Phase 6  | Complete |
+| MCPI-02     | Phase 6  | Complete |
 | SLSH-01     | Phase 8  | Pending |
 | SLSH-02     | Phase 8  | Pending |
 | SLSH-03     | Phase 8  | Pending |
