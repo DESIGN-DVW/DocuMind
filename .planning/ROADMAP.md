@@ -80,6 +80,7 @@ Full details: `.planning/milestones/v3.0-ROADMAP.md`
 **Plans:** 2/2 plans complete
 
 Plans:
+
 - [x] 08-01-PLAN.md — Rewrite /diagram-registry and /figma-diagram to use MCP tools
 - [x] 08-02-PLAN.md — Rewrite /figma-curate and update global-rules.md
 
@@ -94,11 +95,11 @@ Plans:
 2. Each target repo has a `.markdownlint-cli2.jsonc` that references the custom rules
 3. Running `markdownlint-cli2` in any target repo applies the custom rules without errors
 
-**Plans:** 2 plans
+**Plans:** 1 plan
 
 Plans:
-- [ ] 08-01-PLAN.md — Rewrite /diagram-registry and /figma-diagram to use MCP tools
-- [ ] 08-02-PLAN.md — Rewrite /figma-curate and update global-rules.md
+
+- [ ] 09-01-PLAN.md — Create and run propagation script for DVW001 + MD060A rules to all DVWDesign repos
 
 ### Phase 10: Documentation Fixes
 
@@ -113,8 +114,9 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 08-01-PLAN.md — Rewrite /diagram-registry and /figma-diagram to use MCP tools
-- [ ] 08-02-PLAN.md — Rewrite /figma-curate and update global-rules.md
+
+- [ ] 10-01-PLAN.md — Backfill Phase 4 VERIFICATION.md
+- [ ] 10-02-PLAN.md — Fix MCPW-05 naming in archived requirements
 
 ## Progress
 
@@ -129,6 +131,6 @@ Plans:
 | 5. MCP Server — Write Tools          | v3.0      | 3/3            | Complete    | 2026-03-22 |
 | 6. MCP Intelligence Tools            | v3.1      | 1/1            | Complete    | 2026-03-22 |
 | 7. Diagram Registry Completion       | v3.1      | 1/1            | Complete    | 2026-03-22 |
-| 8. Slash Command Updates             | 2/2 | Complete   | 2026-03-22 | -          |
-| 9. Markdown Tooling Propagation      | v3.1      | 0/?            | Not started | -          |
+| 8. Slash Command Updates             | v3.1      | 2/2            | Complete    | 2026-03-22 |
+| 9. Markdown Tooling Propagation      | v3.1      | 0/1            | Not started | -          |
 | 10. Documentation Fixes              | v3.1      | 0/?            | Not started | -          |
