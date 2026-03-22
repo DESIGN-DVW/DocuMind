@@ -77,7 +77,11 @@ Full details: `.planning/milestones/v3.0-ROADMAP.md`
 3. `/figma-curate` updates diagram URLs via `curate_diagram` MCP tool, not manual file editing + curl
 4. `global-rules.md` states that the `diagrams` table is the single source of truth and DIAGRAM-REGISTRY.md is a generated snapshot
 
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 08-01-PLAN.md — Rewrite /diagram-registry and /figma-diagram to use MCP tools
+- [ ] 08-02-PLAN.md — Rewrite /figma-curate and update global-rules.md
 
 ### Phase 9: Markdown Tooling Propagation
 
@@ -90,7 +94,11 @@ Full details: `.planning/milestones/v3.0-ROADMAP.md`
 2. Each target repo has a `.markdownlint-cli2.jsonc` that references the custom rules
 3. Running `markdownlint-cli2` in any target repo applies the custom rules without errors
 
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 08-01-PLAN.md — Rewrite /diagram-registry and /figma-diagram to use MCP tools
+- [ ] 08-02-PLAN.md — Rewrite /figma-curate and update global-rules.md
 
 ### Phase 10: Documentation Fixes
 
@@ -102,7 +110,11 @@ Full details: `.planning/milestones/v3.0-ROADMAP.md`
 1. Phase 4 VERIFICATION.md exists at `.planning/phases/04-mcp-read-tools/04-VERIFICATION.md` and documents what was verified
 2. `milestones/v3.0-REQUIREMENTS.md` uses MCPW-05 naming consistently — no incorrect aliases
 
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 08-01-PLAN.md — Rewrite /diagram-registry and /figma-diagram to use MCP tools
+- [ ] 08-02-PLAN.md — Rewrite /figma-curate and update global-rules.md
 
 ## Progress
 
@@ -117,6 +129,6 @@ Full details: `.planning/milestones/v3.0-ROADMAP.md`
 | 5. MCP Server — Write Tools          | v3.0      | 3/3            | Complete    | 2026-03-22 |
 | 6. MCP Intelligence Tools            | v3.1      | 1/1            | Complete    | 2026-03-22 |
 | 7. Diagram Registry Completion       | v3.1      | 1/1            | Complete    | 2026-03-22 |
-| 8. Slash Command Updates             | v3.1      | 0/?            | Not started | -          |
+| 8. Slash Command Updates             | v3.1      | 0/2            | Planned     | -          |
 | 9. Markdown Tooling Propagation      | v3.1      | 0/?            | Not started | -          |
 | 10. Documentation Fixes              | v3.1      | 0/?            | Not started | -          |
