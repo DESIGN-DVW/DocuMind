@@ -6,7 +6,7 @@
  */
 
 import cron from 'node-cron';
-import { runScan } from '../orchestrator.mjs';
+import { runScan, generateDiagramSnapshot } from '../orchestrator.mjs';
 
 /**
  * @param {import('better-sqlite3').Database} db
@@ -89,6 +89,12 @@ export function initScheduler(db, root, ctx) {
       `
       ).run(result.durationMs, result.documentsFound, result.added, result.updated, scanId);
       console.log(`[scheduler] Daily full scan completed in ${result.durationMs}ms`);
+      try {
+        await generateDiagramSnapshot(db, root);
+        console.log('[scheduler] Daily diagram snapshot regenerated');
+      } catch (snapErr) {
+        console.error('[scheduler] Diagram snapshot failed:', snapErr.message);
+      }
     } catch (err) {
       db.prepare(
         `
@@ -121,6 +127,12 @@ export function initScheduler(db, root, ctx) {
       `
       ).run(result.durationMs, result.documentsFound, result.added, result.updated, scanId);
       console.log(`[scheduler] Weekly deep analysis completed in ${result.durationMs}ms`);
+      try {
+        await generateDiagramSnapshot(db, root);
+        console.log('[scheduler] Weekly diagram snapshot regenerated');
+      } catch (snapErr) {
+        console.error('[scheduler] Diagram snapshot failed:', snapErr.message);
+      }
     } catch (err) {
       db.prepare(
         `
@@ -171,6 +183,6 @@ export function initScheduler(db, root, ctx) {
   console.log('  */15 * * * *  — heartbeat + stats');
   console.log('  0 * * * *     — hourly incremental scan');
   console.log('  0 */6 * * *   — pending diagram relinks check');
-  console.log('  0 2 * * *     — daily full scan + analysis');
-  console.log('  0 3 * * 0     — weekly deep analysis');
+  console.log('  0 2 * * *     — daily full scan + analysis + diagram snapshot');
+  console.log('  0 3 * * 0     — weekly deep analysis + diagram snapshot');
 }
