@@ -6,17 +6,22 @@ DocuMind v3.0 evolves a 60%-implemented documentation daemon into a fully wired,
 
 ## Phases
 
-**Phase Numbering:**
+### Phase Numbering:
 
 - Integer phases (1, 2, 3): Planned milestone work
+
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Schema Migration Foundation** - Safe, versioned schema evolution that protects 8K live documents while adding classification, tags, and summary columns (completed 2026-03-17)
+
 - [x] **Phase 2: Context Profile Loader** - Externalize all hardcoded DVWDesign config into a portable, Zod-validated JSON profile that every subsystem reads from (completed 2026-03-17)
+
 - [x] **Phase 3: Orchestrator and Scheduler Wiring** - Wire all processors into a single callable orchestrator and replace every scheduler TODO stub with real cron jobs (completed 2026-03-17)
+
 - [x] **Phase 4: MCP Server — Read Tools** - Expose DocuMind's intelligence layer as Claude-callable read tools over stdio transport (completed 2026-03-17)
+
 - [ ] **Phase 5: MCP Server — Write Tools** - Add autonomous document maintenance tools (lint, fix, index, scan, relink) behind path-validated write operations
 
 ## Phase Details
@@ -29,16 +34,23 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Success Criteria** (what must be TRUE):
 
   1. Running `npm run db:migrate` on the live database adds the new columns without touching existing document rows
+
   2. A `schema_migrations` table exists and records each applied migration with its version and timestamp
+
   3. The `documents` table has `summary`, `classification`, and tag-related columns visible via `.schema documents` in SQLite
+
   4. `db:reset` is explicitly blocked or warns loudly — it no longer silently destroys the 8K document corpus
+
   5. FTS5 search still returns results after migration (FTS5 rebuild was run as part of migration)
+
 **Plans:** 3/3 plans complete
 
 Plans:
 
 - [x] 01-01-PLAN.md — Migration runner infrastructure and db:reset safety guard
+
 - [x] 01-02-PLAN.md — SQL migration files (002-005) for columns, tables, and CHECK removal
+
 - [x] 01-03-PLAN.md — Summary and classification backfill for all 8K documents
 
 ### Phase 2: Context Profile Loader
@@ -49,15 +61,21 @@ Plans:
 **Success Criteria** (what must be TRUE):
 
   1. Starting DocuMind with a missing or invalid profile JSON causes an immediate crash with a clear error message — not a silent bad-state start
+
   2. A `dvwdesign.json` reference profile exists and produces identical behavior to the current hardcoded defaults
+
   3. The classification tree is defined entirely in the profile JSON — no classification categories are hardcoded in any `.mjs` file
+
   4. The keyword taxonomies are defined entirely in the profile JSON — `keyword-processor.mjs` contains no hardcoded category lists
+
   5. `DOCUMIND_PROFILE` env var controls which profile is loaded — switching profiles switches all repo paths and classification behavior
+
 **Plans:** 2/2 plans complete
 
 Plans:
 
 - [ ] 02-01-PLAN.md — Zod schema, loader module, and dvwdesign.json reference profile
+
 - [ ] 02-02-PLAN.md — Wire all consumers to use ctx (server, watcher, keyword-processor, backfill-classifications, PM2)
 
 ### Phase 3: Orchestrator and Scheduler Wiring
@@ -68,17 +86,25 @@ Plans:
 **Success Criteria** (what must be TRUE):
 
   1. `GET /graph` returns actual relationship edges — `doc_relationships` table is no longer empty after the first orchestrated scan
+
   2. `GET /keywords` returns real TF-IDF scores — the `keywords` table is populated after the first weekly cron or manual trigger
+
   3. `GET /stats` shows a non-zero stale document count — staleness detection is running and surfacing results
+
   4. `POST /scan` triggers the orchestrator and completes without duplicating logic that already exists in `scheduler.mjs`
+
   5. Scheduler log shows hourly, daily, and weekly jobs firing (no TODO stubs remaining in `scheduler.mjs`)
+
 **Plans:** 4/4 plans complete
 
 Plans:
 
 - [ ] 03-01-PLAN.md — Processor foundations: summary extraction, ctx-based classification, sibling edge cap
+
 - [ ] 03-02-PLAN.md — Create orchestrator.mjs with three scan modes (incremental/full/deep) and FTS5 rebuild
+
 - [ ] 03-03-PLAN.md — Wire scheduler, REST /scan, watcher, and hooks to orchestrator
+
 - [ ] 03-04-PLAN.md — Document intelligence: tags, similarity, staleness, and deviation detection
 
 ### Phase 4: MCP Server — Read Tools
@@ -89,15 +115,21 @@ Plans:
 **Success Criteria** (what must be TRUE):
 
   1. `npx @modelcontextprotocol/inspector node daemon/mcp-server.mjs` connects cleanly and lists all read tools without errors
+
   2. Calling `search_docs` from Claude Code returns ranked document results with repo and classification metadata
+
   3. Calling `get_related` with a document ID returns its relationship graph up to the requested hop depth
+
   4. No `console.log` output appears on stdout during any tool call — all logging routes to stderr only
+
   5. The MCP server is registered in `ecosystem.config.cjs` and starts alongside the main daemon
+
 **Plans:** 2/2 plans complete
 
 Plans:
 
 - [ ] 04-01-PLAN.md — MCP server with all 6 read tools, SDK install, PM2 config
+
 - [ ] 04-02-PLAN.md — Claude Code MCP registration and Inspector verification
 
 ### Phase 5: MCP Server — Write Tools
@@ -108,27 +140,41 @@ Plans:
 **Success Criteria** (what must be TRUE):
 
   1. Calling `lint_file` from Claude Code returns actionable lint issues for a given file path without modifying the file
+
   2. Calling `fix_file` applies markdownlint auto-fixes and reports what changed
+
   3. Calling `trigger_scan` from an agent initiates an incremental scan via the orchestrator and returns a completion summary
+
   4. A file path outside `ctx.repoRoots` passed to any write tool returns a validation error — not a silent failure or filesystem access
+
   5. Calling `relink_diagram` sets a curated FigJam URL and propagates it into the source markdown file
-**Plans:** 3 plans
+
+**Plans:** 1/3 plans executed
 
 Plans:
 
 - [ ] 05-01-PLAN.md — Write tools implementation: 5 MCP tools + path validation + read-write DB + fix function exports
+
 - [ ] 05-02-PLAN.md — Cross-repo .mcp.json registration + diagram registry centralization
+
 - [ ] 05-03-PLAN.md — MCP Inspector verification checkpoint
 
 ## Progress
 
-**Execution Order:**
+### Execution Order:
+
 Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
+
 | ------- | ---------------- | -------- | ----------- |
+
 | 1. Schema Migration Foundation | 3/3 | Complete   | 2026-03-17 |
+
 | 2. Context Profile Loader | 2/2 | Complete   | 2026-03-17 |
+
 | 3. Orchestrator and Scheduler Wiring | 4/4 | Complete   | 2026-03-17 |
+
 | 4. MCP Server — Read Tools | 2/2 | Complete   | 2026-03-17 |
-| 5. MCP Server — Write Tools | 0/3 | Not started | - |
+
+| 5. MCP Server — Write Tools | 1/3 | In Progress|  |
