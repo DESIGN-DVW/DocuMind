@@ -33,10 +33,28 @@ When you look at a document, you instantly see what it's connected to — what l
 - ✓ MCP server: 5 write tools (index, lint, fix, scan, curate_diagram) — v3.0
 - ✓ DocuMind MCP registered in all 16 DVWDesign repos — v3.0
 
+## Current Milestone: v3.1 Polish & Propagation
+
+**Goal:** Close v3.0 tech debt, propagate markdown tooling to all repos, complete diagram registry centralization with slash command updates.
+
+**Target features:**
+- MCP read tools for similarities + deviations
+- Slash commands (/diagram-registry, /figma-diagram, /figma-curate) rewritten for MCP
+- Markdownlint custom rules (DVW001 + MD060A) propagated to all repos
+- Diagram snapshot auto-generated during scheduled scans
+- Phase 4 VERIFICATION.md backfill + MCPW-05 naming fix
+
 ### Active
 
 - [ ] MCP tools for surfacing similarity/deviation intelligence
-- [ ] Update /figma-diagram and /figma-curate slash commands to use MCP tools
+- [ ] Update /diagram-registry, /figma-diagram, /figma-curate slash commands for MCP
+- [ ] Propagate DVW001 + MD060A markdownlint rules to all DVWDesign repos
+- [ ] Auto-generate DIAGRAM-REGISTRY.md snapshot during scheduled scans
+- [ ] Backfill Phase 4 VERIFICATION.md
+- [ ] Fix MCPW-05 naming in archived REQUIREMENTS.md
+
+### Future
+
 - [ ] Dockerize for portable deployment
 - [ ] Web dashboard beyond diagram curation
 - [ ] Git-based ingestion (clone/pull instead of filesystem walk)
@@ -86,4 +104,4 @@ The strategic path forward:
 
 ---
 
-*Last updated: 2026-03-22 after v3.0 milestone*
+*Last updated: 2026-03-22 after v3.1 milestone start*
