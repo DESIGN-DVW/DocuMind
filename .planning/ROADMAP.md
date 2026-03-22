@@ -133,4 +133,4 @@ Plans:
 | 7. Diagram Registry Completion       | v3.1      | 1/1            | Complete    | 2026-03-22 |
 | 8. Slash Command Updates             | v3.1      | 2/2            | Complete    | 2026-03-22 |
 | 9. Markdown Tooling Propagation      | v3.1      | 0/1            | Not started | -          |
-| 10. Documentation Fixes              | 2/2 | Complete   | 2026-03-22 | -          |
+| 10. Documentation Fixes              | 2/2 | Complete    | 2026-03-22 | -          |
