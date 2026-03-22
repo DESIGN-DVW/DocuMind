@@ -30,7 +30,7 @@ Full details: `.planning/milestones/v3.0-ROADMAP.md`
 - [ ] **Phase 7: Diagram Registry Completion** — Add `register_diagram` MCP tool and auto-generate DIAGRAM-REGISTRY.md snapshot during scheduled scans
 - [x] **Phase 8: Slash Command Updates** — Rewrite `/diagram-registry`, `/figma-diagram`, `/figma-curate` to use MCP tools; update global-rules.md (completed 2026-03-22)
 - [ ] **Phase 9: Markdown Tooling Propagation** — Install DVW001 + MD060A custom lint rules and `.markdownlint-cli2.jsonc` in all DVWDesign repos
-- [ ] **Phase 10: Documentation Fixes** — Backfill Phase 4 VERIFICATION.md and fix MCPW-05 naming in archived requirements
+- [x] **Phase 10: Documentation Fixes** — Backfill Phase 4 VERIFICATION.md and fix MCPW-05 naming in archived requirements (completed 2026-03-22)
 
 ## Phase Details
 
@@ -111,7 +111,7 @@ Plans:
 1. Phase 4 VERIFICATION.md exists at `.planning/phases/04-mcp-read-tools/04-VERIFICATION.md` and documents what was verified
 2. `milestones/v3.0-REQUIREMENTS.md` uses MCPW-05 naming consistently — no incorrect aliases
 
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 
@@ -133,4 +133,4 @@ Plans:
 | 7. Diagram Registry Completion       | v3.1      | 1/1            | Complete    | 2026-03-22 |
 | 8. Slash Command Updates             | v3.1      | 2/2            | Complete    | 2026-03-22 |
 | 9. Markdown Tooling Propagation      | v3.1      | 0/1            | Not started | -          |
-| 10. Documentation Fixes              | 1/2 | In Progress|  | -          |
+| 10. Documentation Fixes              | 2/2 | Complete   | 2026-03-22 | -          |
