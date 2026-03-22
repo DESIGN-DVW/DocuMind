@@ -98,10 +98,16 @@ const TARGET_REPOS = targetRepo ? [targetRepo] : ALL_TARGET_REPOS;
 /**
  * Detect package manager for a repo.
  * @param {string} repoPath - Absolute path to repo root
- * @returns {'pnpm' | 'npm'}
+ * @returns {'pnpm' | 'pnpm-workspace' | 'npm'}
  */
 function detectPackageManager(repoPath) {
-  if (fs.existsSync(path.join(repoPath, 'pnpm-lock.yaml'))) return 'pnpm';
+  if (fs.existsSync(path.join(repoPath, 'pnpm-lock.yaml'))) {
+    // Workspace root requires -w flag to add to root package
+    if (fs.existsSync(path.join(repoPath, 'pnpm-workspace.yaml'))) {
+      return 'pnpm-workspace';
+    }
+    return 'pnpm';
+  }
   return 'npm';
 }
 
@@ -250,7 +256,11 @@ function propagateToRepo(repoName, dryRun) {
   for (const { pkg, installPkg } of depsToCheck) {
     if (!hasDevDep(repoPath, pkg)) {
       const installCmd =
-        pm === 'pnpm' ? `pnpm add -D ${installPkg}` : `npm install --save-dev ${installPkg}`;
+        pm === 'pnpm'
+          ? `pnpm add -D ${installPkg}`
+          : pm === 'pnpm-workspace'
+            ? `pnpm add -D -w ${installPkg}`
+            : `npm install --save-dev ${installPkg}`;
       result.actions.push(`Install ${pkg} (${pm}): ${installCmd}`);
       if (!dryRun) {
         try {
