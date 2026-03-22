@@ -4,12 +4,12 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-03-22T00:00:00.000Z"
+last_updated: "2026-03-22T14:42:59Z"
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 11
-  completed_plans: 11
+  completed_plans: 12
 
 ---
 
@@ -25,21 +25,21 @@ See: .planning/PROJECT.md (updated 2026-03-15)
 ## Current Position
 
 Phase: 5 of 5 (MCP Server — Write Tools) — IN PROGRESS
-Plan: 1 of 3 in current phase — COMPLETE
-Status: Phase 5 Plan 1 complete; 5 write tools added to MCP server
-Last activity: 2026-03-22 — Phase 5 Plan 1 complete: 5 write tools (index_file, lint_file, fix_file, trigger_scan, curate_diagram) added to mcp-server.mjs; DB switched to read-write WAL
+Plan: 2 of 3 in current phase — COMPLETE
+Status: Phase 5 Plan 2 complete; DocuMind MCP registered in all 16 repos; diagram registry centralized in DB
+Last activity: 2026-03-22 — Phase 5 Plan 2 complete: documind entry added to 16 repo .mcp.json files; 9 diagrams reverse-synced from per-repo DIAGRAM-REGISTRY.md files into DocuMind DB; source files deleted
 
-Progress: [████████████] 85% (12 of ~14 estimated plans)
+Progress: [████████████░] 87% (13 of ~15 estimated plans)
 
 ## Performance Metrics
 
 ### Velocity:
 
-- Total plans completed: 10
+- Total plans completed: 12
 
-- Average duration: 4m 41s
+- Average duration: 4m 31s
 
-- Total execution time: ~45m 50s
+- Total execution time: ~49m 22s
 
 ### By Phase:
 
@@ -55,13 +55,13 @@ Progress: [████████████] 85% (12 of ~14 estimated plans)
 
 | Phase 4 | 1 | 5m 24s | 5m 24s |
 
-| Phase 5 | 1 (of 3) | 3m 10s | 3m 10s |
+| Phase 5 | 2 (of 3) | 6m 42s | 3m 21s |
 
 ### Recent Trend:
 
-- Last 5 plans: 03-03 (2m 58s), 03-04 (~4m 0s), 04-01 (5m 24s), 05-01 (3m 10s)
+- Last 5 plans: 03-04 (~4m 0s), 04-01 (5m 24s), 04-02 (~2m), 05-01 (3m 10s), 05-02 (3m 32s)
 
-- Trend: Phase 5 Plan 1 complete — 5 write tools + path validation in one pass; no deviations
+- Trend: Phase 5 Plan 2 complete — cross-repo .mcp.json registration + diagram registry centralization; 1 auto-fix (URL normalization)
 
 Updated after each plan completion
 
@@ -160,6 +160,12 @@ Recent decisions affecting current work:
 
 - [05-01]: curate_diagram skips URL propagation when oldUrl is null — new diagram with no prior generated URL has nothing to replace in markdown files
 
+- [05-02]: any2figma registry URL format `[FigJam](url)` differs from RootDispatcher `<url>` format — custom normalizeUrl() handles both; the built-in reverseSyncFromRegistry only handles angle brackets
+
+- [05-02]: better-sqlite3 binary compiled for Node 24 — use /opt/homebrew/bin/node for scripts touching the DB when system node is v22
+
+- [05-02]: any2figma DIAGRAM-REGISTRY.md was untracked in git — no git commit needed for that deletion; RootDispatcher deletion is tracked in its own repo
+
 ### Pending Todos
 
 None.
@@ -173,5 +179,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-22
-Stopped at: Completed 05-01-PLAN.md — 5 write tools added to mcp-server.mjs
+Stopped at: Completed 05-02-PLAN.md — DocuMind MCP registered in all 16 repos; diagram registry centralized
 Resume file: None

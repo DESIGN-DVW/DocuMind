@@ -149,7 +149,7 @@ Plans:
 
   5. Calling `relink_diagram` sets a curated FigJam URL and propagates it into the source markdown file
 
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 
 Plans:
 
@@ -177,4 +177,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | 4. MCP Server — Read Tools | 2/2 | Complete   | 2026-03-17 |
 
-| 5. MCP Server — Write Tools | 1/3 | In Progress|  |
+| 5. MCP Server — Write Tools | 2/3 | In Progress|  |
