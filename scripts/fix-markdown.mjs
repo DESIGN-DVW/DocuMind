@@ -105,7 +105,7 @@ async function findMarkdownFiles(dir, excludePatterns = []) {
   return files;
 }
 
-function detectLanguage(code) {
+export function detectLanguage(code) {
   const lines = code.split('\n').slice(0, 5);
   const content = lines.join('\n');
 
@@ -191,7 +191,7 @@ function isBlockElement(line) {
 // Fix Functions (same as FigmailAPP version)
 // ============================================================================
 
-function fixLineBreaks(lines) {
+export function fixLineBreaks(lines) {
   const fixed = [];
 
   for (let i = 0; i < lines.length; i++) {
@@ -224,7 +224,7 @@ function fixLineBreaks(lines) {
   return fixed;
 }
 
-function fixCodeBlockLanguages(lines) {
+export function fixCodeBlockLanguages(lines) {
   const fixed = [];
   let inCodeBlock = false;
   let codeBlockStart = -1;
@@ -270,7 +270,7 @@ function fixCodeBlockLanguages(lines) {
   return fixed;
 }
 
-function fixBoldItalicToHeadingsOrLists(lines) {
+export function fixBoldItalicToHeadingsOrLists(lines) {
   const fixed = [];
 
   for (let i = 0; i < lines.length; i++) {
