@@ -26,8 +26,8 @@ Requirements for v3.1 Polish & Propagation. Closes v3.0 tech debt and propagates
 
 ### Diagram Registry Completion
 
-- [ ] **DIAG-01**: `DIAGRAM-REGISTRY.md` snapshot auto-generated during scheduled scans (daily/weekly)
-- [ ] **DIAG-02**: `register_diagram` MCP tool added for agents to register new diagrams (auto-detect type from .mmd)
+- [x] **DIAG-01**: `DIAGRAM-REGISTRY.md` snapshot auto-generated during scheduled scans (daily/weekly)
+- [x] **DIAG-02**: `register_diagram` MCP tool added for agents to register new diagrams (auto-detect type from .mmd)
 
 ### Documentation Fixes
 
@@ -56,20 +56,20 @@ Deferred to v4.0 or later:
 
 Which phases cover which requirements. Updated during roadmap creation.
 
-| Requirement | Phase    | Status  |
-| ----------- | -------- | ------- |
+| Requirement | Phase    | Status   |
+| ----------- | -------- | -------- |
 | MCPI-01     | Phase 6  | Complete |
 | MCPI-02     | Phase 6  | Complete |
-| SLSH-01     | Phase 8  | Pending |
-| SLSH-02     | Phase 8  | Pending |
-| SLSH-03     | Phase 8  | Pending |
-| SLSH-04     | Phase 8  | Pending |
-| PROP-01     | Phase 9  | Pending |
-| PROP-02     | Phase 9  | Pending |
-| DIAG-01     | Phase 7  | Pending |
-| DIAG-02     | Phase 7  | Pending |
-| DOCS-01     | Phase 10 | Pending |
-| DOCS-02     | Phase 10 | Pending |
+| SLSH-01     | Phase 8  | Pending  |
+| SLSH-02     | Phase 8  | Pending  |
+| SLSH-03     | Phase 8  | Pending  |
+| SLSH-04     | Phase 8  | Pending  |
+| PROP-01     | Phase 9  | Pending  |
+| PROP-02     | Phase 9  | Pending  |
+| DIAG-01     | Phase 7  | Complete |
+| DIAG-02     | Phase 7  | Complete |
+| DOCS-01     | Phase 10 | Pending  |
+| DOCS-02     | Phase 10 | Pending  |
 
 **Coverage:**
 

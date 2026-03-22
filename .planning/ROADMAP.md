@@ -61,11 +61,9 @@ Full details: `.planning/milestones/v3.0-ROADMAP.md`
 2. DIAGRAM-REGISTRY.md snapshot is regenerated automatically during daily and weekly scheduled scans
 3. DIAGRAM-REGISTRY.md reflects the current state of the `diagrams` table after each scan completes
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
-Plans:
-
-- [ ] 07-01-PLAN.md — Add register_diagram MCP tool + wire snapshot generation into scheduled scans
+- [x] 07-01-PLAN.md — Add register_diagram MCP tool + wire snapshot generation into scheduled scans
 
 ### Phase 8: Slash Command Updates
 
@@ -118,7 +116,7 @@ Plans:
 | 4. MCP Server — Read Tools           | v3.0      | 2/2            | Complete    | 2026-03-17 |
 | 5. MCP Server — Write Tools          | v3.0      | 3/3            | Complete    | 2026-03-22 |
 | 6. MCP Intelligence Tools            | v3.1      | 1/1            | Complete    | 2026-03-22 |
-| 7. Diagram Registry Completion       | v3.1      | 0/1            | Not started | -          |
+| 7. Diagram Registry Completion       | v3.1      | 1/1            | Complete    | 2026-03-22 |
 | 8. Slash Command Updates             | v3.1      | 0/?            | Not started | -          |
 | 9. Markdown Tooling Propagation      | v3.1      | 0/?            | Not started | -          |
 | 10. Documentation Fixes              | v3.1      | 0/?            | Not started | -          |
