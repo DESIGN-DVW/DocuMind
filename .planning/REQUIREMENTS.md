@@ -14,8 +14,8 @@ Requirements for v3.1 Polish & Propagation. Closes v3.0 tech debt and propagates
 
 ### Slash Command Updates
 
-- [ ] **SLSH-01**: `/diagram-registry` rewritten to use `get_diagrams` MCP tool instead of local file lookup
-- [ ] **SLSH-02**: `/figma-diagram` Step 4 uses `register_diagram` MCP tool instead of editing DIAGRAM-REGISTRY.md
+- [x] **SLSH-01**: `/diagram-registry` rewritten to use `get_diagrams` MCP tool instead of local file lookup
+- [x] **SLSH-02**: `/figma-diagram` Step 4 uses `register_diagram` MCP tool instead of editing DIAGRAM-REGISTRY.md
 - [ ] **SLSH-03**: `/figma-curate` uses `curate_diagram` MCP tool instead of manual file editing + curl
 - [ ] **SLSH-04**: `global-rules.md` updated to declare DB as single source of truth for diagrams
 
@@ -60,8 +60,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ----------- | -------- | -------- |
 | MCPI-01     | Phase 6  | Complete |
 | MCPI-02     | Phase 6  | Complete |
-| SLSH-01     | Phase 8  | Pending  |
-| SLSH-02     | Phase 8  | Pending  |
+| SLSH-01     | Phase 8  | Complete |
+| SLSH-02     | Phase 8  | Complete |
 | SLSH-03     | Phase 8  | Pending  |
 | SLSH-04     | Phase 8  | Pending  |
 | PROP-01     | Phase 9  | Pending  |

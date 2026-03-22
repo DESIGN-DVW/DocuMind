@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Polish & Propagation
 status: unknown
-last_updated: "2026-03-22T16:30:44.139Z"
+last_updated: "2026-03-22T16:45:00.842Z"
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 16
-  completed_plans: 16
+  total_phases: 8
+  completed_phases: 8
+  total_plans: 18
+  completed_plans: 18
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** When you look at a document, you instantly see what it's connected to — what links to it, what duplicates it, and whether it's stale.
-**Current focus:** Milestone v3.1 — Phase 7: Diagram Registry Completion
+**Current focus:** Milestone v3.1 — Phase 8: Slash Command Updates
 
 ## Current Position
 
-Phase: 7 of 10 (Diagram Registry Completion)
-Plan: 1 complete (07-01)
-Status: Active — Plan 1 complete
-Last activity: 2026-03-22 — Added register_diagram MCP Tool 14, extracted generateDiagramSnapshot to orchestrator, wired snapshot into daily/weekly scans
+Phase: 8 of 10 (Slash Command Updates)
+Plan: 2 complete (08-01, 08-02)
+Status: Active — Phase 8 complete
+Last activity: 2026-03-22 — Rewired /figma-curate to use curate_diagram MCP tool; global-rules.md declares DB as single source of truth
 
-Progress: [██░░░░░░░░] 20% (v3.1 — 2/10 plans done)
+Progress: [████░░░░░░] 40% (v3.1 — 4/10 plans done)
 
 ## Performance Metrics
 
@@ -53,6 +53,8 @@ Progress: [██░░░░░░░░] 20% (v3.1 — 2/10 plans done)
 | ------------ | ----- | -------- | ----- |
 | Phase 06 P01 | 2     | ~2m      | 1     |
 | Phase 07 P01 | 2     | 2m 15s   | 3     |
+| Phase 08 P01 | 2     | ~2m      | 1     |
+| Phase 08 P02 | 2     | ~1m 9s   | 2     |
 
 ## Accumulated Context
 
@@ -68,6 +70,8 @@ Recent decisions affecting v3.1:
 - [Phase 07-01]: generateDiagramSnapshot extracted to orchestrator.mjs; mcp-server wraps with writingNow guard for chokidar suppression
 - [Phase 07-01]: register_diagram uses SHA-256 source_hash for unchanged detection — no unnecessary DB writes
 - [Phase 07-01]: Snapshot failures in scheduler are non-fatal — inner try/catch isolates from scan result
+- [Phase 08-slash-command-updates]: DocuMind diagrams table is single source of truth; DIAGRAM-REGISTRY.md is a generated snapshot
+- [Phase 08-slash-command-updates]: Slash commands use MCP tools as primary backend with local file fallback if MCP unavailable
 
 ### Pending Todos
 
@@ -80,5 +84,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-22
-Stopped at: Completed 07-01-PLAN.md — register_diagram Tool 14 + auto-snapshot on daily/weekly scans
+Stopped at: Completed 08-02-PLAN.md — /figma-curate uses curate_diagram MCP tool; global-rules.md declares DB as single source of truth
 Resume file: None

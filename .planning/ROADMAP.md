@@ -28,7 +28,7 @@ Full details: `.planning/milestones/v3.0-ROADMAP.md`
 
 - [x] **Phase 6: MCP Intelligence Tools** — Add `get_similarities` and `get_deviations` read tools to the MCP server (completed 2026-03-22)
 - [ ] **Phase 7: Diagram Registry Completion** — Add `register_diagram` MCP tool and auto-generate DIAGRAM-REGISTRY.md snapshot during scheduled scans
-- [ ] **Phase 8: Slash Command Updates** — Rewrite `/diagram-registry`, `/figma-diagram`, `/figma-curate` to use MCP tools; update global-rules.md
+- [x] **Phase 8: Slash Command Updates** — Rewrite `/diagram-registry`, `/figma-diagram`, `/figma-curate` to use MCP tools; update global-rules.md (completed 2026-03-22)
 - [ ] **Phase 9: Markdown Tooling Propagation** — Install DVW001 + MD060A custom lint rules and `.markdownlint-cli2.jsonc` in all DVWDesign repos
 - [ ] **Phase 10: Documentation Fixes** — Backfill Phase 4 VERIFICATION.md and fix MCPW-05 naming in archived requirements
 
@@ -77,7 +77,7 @@ Full details: `.planning/milestones/v3.0-ROADMAP.md`
 3. `/figma-curate` updates diagram URLs via `curate_diagram` MCP tool, not manual file editing + curl
 4. `global-rules.md` states that the `diagrams` table is the single source of truth and DIAGRAM-REGISTRY.md is a generated snapshot
 
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 08-01-PLAN.md — Rewrite /diagram-registry and /figma-diagram to use MCP tools
@@ -129,6 +129,6 @@ Plans:
 | 5. MCP Server — Write Tools          | v3.0      | 3/3            | Complete    | 2026-03-22 |
 | 6. MCP Intelligence Tools            | v3.1      | 1/1            | Complete    | 2026-03-22 |
 | 7. Diagram Registry Completion       | v3.1      | 1/1            | Complete    | 2026-03-22 |
-| 8. Slash Command Updates             | v3.1      | 0/2            | Planned     | -          |
+| 8. Slash Command Updates             | 2/2 | Complete   | 2026-03-22 | -          |
 | 9. Markdown Tooling Propagation      | v3.1      | 0/?            | Not started | -          |
 | 10. Documentation Fixes              | v3.1      | 0/?            | Not started | -          |
