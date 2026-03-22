@@ -47,37 +47,37 @@ Deferred to v4.0 or later:
 
 | Feature                         | Reason                                              |
 | ------------------------------- | --------------------------------------------------- |
-| OAuth / multi-tenant auth       | v4.0 SaaS concern, not v3.1                        |
+| OAuth / multi-tenant auth       | v4.0 SaaS concern, not v3.1                         |
 | Semantic/embedding search       | FTS5 + TF-IDF sufficient for current scale          |
 | New processors (MJML, Figma)    | Not tech debt — new capability for future milestone |
-| Auto-commit for URL propagation | User chose unstaged in v3.0; revisit in v4.0       |
+| Auto-commit for URL propagation | User chose unstaged in v3.0; revisit in v4.0        |
 
 ## Traceability
 
 Which phases cover which requirements. Updated during roadmap creation.
 
-| Requirement | Phase | Status  |
-| ----------- | ----- | ------- |
-| MCPI-01     | TBD   | Pending |
-| MCPI-02     | TBD   | Pending |
-| SLSH-01     | TBD   | Pending |
-| SLSH-02     | TBD   | Pending |
-| SLSH-03     | TBD   | Pending |
-| SLSH-04     | TBD   | Pending |
-| PROP-01     | TBD   | Pending |
-| PROP-02     | TBD   | Pending |
-| DIAG-01     | TBD   | Pending |
-| DIAG-02     | TBD   | Pending |
-| DOCS-01     | TBD   | Pending |
-| DOCS-02     | TBD   | Pending |
+| Requirement | Phase    | Status  |
+| ----------- | -------- | ------- |
+| MCPI-01     | Phase 6  | Pending |
+| MCPI-02     | Phase 6  | Pending |
+| SLSH-01     | Phase 8  | Pending |
+| SLSH-02     | Phase 8  | Pending |
+| SLSH-03     | Phase 8  | Pending |
+| SLSH-04     | Phase 8  | Pending |
+| PROP-01     | Phase 9  | Pending |
+| PROP-02     | Phase 9  | Pending |
+| DIAG-01     | Phase 7  | Pending |
+| DIAG-02     | Phase 7  | Pending |
+| DOCS-01     | Phase 10 | Pending |
+| DOCS-02     | Phase 10 | Pending |
 
 **Coverage:**
 
 - v3.1 requirements: 12 total
-- Mapped to phases: 0
-- Unmapped: 12 (awaiting roadmap)
+- Mapped to phases: 12
+- Unmapped: 0
 
 ---
 
 *Requirements defined: 2026-03-22*
-*Last updated: 2026-03-22 after initial definition*
+*Last updated: 2026-03-22 — traceability filled after roadmap creation*
