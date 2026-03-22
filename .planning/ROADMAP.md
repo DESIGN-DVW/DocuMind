@@ -111,7 +111,7 @@ Plans:
 1. Phase 4 VERIFICATION.md exists at `.planning/phases/04-mcp-read-tools/04-VERIFICATION.md` and documents what was verified
 2. `milestones/v3.0-REQUIREMENTS.md` uses MCPW-05 naming consistently — no incorrect aliases
 
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 
@@ -133,4 +133,4 @@ Plans:
 | 7. Diagram Registry Completion       | v3.1      | 1/1            | Complete    | 2026-03-22 |
 | 8. Slash Command Updates             | v3.1      | 2/2            | Complete    | 2026-03-22 |
 | 9. Markdown Tooling Propagation      | v3.1      | 0/1            | Not started | -          |
-| 10. Documentation Fixes              | v3.1      | 0/?            | Not started | -          |
+| 10. Documentation Fixes              | 1/2 | In Progress|  | -          |

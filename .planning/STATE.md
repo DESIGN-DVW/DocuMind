@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Polish & Propagation
 status: unknown
-last_updated: "2026-03-22T17:08:10.321Z"
+last_updated: "2026-03-22T17:16:06.247Z"
 progress:
-  total_phases: 9
+  total_phases: 10
   completed_phases: 9
-  total_plans: 19
-  completed_plans: 19
+  total_plans: 21
+  completed_plans: 20
 ---
 
 # Project State
@@ -22,10 +22,10 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 
 ## Current Position
 
-Phase: 9 of 10 (Markdown Tooling Propagation)
-Plan: 1 complete (09-01)
-Status: Active — Phase 9 Plan 1 complete
-Last activity: 2026-03-22 — Propagated DVW001+MD060A custom lint rules to all 16 DVWDesign repos via scripts/propagate-lint-rules.mjs
+Phase: 10 of 10 (Documentation Fixes)
+Plan: 2 complete (10-02)
+Status: Active — Phase 10 Plan 2 complete
+Last activity: 2026-03-22 — Corrected MCPW-05 tool name (relink_diagram → curate_diagram) in archived v3.0 milestone files
 
 Progress: [█████░░░░░] 50% (v3.1 — 5/10 plans done)
 
@@ -56,6 +56,7 @@ Progress: [█████░░░░░] 50% (v3.1 — 5/10 plans done)
 | Phase 08 P01 | 2     | ~2m      | 1     |
 | Phase 08 P02 | 2     | ~1m 9s   | 2     |
 | Phase 09 P01 | 2     | 4m       | 1     |
+| Phase 10-documentation-fixes P02 | 2min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,7 @@ Recent decisions affecting v3.1:
 - [Phase 08-slash-command-updates]: Slash commands use MCP tools as primary backend with local file fallback if MCP unavailable
 - [Phase 09]: Target repos get customRules only in .markdownlint-cli2.jsonc — no config.extends since they lack DocuMind's .markdownlint.json
 - [Phase 09]: pnpm workspace roots need -w flag detected via pnpm-workspace.yaml; LibraryAssetManager fixed with pnpm add -D -w
+- [Phase 10-02]: v3.0 milestone files use curate_diagram (not relink_diagram) — minimal archive edits preserve history
 
 ### Pending Todos
 
@@ -87,5 +89,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-22
-Stopped at: Completed 09-01-PLAN.md — DVW001+MD060A rules propagated to all 16 DVWDesign repos
+Stopped at: Completed 10-02-PLAN.md — corrected MCPW-05 tool name in archived v3.0 milestone files
 Resume file: None

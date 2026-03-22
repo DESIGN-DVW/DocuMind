@@ -32,7 +32,7 @@ Requirements for v3.1 Polish & Propagation. Closes v3.0 tech debt and propagates
 ### Documentation Fixes
 
 - [ ] **DOCS-01**: Phase 4 VERIFICATION.md backfilled
-- [ ] **DOCS-02**: MCPW-05 naming fixed in archived `milestones/v3.0-REQUIREMENTS.md`
+- [x] **DOCS-02**: MCPW-05 naming fixed in archived `milestones/v3.0-REQUIREMENTS.md`
 
 ## Future Requirements
 
@@ -69,7 +69,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DIAG-01     | Phase 7  | Complete |
 | DIAG-02     | Phase 7  | Complete |
 | DOCS-01     | Phase 10 | Pending  |
-| DOCS-02     | Phase 10 | Pending  |
+| DOCS-02     | Phase 10 | Complete |
 
 **Coverage:**
 
