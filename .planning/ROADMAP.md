@@ -46,7 +46,9 @@ Full details: `.planning/milestones/v3.0-ROADMAP.md`
 3. Both tools appear in `mcp list-tools` output alongside the existing 11 tools
 4. Tools return structured JSON (not plain text) consistent with existing MCP tool response format
 
-**Plans**: TBD
+**Plans:** 1 plan
+
+- [ ] 06-01-PLAN.md — Add get_similarities and get_deviations read tools to MCP server
 
 ### Phase 7: Diagram Registry Completion
 
@@ -111,7 +113,7 @@ Full details: `.planning/milestones/v3.0-ROADMAP.md`
 | 3. Orchestrator and Scheduler Wiring | v3.0      | 4/4            | Complete    | 2026-03-17 |
 | 4. MCP Server — Read Tools           | v3.0      | 2/2            | Complete    | 2026-03-17 |
 | 5. MCP Server — Write Tools          | v3.0      | 3/3            | Complete    | 2026-03-22 |
-| 6. MCP Intelligence Tools            | v3.1      | 0/?            | Not started | -          |
+| 6. MCP Intelligence Tools            | v3.1      | 0/1            | Not started | -          |
 | 7. Diagram Registry Completion       | v3.1      | 0/?            | Not started | -          |
 | 8. Slash Command Updates             | v3.1      | 0/?            | Not started | -          |
 | 9. Markdown Tooling Propagation      | v3.1      | 0/?            | Not started | -          |
