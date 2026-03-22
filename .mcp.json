@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "figma-desktop": {
+      "type": "http",
+      "url": "http://127.0.0.1:3845/mcp"
+    },
+    "documind": {
+      "command": "node",
+      "args": ["/Users/Shared/htdocs/github/DVWDesign/DocuMind/daemon/mcp-server.mjs"],
+      "env": {
+        "DOCUMIND_DB": "/Users/Shared/htdocs/github/DVWDesign/DocuMind/data/documind.db",
+        "DOCUMIND_PROFILE": "/Users/Shared/htdocs/github/DVWDesign/DocuMind/config/profiles/dvwdesign.json"
+      }
+    }
+  }
+}
