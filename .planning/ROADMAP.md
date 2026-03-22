@@ -80,8 +80,8 @@ Full details: `.planning/milestones/v3.0-ROADMAP.md`
 **Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 08-01-PLAN.md — Rewrite /diagram-registry and /figma-diagram to use MCP tools
-- [ ] 08-02-PLAN.md — Rewrite /figma-curate and update global-rules.md
+- [x] 08-01-PLAN.md — Rewrite /diagram-registry and /figma-diagram to use MCP tools
+- [x] 08-02-PLAN.md — Rewrite /figma-curate and update global-rules.md
 
 ### Phase 9: Markdown Tooling Propagation
 
