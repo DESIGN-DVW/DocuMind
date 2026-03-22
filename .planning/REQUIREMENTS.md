@@ -21,8 +21,8 @@ Requirements for v3.1 Polish & Propagation. Closes v3.0 tech debt and propagates
 
 ### Markdown Tooling Propagation
 
-- [ ] **PROP-01**: DVW001 (`table-separator-spacing.cjs`) + MD060A (`force-align-table-columns`) installed and configured in all DVWDesign repos that have markdown
-- [ ] **PROP-02**: `.markdownlint-cli2.jsonc` with custom rules created in each target repo
+- [x] **PROP-01**: DVW001 (`table-separator-spacing.cjs`) + MD060A (`force-align-table-columns`) installed and configured in all DVWDesign repos that have markdown
+- [x] **PROP-02**: `.markdownlint-cli2.jsonc` with custom rules created in each target repo
 
 ### Diagram Registry Completion
 
@@ -64,8 +64,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SLSH-02     | Phase 8  | Complete |
 | SLSH-03     | Phase 8  | Complete |
 | SLSH-04     | Phase 8  | Complete |
-| PROP-01     | Phase 9  | Pending  |
-| PROP-02     | Phase 9  | Pending  |
+| PROP-01     | Phase 9  | Complete |
+| PROP-02     | Phase 9  | Complete |
 | DIAG-01     | Phase 7  | Complete |
 | DIAG-02     | Phase 7  | Complete |
 | DOCS-01     | Phase 10 | Pending  |

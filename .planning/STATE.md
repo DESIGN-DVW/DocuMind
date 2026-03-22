@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Polish & Propagation
 status: unknown
-last_updated: "2026-03-22T16:48:27.263Z"
+last_updated: "2026-03-22T17:05:10.929Z"
 progress:
-  total_phases: 8
-  completed_phases: 8
-  total_plans: 18
-  completed_plans: 18
+  total_phases: 9
+  completed_phases: 9
+  total_plans: 19
+  completed_plans: 19
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** When you look at a document, you instantly see what it's connected to — what links to it, what duplicates it, and whether it's stale.
-**Current focus:** Milestone v3.1 — Phase 8: Slash Command Updates
+**Current focus:** Milestone v3.1 — Phase 9: Markdown Tooling Propagation
 
 ## Current Position
 
-Phase: 8 of 10 (Slash Command Updates)
-Plan: 2 complete (08-01, 08-02)
-Status: Active — Phase 8 complete
-Last activity: 2026-03-22 — Rewired /figma-curate to use curate_diagram MCP tool; global-rules.md declares DB as single source of truth
+Phase: 9 of 10 (Markdown Tooling Propagation)
+Plan: 1 complete (09-01)
+Status: Active — Phase 9 Plan 1 complete
+Last activity: 2026-03-22 — Propagated DVW001+MD060A custom lint rules to all 16 DVWDesign repos via scripts/propagate-lint-rules.mjs
 
-Progress: [████░░░░░░] 40% (v3.1 — 4/10 plans done)
+Progress: [█████░░░░░] 50% (v3.1 — 5/10 plans done)
 
 ## Performance Metrics
 
@@ -55,6 +55,7 @@ Progress: [████░░░░░░] 40% (v3.1 — 4/10 plans done)
 | Phase 07 P01 | 2     | 2m 15s   | 3     |
 | Phase 08 P01 | 2     | ~2m      | 1     |
 | Phase 08 P02 | 2     | ~1m 9s   | 2     |
+| Phase 09 P01 | 2     | 4m       | 1     |
 
 ## Accumulated Context
 
@@ -72,6 +73,8 @@ Recent decisions affecting v3.1:
 - [Phase 07-01]: Snapshot failures in scheduler are non-fatal — inner try/catch isolates from scan result
 - [Phase 08-slash-command-updates]: DocuMind diagrams table is single source of truth; DIAGRAM-REGISTRY.md is a generated snapshot
 - [Phase 08-slash-command-updates]: Slash commands use MCP tools as primary backend with local file fallback if MCP unavailable
+- [Phase 09]: Target repos get customRules only in .markdownlint-cli2.jsonc — no config.extends since they lack DocuMind's .markdownlint.json
+- [Phase 09]: pnpm workspace roots need -w flag detected via pnpm-workspace.yaml; LibraryAssetManager fixed with pnpm add -D -w
 
 ### Pending Todos
 
@@ -79,10 +82,10 @@ None.
 
 ### Blockers/Concerns
 
-- [Phase 9]: Need inventory of which DVWDesign repos have markdown before propagation can begin — check RootDispatcher repo registry
+None.
 
 ## Session Continuity
 
 Last session: 2026-03-22
-Stopped at: Completed 08-02-PLAN.md — /figma-curate uses curate_diagram MCP tool; global-rules.md declares DB as single source of truth
+Stopped at: Completed 09-01-PLAN.md — DVW001+MD060A rules propagated to all 16 DVWDesign repos
 Resume file: None
