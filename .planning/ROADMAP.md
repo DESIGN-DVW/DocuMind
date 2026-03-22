@@ -112,7 +112,13 @@ Plans:
   3. Calling `trigger_scan` from an agent initiates an incremental scan via the orchestrator and returns a completion summary
   4. A file path outside `ctx.repoRoots` passed to any write tool returns a validation error — not a silent failure or filesystem access
   5. Calling `relink_diagram` sets a curated FigJam URL and propagates it into the source markdown file
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+
+- [ ] 05-01-PLAN.md — Write tools implementation: 5 MCP tools + path validation + read-write DB + fix function exports
+- [ ] 05-02-PLAN.md — Cross-repo .mcp.json registration + diagram registry centralization
+- [ ] 05-03-PLAN.md — MCP Inspector verification checkpoint
 
 ## Progress
 
@@ -125,4 +131,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 2. Context Profile Loader | 2/2 | Complete   | 2026-03-17 |
 | 3. Orchestrator and Scheduler Wiring | 4/4 | Complete   | 2026-03-17 |
 | 4. MCP Server — Read Tools | 2/2 | Complete   | 2026-03-17 |
-| 5. MCP Server — Write Tools | 0/TBD | Not started | - |
+| 5. MCP Server — Write Tools | 0/3 | Not started | - |
