@@ -439,7 +439,73 @@ server.tool(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Tool 7: index_file — Re-index a single markdown file (MCPW-01)
+// Tool 7: get_similarities — Similar/duplicate document pairs (MCPI-01)
+// ─────────────────────────────────────────────────────────────────────────────
+server.tool(
+  'get_similarities',
+  'Get similar or duplicate document pairs with similarity scores. Returns document paths, repositories, similarity scores, and deviation types. Filter by repository and/or minimum score threshold.',
+  {
+    repo: z
+      .string()
+      .optional()
+      .describe('Filter to pairs where at least one doc is in this repository'),
+    min_score: z
+      .number()
+      .min(0)
+      .max(1)
+      .default(0.7)
+      .describe('Minimum similarity score threshold (0-1)'),
+    include_reviewed: z.boolean().default(false).describe('Include already-reviewed pairs'),
+    limit: z.number().int().min(1).max(100).default(50).describe('Maximum results (1-100)'),
+  },
+  async ({ repo, min_score, include_reviewed, limit }) => {
+    try {
+      const conditions = ['cs.similarity_score >= ?'];
+      const params = [min_score];
+
+      if (repo) {
+        conditions.push('(d1.repository = ? OR d2.repository = ?)');
+        params.push(repo, repo);
+      }
+      if (!include_reviewed) {
+        conditions.push('cs.reviewed = 0');
+      }
+
+      params.push(limit);
+
+      const sql = `
+        SELECT d1.path as doc1_path, d1.repository as doc1_repo,
+               d2.path as doc2_path, d2.repository as doc2_repo,
+               cs.similarity_score, cs.deviation_type, cs.reviewed,
+               cs.notes, cs.detected_at
+        FROM content_similarities cs
+        JOIN documents d1 ON cs.doc1_id = d1.id
+        JOIN documents d2 ON cs.doc2_id = d2.id
+        WHERE ${conditions.join(' AND ')}
+        ORDER BY cs.similarity_score DESC
+        LIMIT ?
+      `;
+
+      const pairs = db.prepare(sql).all(...params);
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({ total: pairs.length, pairs }, null, 2),
+          },
+        ],
+      };
+    } catch (err) {
+      return {
+        content: [{ type: 'text', text: JSON.stringify({ error: err.message }) }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tool 8: index_file — Re-index a single markdown file (MCPW-01)
 // ─────────────────────────────────────────────────────────────────────────────
 server.tool(
   'index_file',
@@ -489,7 +555,7 @@ server.tool(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Tool 8: lint_file — Lint a markdown file (MCPW-02)
+// Tool 9: lint_file — Lint a markdown file (MCPW-02)
 // ─────────────────────────────────────────────────────────────────────────────
 server.tool(
   'lint_file',
@@ -565,7 +631,7 @@ server.tool(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Tool 9: fix_file — Auto-fix markdown issues (MCPW-03)
+// Tool 10: fix_file — Auto-fix markdown issues (MCPW-03)
 // ─────────────────────────────────────────────────────────────────────────────
 server.tool(
   'fix_file',
@@ -677,7 +743,7 @@ server.tool(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Tool 10: trigger_scan — Trigger documentation scan (MCPW-04)
+// Tool 11: trigger_scan — Trigger documentation scan (MCPW-04)
 // ─────────────────────────────────────────────────────────────────────────────
 server.tool(
   'trigger_scan',
@@ -724,7 +790,7 @@ server.tool(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Tool 11: curate_diagram — Set curated FigJam URL and propagate (MCPW-05)
+// Tool 12: curate_diagram — Set curated FigJam URL and propagate (MCPW-05)
 // ─────────────────────────────────────────────────────────────────────────────
 server.tool(
   'curate_diagram',
