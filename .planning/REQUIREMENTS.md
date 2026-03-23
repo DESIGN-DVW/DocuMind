@@ -75,36 +75,36 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 | ----------- | ----- | ------ |
-| FNDTN-01 | — | Pending |
-| FNDTN-02 | — | Pending |
-| FNDTN-03 | — | Pending |
-| FNDTN-04 | — | Pending |
-| DOCK-01 | — | Pending |
-| DOCK-02 | — | Pending |
-| DOCK-03 | — | Pending |
-| DOCK-04 | — | Pending |
-| DOCK-05 | — | Pending |
-| DOCK-06 | — | Pending |
-| DOCK-07 | — | Pending |
-| INGEST-01 | — | Pending |
-| INGEST-02 | — | Pending |
-| INGEST-03 | — | Pending |
-| INGEST-04 | — | Pending |
-| INGEST-05 | — | Pending |
-| MCPT-01 | — | Pending |
-| MCPT-02 | — | Pending |
-| MCPT-03 | — | Pending |
-| MCPT-04 | — | Pending |
-| CICD-01 | — | Pending |
-| CICD-02 | — | Pending |
-| CICD-03 | — | Pending |
-| CICD-04 | — | Pending |
+| FNDTN-01 | Phase 11 | Pending |
+| FNDTN-02 | Phase 11 | Pending |
+| FNDTN-03 | Phase 11 | Pending |
+| FNDTN-04 | Phase 11 | Pending |
+| DOCK-01 | Phase 12 | Pending |
+| DOCK-02 | Phase 12 | Pending |
+| DOCK-03 | Phase 12 | Pending |
+| DOCK-04 | Phase 12 | Pending |
+| DOCK-05 | Phase 12 | Pending |
+| DOCK-06 | Phase 12 | Pending |
+| DOCK-07 | Phase 12 | Pending |
+| INGEST-01 | Phase 13 | Pending |
+| INGEST-02 | Phase 13 | Pending |
+| INGEST-03 | Phase 13 | Pending |
+| INGEST-04 | Phase 13 | Pending |
+| INGEST-05 | Phase 13 | Pending |
+| MCPT-01 | Phase 14 | Pending |
+| MCPT-02 | Phase 14 | Pending |
+| MCPT-03 | Phase 14 | Pending |
+| MCPT-04 | Phase 14 | Pending |
+| CICD-01 | Phase 15 | Pending |
+| CICD-02 | Phase 15 | Pending |
+| CICD-03 | Phase 15 | Pending |
+| CICD-04 | Phase 15 | Pending |
 
 **Coverage:**
 
 - v3.2 requirements: 24 total
-- Mapped to phases: 0
-- Unmapped: 24
+- Mapped to phases: 24
+- Unmapped: 0 ✓
 
 ---
 
