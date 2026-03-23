@@ -35,3 +35,6 @@ reports/
 *.sqlite
 *.sqlite3
 data/
+
+# Environment variables (local paths must not be committed)
+.env
