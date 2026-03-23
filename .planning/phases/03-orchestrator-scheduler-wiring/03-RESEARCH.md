@@ -19,23 +19,39 @@ The most important implementation constraint is the **sibling edge cap** in `bui
 ---
 
 <phase_requirements>
+
 ## Phase Requirements
 
 | ID | Description | Research Support |
+
 | ---- | ------------- | ----------------- |
+
 | ORCH-01 | `orchestrator.mjs` consolidates scan pipeline (markdown indexing, keyword extraction, graph population, staleness detection) into a single callable function | Orchestrator pattern: each entry point calls one of three modes (incremental/full/deep); all processor imports centralized here |
+
 | ORCH-02 | Scheduler hourly cron calls orchestrator for incremental scan (changed files only via content_hash) | Hourly cron at line 32 of scheduler.mjs has a TODO stub; content_hash delta detection needs a `WHERE content_hash != ?` or `WHERE last_scanned < modified_at` approach |
+
 | ORCH-03 | Scheduler daily cron calls orchestrator for full scan + deviation analysis | Daily cron at line 66 of scheduler.mjs is a pure TODO stub; full scan = scan all repos regardless of hash; deviation = populate deviations table |
+
 | ORCH-04 | Scheduler weekly cron calls orchestrator for keyword refresh + graph rebuild | Weekly cron at line 73 of scheduler.mjs is a pure TODO stub; keyword refresh = DELETE all keywords, re-extract; graph rebuild = DELETE doc_relationships, re-run buildRelationships() with sibling cap |
+
 | ORCH-05 | `/scan` REST endpoint calls orchestrator (not a separate implementation) | `/scan` POST at server.mjs line 208 returns static `"queued"` with TODO comment; must call orchestrator.runScan(db, ctx, { repo }) |
+
 | ORCH-06 | FTS5 explicit rebuild after every bulk write operation | `INSERT INTO documents_fts(documents_fts) VALUES('rebuild')` must run after any batch upsert to documents; after keyword batch inserts, `keywords_fts` needs equivalent rebuild |
+
 | INTL-01 | Auto-generate document summary from frontmatter description > first paragraph > title+keywords fallback | `summary TEXT` column exists in documents table (Phase 1); `processMarkdown()` in markdown-processor.mjs does not yet populate it; summary extraction logic must be added |
+
 | INTL-02 | Auto-classify documents using context profile classification rules (path match + frontmatter field match) | `classification TEXT` column exists in documents table (Phase 1); markdown-processor.mjs uses hardcoded `detectCategory()` function instead of `ctx.classificationRules`; must replace with ctx-based classification |
+
 | INTL-03 | Auto-extract tags via TF-IDF keyword processor with confidence scores | `document_tags` table exists (Phase 1); `indexKeywords()` in keyword-processor.mjs populates `keywords` table not `document_tags`; either use `document_tags` for per-doc tags or pipe keyword extraction through document_tags |
+
 | INTL-04 | Populate document relationship graph via `buildRelationships()` with sibling edge cap (max 10 per folder) | `doc_relationships` table has 0 rows; `buildRelationships()` exists but is never called; sibling loop at lines 111–128 of graph/relations.mjs must be capped before first call |
+
 | INTL-05 | Detect similar/duplicate documents across repos (Levenshtein + cosine, threshold 0.7) | `content_similarities` table exists (columns: doc1_id, doc2_id, similarity_score, detected_at, deviation_type, notes, reviewed, resolution); no similarity computation runs today |
+
 | INTL-06 | Detect stale documents (content_hash changed in linked files but doc not updated) | `documents` table has `content_hash` column; no `freshness_score` column exists — staleness must be detected relationally (linked doc changed but this doc didn't); stale count must appear in `/stats` |
+
 | INTL-07 | Detect convention deviations (5 types: content_drift, structure_change, rule_violation, version_mismatch, metadata_inconsistency) | `deviations` table exists (columns: id, document_id, related_doc_id, deviation_type, severity, description, detected_at, resolved_at, resolution_action, resolver); deviation scripts exist in scripts/ but are not called from scheduler |
+
 </phase_requirements>
 
 ---
@@ -45,11 +61,17 @@ The most important implementation constraint is the **sibling edge cap** in `bui
 ### Core (All Already Installed)
 
 | Library | Version | Purpose | Why Standard |
+
 | ------- | ------- | ------- | ------------ |
+
 | `better-sqlite3` | installed | Synchronous SQLite — all DB operations | Already in use throughout daemon and processors; WAL mode already configured |
+
 | `node-cron` | installed | Cron job scheduler | Already imported in scheduler.mjs; handles all periodic triggers |
+
 | `natural` | installed | TF-IDF keyword extraction | Already used in keyword-processor.mjs; `extractKeywords()` and `indexKeywords()` are ready |
+
 | `fast-glob` | installed | File pattern matching for incremental scans | Already used in index-markdown.mjs and scan-all-repos.mjs |
+
 | `gray-matter` | installed | Frontmatter parsing | Already used in markdown-processor.mjs `processMarkdown()` |
 
 ### No New Dependencies Needed
@@ -63,6 +85,7 @@ Phase 3 requires zero new npm packages. All required libraries are already insta
 The orchestrator exposes three named scan modes that callers choose from:
 
 ```javascript
+
 // orchestrator.mjs
 export async function runScan(db, ctx, options = {}) {
   const { mode = 'incremental', repo = null } = options;
@@ -72,10 +95,13 @@ export async function runScan(db, ctx, options = {}) {
     case 'deep':        return runDeepScan(db, ctx);
   }
 }
+
 ```
 
 - **incremental**: scan files where `modified_at > last_scanned` or `content_hash` changed; call `indexMarkdown`; no graph rebuild; no keyword refresh
+
 - **full**: scan all repos (all files); call `indexMarkdown` for each; run deviation analysis; rebuild FTS5; update scan_history
+
 - **deep**: same as full + keyword refresh (`indexKeywords` for all docs) + graph rebuild (`buildRelationships` with sibling cap)
 
 ### Pattern 2: Scheduler Passes ctx
@@ -89,6 +115,7 @@ In `server.mjs` at line 509, the call is currently `initScheduler(db, ROOT)` —
 The existing sibling block in `graph/relations.mjs` lines 111–128 must be modified to cap at 10 edges per folder before `buildRelationships()` is ever called against the live 8K doc corpus:
 
 ```javascript
+
 // BEFORE calling any siblings loop, group docs by directory
 const siblingsByDir = new Map();
 for (const doc of docs) {
@@ -102,13 +129,16 @@ const dirPath = path.dirname(doc.path);
 const siblings = (siblingsByDir.get(dirPath) || [])
   .filter(d => d.id !== doc.id && d.id > doc.id)
   .slice(0, 10); // cap: max 10 sibling edges per doc
+
 ```
 
 Additionally, skip sibling edges for folders with more than 50 docs (dispatch dirs):
 
 ```javascript
+
 const siblingsInDir = siblingsByDir.get(dirPath) || [];
 if (siblingsInDir.length > 50) continue; // skip bulk-dispatch directories
+
 ```
 
 ### Pattern 4: FTS5 Rebuild After Bulk Writes (ORCH-06)
@@ -116,8 +146,10 @@ if (siblingsInDir.length > 50) continue; // skip bulk-dispatch directories
 Must be called at the end of every bulk document upsert:
 
 ```javascript
+
 db.prepare("INSERT INTO documents_fts(documents_fts) VALUES('rebuild')").run();
 db.prepare("INSERT INTO keywords_fts(keywords_fts) VALUES('rebuild')").run();
+
 ```
 
 This is safe on 8K documents (completes in < 5 seconds). It must run after `indexMarkdown` batch operations in the orchestrator, not inside `indexMarkdown` itself (which is a single-file function called in a loop — rebuilding FTS5 per file is prohibitively expensive).
@@ -127,6 +159,7 @@ This is safe on 8K documents (completes in < 5 seconds). It must run after `inde
 The `documents` table has no `freshness_score` column. Staleness must be computed relationally via the `doc_relationships` table: a document is stale if it has `imports` or `depends_on` edges to documents whose `content_hash` or `modified_at` changed after the source doc's `last_scanned`.
 
 ```sql
+
 -- Stale document detection query
 SELECT DISTINCT s.id, s.path, s.repository, s.last_scanned
 FROM documents s
@@ -134,6 +167,7 @@ JOIN doc_relationships dr ON dr.source_doc_id = s.id
 JOIN documents t ON dr.target_doc_id = t.id
 WHERE dr.relationship_type IN ('imports', 'depends_on')
   AND t.modified_at > s.last_scanned
+
 ```
 
 This requires the graph to be populated first (INTL-04 before INTL-06). An alternative simpler staleness heuristic for docs with zero graph edges: `modified_at` more than 90 days ago with no recent scan.
@@ -145,6 +179,7 @@ The `/stats` endpoint must be updated to report stale count (success criterion #
 The `summary TEXT` column in `documents` exists but `indexMarkdown()` never populates it. Add `extractSummary()` to `markdown-processor.mjs`:
 
 ```javascript
+
 function extractSummary(frontmatter, content) {
   // Priority 1: frontmatter.description
   if (frontmatter.description) return frontmatter.description.slice(0, 500);
@@ -155,6 +190,7 @@ function extractSummary(frontmatter, content) {
   // Priority 3: title + top keywords (no ctx needed — uses raw content)
   return null; // caller writes NULL if no summary found
 }
+
 ```
 
 Then in `indexMarkdown()`, populate `summary` in the UPSERT.
@@ -164,6 +200,7 @@ Then in `indexMarkdown()`, populate `summary` in the UPSERT.
 `markdown-processor.mjs` currently has a hardcoded `detectCategory()` function (lines 109–131) that uses DVWDesign-specific path patterns. Phase 2 added `ctx.classificationRules` (an array of compiled RegExp rules with their target classifications). The `detectCategory()` call in `processMarkdown()` must be replaced by a `classifyPath(filePath, ctx)` function that iterates `ctx.classificationRules`:
 
 ```javascript
+
 function classifyPath(filePath, frontmatter, ctx) {
   if (frontmatter.classification) return frontmatter.classification;
   if (frontmatter.category) return frontmatter.category; // backward compat
@@ -172,6 +209,7 @@ function classifyPath(filePath, frontmatter, ctx) {
   }
   return 'other';
 }
+
 ```
 
 This means `indexMarkdown(db, filePath, repository)` must become `indexMarkdown(db, filePath, repository, ctx)` — a signature change that all callers (watcher, hooks, orchestrator) must propagate.
@@ -181,6 +219,7 @@ This means `indexMarkdown(db, filePath, repository)` must become `indexMarkdown(
 The requirements specify populating `document_tags` (per-document flat tag list with confidence scores). The current `indexKeywords()` in `keyword-processor.mjs` populates the `keywords` table, not `document_tags`. The distinction:
 
 - `keywords` table: repo-level TF-IDF scores, used for the `/keywords` cloud endpoint
+
 - `document_tags` table: per-document tags with confidence, used for filtering in search
 
 The orchestrator should call both: `indexKeywords()` for the keywords cloud, and a new `indexDocumentTags()` function that writes the same extracted keywords to `document_tags`. Alternatively, `indexKeywords()` can be extended to write to both tables in one pass. The simpler approach: extend `indexKeywords()` to also upsert to `document_tags` with `source='extracted'` and `confidence=normalized_tfidf_score`.
@@ -188,6 +227,7 @@ The orchestrator should call both: `indexKeywords()` for the keywords cloud, and
 ### Recommended Project Structure
 
 ```text
+
 DocuMind/
 ├── orchestrator.mjs            # NEW — three-mode scan pipeline
 ├── daemon/
@@ -200,16 +240,23 @@ DocuMind/
 ├── graph/
 │   └── relations.mjs           # MODIFY — cap sibling edges before bulk build
 └── (no new processors needed)
+
 ```
 
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
+
 | ------- | ----------- | ----------- | --- |
+
 | Incremental file detection | Custom file walker comparing mtimes | `WHERE last_scanned < modified_at` SQL query on `documents` table | SQLite already stores both timestamps; file walker is redundant |
+
 | Content hash comparison | Re-reading and re-hashing all files | `WHERE content_hash != ?` after computing hash of current file | Hash already stored on first index; only compute new hash for files that look changed by mtime |
+
 | Similarity detection | Custom Levenshtein implementation | `natural.js` already provides `LevenshteinDistance`; or use cosine on TF-IDF vectors already computed | `natural` is already installed for TF-IDF |
+
 | Cron scheduling | Custom timer loop | `node-cron` already in use in scheduler.mjs | Already installed, already registering 5 jobs |
+
 | FTS5 query planning | Custom tokenizer | SQLite FTS5 `MATCH` operator and `rebuild` virtual command | Already in use for search endpoint |
 
 ## Common Pitfalls
@@ -259,6 +306,7 @@ DocuMind/
 ### orchestrator.mjs Skeleton
 
 ```javascript
+
 // orchestrator.mjs — new file at DocuMind root
 import { glob } from 'fast-glob';
 import { indexMarkdown } from './processors/markdown-processor.mjs';
@@ -300,11 +348,13 @@ async function runDeepScan(db, ctx, startMs) {
   // 7. FTS5 rebuild
   // Returns: { mode, scanned, keywords, edges, stale, similarities, durationMs }
 }
+
 ```
 
 ### Scheduler Wiring (replacing TODO stubs)
 
 ```javascript
+
 // scheduler.mjs — after adding ctx parameter to initScheduler(db, root, ctx)
 import { runScan } from '../orchestrator.mjs';
 
@@ -326,11 +376,13 @@ cron.schedule('0 2 * * *', async () => {
 cron.schedule('0 3 * * 0', async () => {
   await runScan(db, ctx, { mode: 'deep' });
 });
+
 ```
 
 ### REST /scan Endpoint (replacing TODO)
 
 ```javascript
+
 // server.mjs — replace static queued response
 app.post('/scan', async (req, res) => {
   const { repo, mode = 'incremental' } = req.body;
@@ -344,11 +396,13 @@ app.post('/scan', async (req, res) => {
     }
   });
 });
+
 ```
 
 ### FTS5 Rebuild Pattern
 
 ```javascript
+
 // Called once at end of bulk operations, not inside per-file loops
 function rebuildFTS(db) {
   db.prepare("INSERT INTO documents_fts(documents_fts) VALUES('rebuild')").run();
@@ -356,6 +410,7 @@ function rebuildFTS(db) {
 function rebuildKeywordsFTS(db) {
   db.prepare("INSERT INTO keywords_fts(keywords_fts) VALUES('rebuild')").run();
 }
+
 ```
 
 ## Implementation Order (Recommended)
@@ -363,6 +418,7 @@ function rebuildKeywordsFTS(db) {
 Phase 3 has internal dependencies that dictate implementation order:
 
 ```text
+
 Wave 1 — Foundations (unblock all subsequent work):
   1a. Fix sibling edge cap in graph/relations.mjs (INTL-04 safety)
   1b. Add extractSummary() to markdown-processor.mjs (INTL-01)
@@ -370,7 +426,9 @@ Wave 1 — Foundations (unblock all subsequent work):
        → extends signature to indexMarkdown(db, filePath, repository, ctx)
 
 Wave 2 — Orchestrator (the central new file):
+
   2.  Create orchestrator.mjs with runScan(db, ctx, options) — three modes
+
        → imports indexMarkdown, indexKeywords, buildRelationships
        → incremental mode: mtime delta scan
        → full mode: all files + deviations
@@ -388,15 +446,21 @@ Wave 4 — Document Intelligence (fills tables):
   4b. Implement similarity detection in orchestrator deep mode (INTL-05)
   4c. Implement staleness detection in orchestrator (INTL-06)
   4d. Implement deviation detection call in orchestrator full mode (INTL-07)
+
 ```
 
 ## State of the Art
 
 | Old Approach | Current Approach | When Changed | Impact |
+
 | ------------ | ---------------- | ------------ | ------ |
+
 | Hard-coded REPOS list in scan-all-repos.mjs | ctx.repoRoots from context profile | Phase 2 complete | Scanner must use ctx.repoRoots, not the hardcoded constant |
+
 | detectCategory() hardcoded in markdown-processor | ctx.classificationRules from profile | Phase 2 ready, Phase 3 must adopt | INTL-02 requires this migration |
+
 | Hardcoded TECH_KEYWORDS / ACTION_KEYWORDS | ctx.keywordTaxonomy | Phase 2 complete | Already done; all keyword calls need ctx |
+
 | scheduler.mjs receives (db, root) | scheduler.mjs must receive (db, root, ctx) | Phase 3 change | One-line server.mjs update required |
 
 **Key finding:** `scan-all-repos.mjs` (scripts/scan-all-repos.mjs) still has hardcoded `BASE_PATH` and `REPOS` constant at the module top — it was not refactored in Phase 2 because it is a CLI script, not a daemon module. The orchestrator should NOT import this file. Instead, it should build its own scan loop using `ctx.repoRoots` and `fast-glob`, calling `indexMarkdown()` directly.
@@ -404,32 +468,47 @@ Wave 4 — Document Intelligence (fills tables):
 ## Open Questions
 
 1. **Similarity detection algorithm (INTL-05)**
+
    - What we know: `content_similarities` table exists with `similarity_score` field; `natural.js` is installed
+
    - What's unclear: Whether the intent is Levenshtein on full content (slow on 8K docs), TF-IDF cosine (faster — reuse existing TF-IDF vectors), or a hybrid
+
    - Recommendation: Use TF-IDF cosine on already-extracted keywords — reuse what `extractKeywords()` already computes; compare keyword score vectors across documents in the same repo first (cross-repo comparison is more expensive and less useful)
 
 2. **Deviation detection types (INTL-07)**
+
    - What we know: `deviations` table has `deviation_type` column; REQUIREMENTS.md lists 5 types
+
    - What's unclear: The existing deviation detection scripts in `scripts/` are not imported from anywhere — need to verify if they produce valid output or need to be rewritten to write to the `deviations` table
+
    - Recommendation: Inspect `scripts/` deviation scripts before planning Plan 4 (Wave 4 work)
 
 3. **Incremental scan mtime strategy**
+
    - What we know: `documents.last_scanned` and `documents.modified_at` exist; `documents.content_hash` exists
+
    - What's unclear: For files not yet in the DB, `last_scanned` doesn't exist — need to glob all repo files and compare against DB
+
    - Recommendation: `SELECT path, content_hash, last_scanned FROM documents` into a Map; glob all repo files; for each file on disk, stat → if not in Map, add; if in Map and file mtime > last_scanned, re-hash and compare content_hash
 
 ## Validation Architecture
 
 nyquist_validation is not in config.json — the `workflow` key only has `research`, `plan_check`, and `verifier`. No test framework is configured. Verification is done via the gsd-verifier agent using live observable state (SQL queries, log output, API responses).
 
-**Phase gate verification approach (matches success criteria):**
+### Phase gate verification approach (matches success criteria):
 
 | Success Criterion | Verification Command | Notes |
+
 | --- | --- | --- |
+
 | GET /graph returns actual edges | `SELECT COUNT(*) FROM doc_relationships` > 0 | After first deep scan |
+
 | GET /keywords returns TF-IDF scores | `SELECT COUNT(*) FROM keywords` > 0 | After weekly cron or manual /scan?mode=deep |
+
 |  GET /stats shows non-zero stale count  |  `curl localhost:9000/stats \ |  jq .stale` > 0  |
+
 |  POST /scan triggers orchestrator  |  `pm2 logs documind \ |  grep '\[orchestrator\]'`  |
+
 |  Scheduler logs show all jobs firing  |  `pm2 logs documind \ |  grep '\[scheduler\]'`  |
 
 ## Sources
@@ -437,26 +516,37 @@ nyquist_validation is not in config.json — the `workflow` key only has `resear
 ### Primary (HIGH confidence — direct codebase inspection)
 
 - `/Users/Shared/htdocs/github/DVWDesign/DocuMind/daemon/scheduler.mjs` — confirmed 3 TODO stubs at lines 44, 68, 75
+
 - `/Users/Shared/htdocs/github/DVWDesign/DocuMind/daemon/watcher.mjs` — confirmed TODO at line 196 (markdown re-index), lines 203 and 207 (pdf/word)
+
 - `/Users/Shared/htdocs/github/DVWDesign/DocuMind/daemon/hooks.mjs` — confirmed TODOs at lines 35, 43, 49, 55
+
 - `/Users/Shared/htdocs/github/DVWDesign/DocuMind/daemon/server.mjs` — confirmed `/scan` TODO at line 216; `initScheduler(db, ROOT)` at line 509 (no ctx)
+
 - `/Users/Shared/htdocs/github/DVWDesign/DocuMind/graph/relations.mjs` — confirmed sibling loop at lines 111–128; `buildRelationships()` never called
+
 - `/Users/Shared/htdocs/github/DVWDesign/DocuMind/processors/markdown-processor.mjs` — confirmed hardcoded `detectCategory()` at lines 109–131; no summary extraction; no ctx param
+
 - `/Users/Shared/htdocs/github/DVWDesign/DocuMind/processors/keyword-processor.mjs` — confirmed `indexKeywords()` populates `keywords` table only; already uses ctx
+
 - Live DB inspection: `doc_relationships` = 0 rows; `keywords` = 0 rows; `documents` = 8,172 rows; `summary` and `classification` columns exist; `freshness_score` does NOT exist
 
 ### Secondary (HIGH confidence — Phase verification documents)
 
 - `.planning/phases/02-context-profile-loader/02-VERIFICATION.md` — confirmed ctx object structure: 16 repoRoots, 12 classificationRules (RegExp), 53 tech keywords, 17 action keywords, 8 relationshipTypes
+
 - `.planning/REQUIREMENTS.md` — confirmed all 13 Phase 3 requirement IDs and descriptions
+
 - `.planning/research/PITFALLS.md` — O(n²) sibling edge pitfall documented; FTS5 rebuild requirement documented
 
 ## Metadata
 
-**Confidence breakdown:**
+### Confidence breakdown:
 
 - Standard stack: HIGH — all libraries already installed; verified by package.json inspection
+
 - Architecture: HIGH — all patterns derived from direct codebase inspection, not assumptions
+
 - Pitfalls: HIGH — sibling edge cap, FTS5 rebuild, and staleness ordering verified against live DB state and source code
 
 **Research date:** 2026-03-17

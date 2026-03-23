@@ -23,14 +23,23 @@ The phase also requires adding an `mcp-server` entry to `ecosystem.config.cjs` s
 ## Phase Requirements
 
 | ID | Description | Research Support |
+
 | --- | --- | --- |
+
 | MCPR-01 | `daemon/mcp-server.mjs` as separate entry point with stderr-only logging | Separate entry point required by MCP SDK stdio transport design; stdout redirect pattern documented in PITFALLS.md |
+
 | MCPR-02 | `search_docs` tool — full-text search with repo/category/classification filters | Query pattern exists in `server.mjs` `/search` endpoint (lines 131–157); needs classification filter added |
+
 | MCPR-03 | `get_related` tool — graph traversal (doc ID + hops, returns paths and relationship types) | `findRelated(db, docId, maxDepth)` already exported from `graph/relations.mjs` — direct call with hop parameter |
+
 | MCPR-04 | `get_keywords` tool — keyword cloud for a repo with TF-IDF scores | Query pattern exists in `server.mjs` `/keywords` endpoint (lines 260–287) |
+
 | MCPR-05 | `get_tree` tool — folder hierarchy for a repo | Query pattern exists in `server.mjs` `/tree/:repo` endpoint (lines 200–213) |
+
 | MCPR-06 | `check_existing` tool — "does a doc covering X already exist?" (search + scoring) | Requires FTS5 search + scoring heuristic; no existing endpoint but SQL is subset of `search_docs` |
+
 | MCPR-07 | `get_diagrams` tool — diagram registry with stale status | Query pattern exists in `server.mjs` `/diagrams` endpoint (lines 299–330) |
+
 | MCPR-08 | stdio transport for Claude Code integration | `StdioServerTransport` from `@modelcontextprotocol/sdk/server/stdio.js`; verified in STACK.md |
 
 </phase_requirements>
@@ -42,30 +51,43 @@ The phase also requires adding an `mcp-server` entry to `ecosystem.config.cjs` s
 ### Core
 
 | Library | Version | Purpose | Why Standard |
+
 | --- | --- | --- | --- |
+
 | `@modelcontextprotocol/sdk` | `^1.27.1` | MCP server + stdio transport | Official Anthropic SDK; only spec-compliant implementation; 33K+ npm dependents; current stable at 1.27.1 (verified via npm) |
+
 | `zod` (bump) | `^3.25.0` | Tool schema validation | SDK requires zod `>=3.25.0` as peer dep; current DocuMind pin `^3.22.4` must be bumped |
+
 | `better-sqlite3` | `^12.6.2` (existing) | DB queries in tool handlers | Synchronous API fits perfectly in MCP tool handlers; no async DB wrangling needed |
 
 ### Supporting
 
 | Library | Version | Purpose | When to Use |
+
 | --- | --- | --- | --- |
+
 | `@modelcontextprotocol/inspector` | via `npx` | Dev tool for interactive tool testing | Run during development before wiring into Claude Code; add as `mcp:inspect` npm script |
 
 ### Alternatives Considered
 
 | Instead of | Could Use | Tradeoff |
+
 | --- | --- | --- |
+
 | Separate `mcp-server.mjs` entry point | Embed stdio transport in `server.mjs` | Embedding risks stdout pollution from Express internals and existing `console.log` calls; separate entry point allows clean stdout isolation |
+
 | `StdioServerTransport` only | `StreamableHTTPServerTransport` on Express | HTTP transport is for Phase 5+ (SAAS-06) — stdio is the Claude Code integration target for Phase 4 |
 
-**Installation:**
+#### Installation:
 
 ```bash
+
 npm install @modelcontextprotocol/sdk
+
 # Edit package.json: "zod": "^3.22.4" → "^3.25.0"
+
 npm install
+
 ```
 
 ## Architecture Patterns
@@ -73,12 +95,14 @@ npm install
 ### Recommended Project Structure
 
 ```text
+
 daemon/
 ├── server.mjs          # Existing Express HTTP daemon — unchanged
 ├── mcp-server.mjs      # NEW: stdio MCP entry point
 ├── scheduler.mjs       # Existing — unchanged
 ├── watcher.mjs         # Existing — unchanged
 └── hooks.mjs           # Existing — unchanged
+
 ```
 
 The MCP server is a sibling to `server.mjs`, not embedded in it. It opens its own DB connection and imports `findRelated` from `graph/relations.mjs`. It does NOT import from `server.mjs` (circular import risk + stdout pollution from Express startup).
@@ -89,9 +113,10 @@ The MCP server is a sibling to `server.mjs`, not embedded in it. It opens its ow
 
 **When to use:** Mandatory for any stdio MCP server process. Any module in the import chain that calls `console.log` would corrupt the JSON-RPC wire.
 
-**Example:**
+#### Example:
 
 ```javascript
+
 // daemon/mcp-server.mjs — FIRST TWO LINES, before any import
 // Redirect stdout → stderr so JSON-RPC wire is never polluted
 const _origLog = console.log.bind(console);
@@ -100,6 +125,7 @@ console.log = (...args) => process.stderr.write(args.join(' ') + '\n');
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 // ... rest of imports
+
 ```
 
 **Warning:** `console.log = ...` only redirects calls made after this assignment. In ES modules, import hoisting means all imports are resolved at module parse time, but module-level side effects run in order of import. Since the redirect is the first executable code, it fires before any imported module's top-level code runs — this is correct behavior.
@@ -110,9 +136,10 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 
 **When to use:** All 7 read tools follow this pattern.
 
-**Example (from official SDK docs):**
+#### Example (from official SDK docs):
 
 ```javascript
+
 // Source: @modelcontextprotocol/sdk official docs
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
@@ -136,6 +163,7 @@ server.tool(
     };
   }
 );
+
 ```
 
 ### Pattern 3: Structured Error Returns (Not Thrown Exceptions)
@@ -144,9 +172,10 @@ server.tool(
 
 **When to use:** Wrap all DB operations in try/catch inside every tool handler.
 
-**Example:**
+#### Example:
 
 ```javascript
+
 async ({ query }) => {
   try {
     const results = db.prepare(sql).all(query);
@@ -158,6 +187,7 @@ async ({ query }) => {
     };
   }
 }
+
 ```
 
 ### Pattern 4: PM2 Second App Entry
@@ -166,9 +196,10 @@ async ({ query }) => {
 
 **When to use:** Required for MCPR-01 — "MCP server registered in ecosystem.config.cjs and starts alongside main daemon."
 
-**Example:**
+#### Example:
 
 ```javascript
+
 // ecosystem.config.cjs
 module.exports = {
   apps: [
@@ -194,6 +225,7 @@ module.exports = {
     },
   ],
 };
+
 ```
 
 **Critical:** Set `out_file: '/dev/null'` on the MCP PM2 entry so PM2 does not capture the JSON-RPC stdout stream as a log.
@@ -206,9 +238,10 @@ module.exports = {
 
 **Config location:** `~/.claude/claude_desktop_config.json` or project-level `.claude/mcp.json` (Claude Code reads both).
 
-**Example:**
+#### Example:
 
 ```json
+
 {
   "mcpServers": {
     "documind": {
@@ -221,14 +254,19 @@ module.exports = {
     }
   }
 }
+
 ```
 
 ### Anti-Patterns to Avoid
 
 - **Importing `server.mjs` from `mcp-server.mjs`:** Express startup emits to stdout; the circular import also risks initialization order issues.
+
 - **`console.log` redirect placed after first import:** Any module-level `console.log` in imported code fires at import time, before the redirect takes effect. The redirect must be the very first executable code.
+
 - **Using cluster mode in PM2 for MCP:** Cluster mode spawns multiple processes sharing stdio — incompatible with a single-client stdio transport.
+
 - **Returning raw objects from tool handlers:** MCP SDK requires the `content` array shape. Returning a plain object causes a schema validation error in the SDK.
+
 - **Tool count over 20:** Cursor has a hard limit of 40 MCP tools total across all servers; design DocuMind Phase 4 with 7 tools, well within limits and leaving room for Phase 5 write tools.
 
 ## What Already Exists (Don't Re-Build)
@@ -236,12 +274,19 @@ module.exports = {
 Every query the MCP tools need is already written in `daemon/server.mjs`. Extract, don't invent:
 
 | MCP Tool | Source Endpoint | SQL Pattern Location |
+
 | --- | --- | --- |
+
 | `search_docs` | `GET /search` | `server.mjs` lines 131–157 |
+
 | `get_related` | `GET /graph` (partial) | `graph/relations.mjs` `findRelated()` — recursive CTE already written |
+
 | `get_keywords` | `GET /keywords` | `server.mjs` lines 260–287 |
+
 | `get_tree` | `GET /tree/:repo` | `server.mjs` lines 200–213 |
+
 | `check_existing` | N/A (new) | Subset of search_docs SQL + score heuristic |
+
 | `get_diagrams` | `GET /diagrams` | `server.mjs` lines 299–330 |
 
 The `findRelated(db, docId, maxDepth)` function in `graph/relations.mjs` is the direct implementation for `get_related` — import and call it directly.
@@ -254,81 +299,116 @@ The `findRelated(db, docId, maxDepth)` function in `graph/relations.mjs` is the 
 
 Extends the existing `/search` query with a `classification` filter. The existing query joins `documents_fts` to `documents`; add `AND d.classification LIKE ?` for prefix matching when classification is provided.
 
-**Input schema:**
+#### Input schema:
+
 - `query: string` — FTS5 query string
+
 - `repo: string?` — repository filter
+
 - `category: string?` — category filter
+
 - `classification: string?` — classification prefix filter (`LIKE 'engineering/%'`)
+
 - `limit: integer(1-100, default 20)`
 
-**Output shape:**
+#### Output shape:
+
 ```json
+
 { "query": "...", "count": 5, "results": [{ "id": 1, "path": "...", "repository": "...", "category": "...", "classification": "...", "snippet": "..." }] }
+
 ```
 
 ### `get_related` (MCPR-03)
 
 Direct wrapper around `findRelated(db, docId, maxDepth)`.
 
-**Input schema:**
+#### Input schema:
+
 - `doc_id: integer` — document ID (from search_docs results)
+
 - `hops: integer(1-3, default 2)` — max traversal depth
 
-**Output shape:**
+#### Output shape:
+
 ```json
+
 { "doc_id": 42, "hops": 2, "count": 12, "related": [{ "doc_id": 7, "relationship_type": "imports", "weight": 1.0, "depth": 1, "path": "...", "repository": "..." }] }
+
 ```
 
 **Note:** Enforce `hops <= 3` in the Zod schema to prevent runaway recursive CTEs. The `findRelated` query has no built-in depth limit beyond the parameter passed.
 
 ### `get_keywords` (MCPR-04)
 
-**Input schema:**
+#### Input schema:
+
 - `repo: string?` — repository filter
+
 - `category: string?` — keyword category filter (technology/action/topic)
+
 - `limit: integer(1-200, default 50)`
 
-**Output shape:**
+#### Output shape:
+
 ```json
+
 { "count": 30, "keywords": [{ "keyword": "sqlite", "category": "technology", "score": 0.85, "repository": "DocuMind", "path": "..." }] }
+
 ```
 
 ### `get_tree` (MCPR-05)
 
-**Input schema:**
+#### Input schema:
+
 - `repo: string` — repository name (required)
 
-**Output shape:**
+#### Output shape:
+
 ```json
+
 { "repository": "DocuMind", "folder_count": 15, "folders": [{ "path": "...", "depth": 0, "doc_count": 5, "folder_type": "docs" }] }
+
 ```
 
 ### `check_existing` (MCPR-06)
 
 **What it does:** Searches FTS5 for documents matching the query, then scores them by title relevance and classification match to answer "has this already been documented?" Returns a boolean `exists` field plus top matches with confidence scores.
 
-**Input schema:**
+#### Input schema:
+
 - `query: string` — topic description to check
+
 - `repo: string?` — narrow search to a repo
+
 - `threshold: number(0-1, default 0.5)` — minimum score to report as "existing"
 
-**Output shape:**
+#### Output shape:
+
 ```json
+
 { "query": "...", "exists": true, "confidence": 0.82, "matches": [{ "path": "...", "score": 0.82, "title": "...", "classification": "..." }] }
+
 ```
 
 **Implementation:** Run FTS5 search (same as search_docs), then compute a simple score from: snippet match quality (rank from FTS5) + whether the title/filename contains query terms. No ML needed — the FTS5 rank column provides the signal.
 
 ### `get_diagrams` (MCPR-07)
 
-**Input schema:**
+#### Input schema:
+
 - `repo: string?` — filter by repository
+
 - `stale_only: boolean(default false)` — return only stale diagrams
+
 - `limit: integer(1-100, default 50)`
 
-**Output shape:**
+#### Output shape:
+
 ```json
+
 { "count": 8, "diagrams": [{ "name": "auth-flow", "repository": "DocuMind", "stale": false, "figjam_url": "...", "curated_url": "...", "png_url": "/diagrams/png/DocuMind/auth-flow.png" }] }
+
 ```
 
 ## Common Pitfalls
@@ -386,6 +466,7 @@ Direct wrapper around `findRelated(db, docId, maxDepth)`.
 ### Minimal Wiring Pattern
 
 ```javascript
+
 // daemon/mcp-server.mjs
 // MUST be first — redirect console.log before any imports
 console.log = (...args) => process.stderr.write(args.join(' ') + '\n');
@@ -415,11 +496,13 @@ const server = new McpServer({ name: 'DocuMind', version: '3.0.0' });
 const transport = new StdioServerTransport();
 await server.connect(transport);
 process.stderr.write('[mcp-server] DocuMind MCP ready\n');
+
 ```
 
 ### search_docs Implementation Pattern
 
 ```javascript
+
 // Extracted from server.mjs /search endpoint — adapted for MCP
 server.tool(
   'search_docs',
@@ -454,48 +537,68 @@ server.tool(
     }
   }
 );
+
 ```
 
 ### npm Script Additions
 
 ```json
+
 {
   "mcp:dev": "node daemon/mcp-server.mjs",
   "mcp:inspect": "npx @modelcontextprotocol/inspector node daemon/mcp-server.mjs"
 }
+
 ```
 
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
+
 | --- | --- | --- | --- |
+
 | Graph traversal with hop depth | Recursive JS loop over DB results | `findRelated()` in `graph/relations.mjs` | Already written, tested, capped; recursive CTE is 10x faster than JS traversal for graph data |
+
 | Input validation for tool parameters | Manual type checks | Zod schema in `server.tool()` call | SDK enforces Zod schema before calling handler; no manual validation needed |
+
 | MCP protocol framing | Custom JSON-RPC serializer | `@modelcontextprotocol/sdk` | Protocol is complex (streaming, batching, error codes); SDK handles it all |
+
 | FTS5 ranking | Custom scoring | SQLite `rank` column from FTS5 query | FTS5 BM25 rank is provided automatically in ORDER BY rank; more accurate than hand-rolled scoring |
 
 ## State of the Art
 
 | Old Approach | Current Approach | When Changed | Impact |
+
 | --- | --- | --- | --- |
+
 | SSE transport (deprecated) | `StdioServerTransport` + `StreamableHTTPServerTransport` | MCP spec 2025-11-25 | SSE is removed from spec; do not use `SSEServerTransport` |
+
 | `Server` class from SDK | `McpServer` high-level class | SDK v1.x | `McpServer` is the recommended API; `Server` is lower-level and requires more boilerplate |
 
 ## Open Questions
 
 1. **`check_existing` scoring threshold**
+
    - What we know: FTS5 returns a `rank` column (negative float; closer to 0 = more relevant); no normalized 0–1 score
+
    - What's unclear: What threshold makes `check_existing` useful vs. noisy — needs tuning against real DocuMind data
+
    - Recommendation: Implement with a configurable `threshold` parameter defaulting to 0.5 (normalized by dividing rank by a fixed baseline); let Claude Code usage inform tuning in Phase 5
 
 2. **`readonly: true` vs WAL PRAGMA**
+
    - What we know: `new Database(DB_PATH, { readonly: true })` opens in read-only mode; WAL PRAGMA on a read-only connection is a no-op
+
    - What's unclear: Whether better-sqlite3 `readonly` option conflicts with `journal_mode = WAL` PRAGMA
+
    - Recommendation: Use `readonly: true` constructor option; skip the WAL PRAGMA on the MCP connection; verify with a quick test before relying on it
 
 3. **Tool description iteration**
+
    - What we know: STATE.md notes "MCP tool description quality affects model behavior — test with MCP Inspector before finalizing tool definitions"
+
    - What's unclear: Which descriptions will cause Claude to under-use or misuse tools
+
    - Recommendation: Write initial descriptions with example use cases; defer tuning to post-Phase-4 observation
 
 ## Sources
@@ -503,26 +606,37 @@ server.tool(
 ### Primary (HIGH confidence)
 
 - `@modelcontextprotocol/sdk` npm — version 1.27.1 confirmed current stable (verified via `npm show @modelcontextprotocol/sdk version`)
+
 - `daemon/server.mjs` — all SQL patterns for search, keywords, tree, diagrams (direct codebase inspection)
+
 - `graph/relations.mjs` — `findRelated(db, docId, maxDepth)` recursive CTE implementation (direct codebase inspection)
+
 - `context/loader.mjs` — `loadProfile()` return shape; ctx object fields confirmed (direct codebase inspection)
+
 - `ecosystem.config.cjs` — existing PM2 config structure; out_file/error_file pattern (direct codebase inspection)
+
 - `.planning/research/STACK.md` — MCP import paths, zod version requirement, transport strategies (project research document)
+
 - `.planning/research/PITFALLS.md` — stdout pollution pitfall, tool count limits, security considerations (project research document)
 
 ### Secondary (MEDIUM confidence)
 
 - MCP TypeScript SDK GitHub releases — v1.27.1 confirmed (verified in STACK.md)
+
 - MCP official build-server docs — `McpServer`, `StdioServerTransport` API patterns (cited in STACK.md)
+
 - Cursor 40-tool hard limit — design for well under this ceiling (cited in PITFALLS.md)
 
 ## Metadata
 
-**Confidence breakdown:**
+### Confidence breakdown:
 
 - Standard stack: HIGH — MCP SDK version confirmed via npm; zod requirement confirmed from prior research
+
 - Architecture: HIGH — patterns derived from direct codebase inspection of existing endpoints; nothing invented
+
 - Tool specs: HIGH — SQL patterns copy-adapted from live endpoints; `findRelated` signature confirmed from source
+
 - Pitfalls: HIGH — stdout pollution pattern confirmed by prior research; PM2 out_file risk derived from PM2 docs and MCP stdio constraints
 
 **Research date:** 2026-03-17
