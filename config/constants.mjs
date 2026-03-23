@@ -7,6 +7,8 @@
  * @module config/constants
  */
 
+import { REPOS_DIR } from './env.mjs';
+
 // ============================================================================
 // GITHUB ORGANIZATION
 // ============================================================================
@@ -37,9 +39,10 @@ export const GITHUB_BASE_URL = `https://github.com/${GITHUB_ORG}`;
 /**
  * Local base path for all DVWDesign repositories
  * NOTE: This is a local folder name only, NOT a GitHub organization
+ * Derives from DOCUMIND_REPOS_DIR env var; falls back to macOS development path.
  * @constant {string}
  */
-export const LOCAL_BASE_PATH = '/Users/Shared/htdocs/github/DVWDesign';
+export const LOCAL_BASE_PATH = REPOS_DIR ?? '/Users/Shared/htdocs/github/DVWDesign';
 
 // ============================================================================
 // ACTIVE REPOSITORIES
