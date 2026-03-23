@@ -1,33 +1,31 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.0
-milestone_name: Polish & Propagation
-status: unknown
-last_updated: "2026-03-23T02:00:40.158Z"
+milestone: v3.2
+milestone_name: Dockerize
+status: defining_requirements
+last_updated: "2026-03-23T12:00:00.000Z"
 progress:
-  total_phases: 10
-  completed_phases: 10
-  total_plans: 21
-  completed_plans: 21
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-22)
+See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** When you look at a document, you instantly see what it's connected to — what links to it, what duplicates it, and whether it's stale.
-**Current focus:** Milestone v3.1 — Phase 9: Markdown Tooling Propagation
+**Current focus:** Milestone v3.2 — Dockerize
 
 ## Current Position
 
-Phase: 10 of 10 (Documentation Fixes)
-Plan: 2 complete (10-02)
-Status: Active — Phase 10 Plan 2 complete
-Last activity: 2026-03-22 — Corrected MCPW-05 tool name (relink_diagram → curate_diagram) in archived v3.0 milestone files
-
-Progress: [█████░░░░░] 50% (v3.1 — 5/10 plans done)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-23 — Milestone v3.2 started
 
 ## Performance Metrics
 
@@ -37,48 +35,11 @@ Progress: [█████░░░░░] 50% (v3.1 — 5/10 plans done)
 - Average duration: 4m 31s
 - Total execution time: ~49m 22s
 
-**By Phase (v3.0):**
-
-| Phase | Plans | Total    | Avg/Plan |
-| ----- | ----- | -------- | -------- |
-| 1     | 3     | 27m 42s  | 9m 14s   |
-| 2     | 2     | 8m 11s   | 4m 5s    |
-| 3     | 4     | ~10m 01s | ~2m 30s  |
-| 4     | 2     | ~7m 26s  | ~3m 43s  |
-| 5     | 3     | ~12m     | 4m       |
-
-**v3.1 plans:**
-
-| Plan         | Tasks | Duration | Files |
-| ------------ | ----- | -------- | ----- |
-| Phase 06 P01 | 2     | ~2m      | 1     |
-| Phase 07 P01 | 2     | 2m 15s   | 3     |
-| Phase 08 P01 | 2     | ~2m      | 1     |
-| Phase 08 P02 | 2     | ~1m 9s   | 2     |
-| Phase 09 P01 | 2     | 4m       | 1     |
-| Phase 10-documentation-fixes P02 | 2min | 2 tasks | 2 files |
-| Phase 10-documentation-fixes P01 | 2m | 1 tasks | 1 files |
-
 ## Accumulated Context
 
 ### Decisions
 
 Decisions logged in PROJECT.md Key Decisions table.
-Recent decisions affecting v3.1:
-
-- [v3.0 close]: DB is single source of truth for diagrams — per-repo DIAGRAM-REGISTRY.md files deprecated
-- [v3.0 close]: MCP server uses stdio; stdout redirect must be line 1 before all imports
-- [v3.0 close]: any2figma registry URL format differs from RootDispatcher — normalizeUrl() handles both
-- [Phase 06]: Inserted get_similarities and get_deviations between read and write tools to preserve logical MCP tool grouping
-- [Phase 07-01]: generateDiagramSnapshot extracted to orchestrator.mjs; mcp-server wraps with writingNow guard for chokidar suppression
-- [Phase 07-01]: register_diagram uses SHA-256 source_hash for unchanged detection — no unnecessary DB writes
-- [Phase 07-01]: Snapshot failures in scheduler are non-fatal — inner try/catch isolates from scan result
-- [Phase 08-slash-command-updates]: DocuMind diagrams table is single source of truth; DIAGRAM-REGISTRY.md is a generated snapshot
-- [Phase 08-slash-command-updates]: Slash commands use MCP tools as primary backend with local file fallback if MCP unavailable
-- [Phase 09]: Target repos get customRules only in .markdownlint-cli2.jsonc — no config.extends since they lack DocuMind's .markdownlint.json
-- [Phase 09]: pnpm workspace roots need -w flag detected via pnpm-workspace.yaml; LibraryAssetManager fixed with pnpm add -D -w
-- [Phase 10-02]: v3.0 milestone files use curate_diagram (not relink_diagram) — minimal archive edits preserve history
-- [Phase 10-documentation-fixes]: Backfill format mirrors 05-VERIFICATION.md exactly for consistency; all evidence sourced from existing SUMMARYs only
 
 ### Pending Todos
 
@@ -90,6 +51,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-22
-Stopped at: Completed 10-02-PLAN.md — corrected MCPW-05 tool name in archived v3.0 milestone files
+Last session: 2026-03-23
+Stopped at: Milestone v3.2 initialization — defining requirements
 Resume file: None

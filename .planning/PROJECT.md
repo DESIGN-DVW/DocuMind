@@ -42,13 +42,21 @@ When you look at a document, you instantly see what it's connected to — what l
 
 ### Active
 
-(No active requirements — planning next milestone)
+<!-- v3.2 scope — Dockerize -->
+- [ ] Dockerfile + docker-compose.yml for single-command startup
+- [ ] Volume mount mode for local dev repo access
+- [ ] Git clone/pull mode for remote/CI repo access
+- [ ] Environment-based configuration (repo paths, mode, cron schedules)
+- [ ] MCP server dual-mode: stdio local, HTTP containerized
+- [ ] Health checks + graceful shutdown
+- [ ] Published image on GHCR
+- [ ] CI-ready: runs as GitHub Action service or on remote Linux server
 
 ### Future
 
-- [ ] Dockerize for portable deployment
 - [ ] Web dashboard beyond diagram curation
-- [ ] Git-based ingestion (clone/pull instead of filesystem walk)
+- [ ] Pluggable rule packs for different domains
+- [ ] SaaS layer (multi-tenant, auth, billing)
 
 ### Out of Scope
 
@@ -98,4 +106,21 @@ The strategic path forward:
 
 ---
 
-*Last updated: 2026-03-23 after v3.1 milestone*
+## Current Milestone: v3.2 Dockerize
+
+**Goal:** Containerize DocuMind as a CI-ready, published image that runs anywhere — with both volume-mount and git-clone repo access, and MCP available via stdio or HTTP.
+
+**Target features:**
+
+- Dockerfile + docker-compose.yml — `docker compose up` starts daemon + SQLite + API on :9000
+- Volume mount mode for local dev (mount repo dirs into container)
+- Git clone/pull mode for remote/CI (container fetches repos itself)
+- Environment-based config (repo paths, mode, cron schedules)
+- MCP server dual-mode: stdio for local Claude Code, HTTP for containerized/remote consumers
+- Health checks + graceful shutdown
+- Published image on GHCR (GitHub Container Registry)
+- CI integration: runs as GitHub Action service or on remote Linux server
+
+---
+
+*Last updated: 2026-03-23 after v3.2 milestone started*
