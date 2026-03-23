@@ -53,7 +53,7 @@ Full details: `.planning/milestones/v3.1-ROADMAP.md`
 **Requirements**: FNDTN-01, FNDTN-02, FNDTN-03, FNDTN-04
 **Success Criteria** (what must be TRUE):
 
-1. Running `grep -r '/Users/Shared' daemon/ processors/ config/constants.mjs` returns no results in production code paths
+1. Running `grep -r '/Users/Shared' daemon/ processors/ scripts/` returns no results (one permitted fallback in `config/constants.mjs`)
 2. Starting the daemon with `DOCUMIND_REPOS_DIR=/some/path` causes all repo scans to resolve against that path
 3. PORT, DB path, and cron schedules can each be changed via env var without touching source files
 4. A `.env` file with documented defaults exists and the daemon loads it at startup
@@ -156,7 +156,7 @@ Plans:
 | 8. Slash Command Updates             | v3.1      | 2/2            | Complete    | 2026-03-22 |
 | 9. Markdown Tooling Propagation      | v3.1      | 1/1            | Complete    | 2026-03-22 |
 | 10. Documentation Fixes              | v3.1      | 2/2            | Complete    | 2026-03-22 |
-| 11. Foundation                       | 3/3 | Complete   | 2026-03-23 | -          |
+| 11. Foundation                       | 3/3 | Complete    | 2026-03-23 | -          |
 | 12. Dockerfile + Docker Compose      | v3.2      | 0/TBD          | Not started | -          |
 | 13. Git-Clone Ingestion + Dual Mode  | v3.2      | 0/TBD          | Not started | -          |
 | 14. MCP HTTP Transport               | v3.2      | 0/TBD          | Not started | -          |
