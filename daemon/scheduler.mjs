@@ -7,6 +7,13 @@
 
 import cron from 'node-cron';
 import { runScan, generateDiagramSnapshot } from '../orchestrator.mjs';
+import {
+  CRON_HEARTBEAT,
+  CRON_HOURLY,
+  CRON_DAILY,
+  CRON_WEEKLY,
+  CRON_RELINK,
+} from '../config/env.mjs';
 
 /**
  * @param {import('better-sqlite3').Database} db
@@ -17,7 +24,7 @@ export function initScheduler(db, root, ctx) {
   console.log('[scheduler] Initializing cron jobs...');
 
   // Every 15 minutes: heartbeat + quick stats update
-  cron.schedule('*/15 * * * *', () => {
+  cron.schedule(CRON_HEARTBEAT, () => {
     const now = new Date().toISOString();
     const docs = db.prepare('SELECT COUNT(*) as count FROM documents').get();
     db.prepare(
@@ -31,7 +38,7 @@ export function initScheduler(db, root, ctx) {
   });
 
   // Every hour: incremental scan (changed files only)
-  cron.schedule('0 * * * *', async () => {
+  cron.schedule(CRON_HOURLY, async () => {
     console.log('[scheduler] Starting hourly incremental scan...');
     const scanId = db
       .prepare(
@@ -68,7 +75,7 @@ export function initScheduler(db, root, ctx) {
   });
 
   // Daily at 2 AM: full scan + similarity detection + deviation analysis
-  cron.schedule('0 2 * * *', async () => {
+  cron.schedule(CRON_DAILY, async () => {
     console.log('[scheduler] Starting daily full scan...');
     const scanId = db
       .prepare(
@@ -106,7 +113,7 @@ export function initScheduler(db, root, ctx) {
   });
 
   // Weekly Sunday at 3 AM: PDF re-index + keyword refresh + graph rebuild
-  cron.schedule('0 3 * * 0', async () => {
+  cron.schedule(CRON_WEEKLY, async () => {
     console.log('[scheduler] Starting weekly deep analysis...');
     const scanId = db
       .prepare(
@@ -144,7 +151,7 @@ export function initScheduler(db, root, ctx) {
   });
 
   // Every 6 hours: check for diagrams pending curation
-  cron.schedule('0 */6 * * *', () => {
+  cron.schedule(CRON_RELINK, () => {
     console.log('[scheduler] Checking pending diagram relinks...');
     const hasView = db
       .prepare(
@@ -180,9 +187,9 @@ export function initScheduler(db, root, ctx) {
   });
 
   console.log('[scheduler] Cron jobs registered:');
-  console.log('  */15 * * * *  — heartbeat + stats');
-  console.log('  0 * * * *     — hourly incremental scan');
-  console.log('  0 */6 * * *   — pending diagram relinks check');
-  console.log('  0 2 * * *     — daily full scan + analysis + diagram snapshot');
-  console.log('  0 3 * * 0     — weekly deep analysis + diagram snapshot');
+  console.log(`  ${CRON_HEARTBEAT}  — heartbeat + stats`);
+  console.log(`  ${CRON_HOURLY}     — hourly incremental scan`);
+  console.log(`  ${CRON_RELINK}   — pending diagram relinks check`);
+  console.log(`  ${CRON_DAILY}     — daily full scan + analysis + diagram snapshot`);
+  console.log(`  ${CRON_WEEKLY}     — weekly deep analysis + diagram snapshot`);
 }

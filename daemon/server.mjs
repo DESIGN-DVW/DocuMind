@@ -9,7 +9,6 @@ import express from 'express';
 import Database from 'better-sqlite3';
 import fs from 'fs/promises';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { initScheduler } from './scheduler.mjs';
 import { initWatcher } from './watcher.mjs';
 import { runScan } from '../orchestrator.mjs';
@@ -25,13 +24,8 @@ import {
 import { processHook } from './hooks.mjs';
 import { loadProfile } from '../context/loader.mjs';
 import { commonDir } from '../context/utils.mjs';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const ROOT = path.resolve(__dirname, '..');
-
-const PORT = process.env.PORT || 9000;
-const DB_PATH = process.env.DOCUMIND_DB || path.join(ROOT, 'data/documind.db');
+import { ROOT, PORT, DB_PATH, REPOS_DIR } from '../config/env.mjs';
+import { LOCAL_BASE_PATH } from '../config/constants.mjs';
 
 // --- Context Profile ---
 let ctx;
@@ -46,8 +40,7 @@ try {
 // --- Repository Registry (for PNG serving) ---
 // registryPath is still needed directly by diagram relink endpoints
 const registryPath = path.join(ROOT, '../RootDispatcher/config/repository-registry.json');
-const REPOS_ROOT =
-  commonDir(ctx.repoRoots.map(r => r.path)) || '/Users/Shared/htdocs/github/DVWDesign';
+const REPOS_ROOT = commonDir(ctx.repoRoots.map(r => r.path)) || REPOS_DIR || LOCAL_BASE_PATH;
 const repoRegistry = new Map(ctx.repoRoots.map(r => [r.name, path.relative(REPOS_ROOT, r.path)]));
 
 // --- Database ---

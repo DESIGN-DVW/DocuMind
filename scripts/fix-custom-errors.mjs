@@ -14,6 +14,7 @@ import fs from 'fs/promises';
 import { readFileSync, existsSync, statSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { LOCAL_BASE_PATH } from '../config/constants.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,7 +24,7 @@ const __dirname = path.dirname(__filename);
 // ============================================================================
 
 const CONFIG = {
-  basePath: '/Users/Shared/htdocs/github/DVWDesign',
+  basePath: LOCAL_BASE_PATH,
   repositories: [
     'DocuMind',
     'RootDispatcher',

@@ -13,12 +13,13 @@ import { glob } from 'glob';
 import fs from 'fs/promises';
 import path from 'path';
 import grayMatter from 'gray-matter';
+import { LOCAL_BASE_PATH } from '../config/constants.mjs';
 
 // ============================================================================
 // Configuration
 // ============================================================================
 
-const BASE_PATH = '/Users/Shared/htdocs/github/DVWDesign';
+const BASE_PATH = LOCAL_BASE_PATH;
 const OUTPUT_FILE = 'index/all-markdown-files.json';
 const REPORT_FILE = 'index/scan-report.md';
 
@@ -80,7 +81,7 @@ async function scanRepository(repo) {
   console.log(`  Found ${files.length} markdown files`);
 
   const fileData = await Promise.all(
-    files.map(async (file) => {
+    files.map(async file => {
       const fullPath = path.join(repoPath, file);
 
       try {
@@ -104,8 +105,8 @@ async function scanRepository(repo) {
 
         // Extract headings
         const headings = lines
-          .filter((line) => /^#{1,6}\s/.test(line))
-          .map((line) => {
+          .filter(line => /^#{1,6}\s/.test(line))
+          .map(line => {
             const match = line.match(/^(#{1,6})\s+(.+)/);
             return match ? { level: match[1].length, text: match[2] } : null;
           })
@@ -137,8 +138,8 @@ async function scanRepository(repo) {
     })
   );
 
-  const validFiles = fileData.filter((f) => !f.error);
-  const errorFiles = fileData.filter((f) => f.error);
+  const validFiles = fileData.filter(f => !f.error);
+  const errorFiles = fileData.filter(f => f.error);
 
   const stats = {
     total: files.length,
@@ -146,9 +147,9 @@ async function scanRepository(repo) {
     errors: errorFiles.length,
     size: validFiles.reduce((sum, f) => sum + (f.size || 0), 0),
     lines: validFiles.reduce((sum, f) => sum + (f.lines || 0), 0),
-    withTimestamp: validFiles.filter((f) => f.hasTimestamp).length,
-    withVersion: validFiles.filter((f) => f.hasVersion).length,
-    withClaudeMarker: validFiles.filter((f) => f.hasClaudeMarker).length,
+    withTimestamp: validFiles.filter(f => f.hasTimestamp).length,
+    withVersion: validFiles.filter(f => f.hasVersion).length,
+    withClaudeMarker: validFiles.filter(f => f.hasClaudeMarker).length,
   };
 
   console.log(`  ✓ Valid: ${stats.valid}, Errors: ${stats.errors}`);
@@ -189,7 +190,7 @@ function generateMarkdownReport(results, outputPath) {
 
 `;
 
-  results.forEach((result) => {
+  results.forEach(result => {
     if (!result.found) {
       report += `### ${result.repo} (NOT FOUND)\n\n`;
       report += `⚠️ Repository not found at expected location\n\n`;
@@ -211,13 +212,13 @@ function generateMarkdownReport(results, outputPath) {
 
     // Top 5 largest files
     const topFiles = result.files
-      .filter((f) => !f.error)
+      .filter(f => !f.error)
       .sort((a, b) => b.size - a.size)
       .slice(0, 5);
 
     if (topFiles.length > 0) {
       report += `**Largest Files**:\n\n`;
-      topFiles.forEach((file) => {
+      topFiles.forEach(file => {
         report += `- [${file.path}](${file.fullPath}) (${(file.size / 1024).toFixed(1)} KB, ${file.lines} lines)\n`;
       });
       report += `\n`;
@@ -286,8 +287,8 @@ async function main() {
   console.log('Summary');
   console.log('='.repeat(60) + '\n');
 
-  const foundRepos = results.filter((r) => r.found);
-  const notFoundRepos = results.filter((r) => !r.found);
+  const foundRepos = results.filter(r => r.found);
+  const notFoundRepos = results.filter(r => !r.found);
   const totalFiles = results.reduce((sum, r) => sum + r.stats.total, 0);
   const totalSize = results.reduce((sum, r) => sum + r.stats.size, 0);
 
@@ -297,7 +298,7 @@ async function main() {
 
   if (notFoundRepos.length > 0) {
     console.log(`\n⚠️  Repositories Not Found:`);
-    notFoundRepos.forEach((r) => console.log(`  - ${r.repo}`));
+    notFoundRepos.forEach(r => console.log(`  - ${r.repo}`));
   }
 
   console.log('\n✓ Done!\n');

@@ -12,12 +12,13 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import chalk from 'chalk';
+import { LOCAL_BASE_PATH } from '../config/constants.mjs';
 
 // ============================================================================
 // CONFIGURATION
 // ============================================================================
 
-const BASE_PATH = '/Users/Shared/htdocs/github/DVWDesign';
+const BASE_PATH = LOCAL_BASE_PATH;
 
 const SOURCE_REPO = 'DocuMind';
 

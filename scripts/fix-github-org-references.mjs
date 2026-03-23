@@ -16,12 +16,13 @@ import { readFileSync, writeFileSync } from 'fs';
 import { resolve, join } from 'path';
 import { globSync } from 'glob';
 import chalk from 'chalk';
+import { LOCAL_BASE_PATH } from '../config/constants.mjs';
 
 // ============================================================================
 // CONFIGURATION
 // ============================================================================
 
-const BASE_PATH = '/Users/Shared/htdocs/github/DVWDesign';
+const BASE_PATH = LOCAL_BASE_PATH;
 
 const REPOSITORIES = [
   'DocuMind',

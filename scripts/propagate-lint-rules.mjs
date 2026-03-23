@@ -19,6 +19,7 @@ import path from 'node:path';
 import { execSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import { LOCAL_BASE_PATH } from '../config/constants.mjs';
 
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -41,7 +42,7 @@ try {
 }
 
 // ─── Constants ─────────────────────────────────────────────────────────────
-const BASE_PATH = '/Users/Shared/htdocs/github/DVWDesign';
+const BASE_PATH = LOCAL_BASE_PATH;
 const DOCUMIND_PATH = path.resolve(__dirname, '..');
 const RULES_SRC = path.join(DOCUMIND_PATH, 'config', 'rules');
 

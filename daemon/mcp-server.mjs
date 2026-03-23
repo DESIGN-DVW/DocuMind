@@ -5,7 +5,6 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import Database from 'better-sqlite3';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { z } from 'zod';
 import { loadProfile } from '../context/loader.mjs';
 import { findRelated } from '../graph/relations.mjs';
@@ -24,9 +23,7 @@ import { writingNow } from './registry-lock.mjs';
 const require = createRequire(import.meta.url);
 const { sync: markdownlintSync, applyFixes } = require('markdownlint');
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, '..');
-const DB_PATH = process.env.DOCUMIND_DB || path.join(ROOT, 'data/documind.db');
+import { ROOT, DB_PATH, PROFILE_PATH } from '../config/env.mjs';
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
@@ -37,9 +34,7 @@ const MARKDOWNLINT_CONFIG_PATH = path.join(ROOT, 'config/.markdownlint.json');
 const RULES_DIR = path.join(ROOT, 'config/rules');
 
 // Derive registryPath for curate_diagram from profile JSON
-const profileFilePath = path.resolve(
-  process.env.DOCUMIND_PROFILE || path.join(ROOT, 'config/profiles/dvwdesign.json')
-);
+const profileFilePath = PROFILE_PATH;
 const profileRaw = JSON.parse(await fs.readFile(profileFilePath, 'utf-8'));
 const REGISTRY_PATH = path.resolve(
   path.dirname(profileFilePath),

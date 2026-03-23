@@ -9,6 +9,7 @@ import matter from 'gray-matter';
 import chalk from 'chalk';
 import ora from 'ora';
 import { fileURLToPath } from 'url';
+import { LOCAL_BASE_PATH } from '../../config/constants.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,16 +20,28 @@ const db = new Database(DB_PATH);
 
 // Repository configuration
 const REPOS = [
-  { name: 'FigmailAPP', path: '/Users/Shared/htdocs/github/DVWDesign/FigmaAPI/FigmailAPP', priority: 'high' },
-  { name: 'FigmaDSController', path: '/Users/Shared/htdocs/github/DVWDesign/FigmaAPI/FigmaDSController', priority: 'high' },
-  { name: '@figma-core', path: '/Users/Shared/htdocs/github/DVWDesign/FigmaAPI/@figma-core', priority: 'high' },
-  { name: '@figma-docs', path: '/Users/Shared/htdocs/github/DVWDesign/FigmaAPI/@figma-docs', priority: 'high' },
-  { name: 'Figma-Plug-ins', path: '/Users/Shared/htdocs/github/DVWDesign/Figma-Plug-ins', priority: 'high' },
-  { name: 'Markdown', path: '/Users/Shared/htdocs/github/DVWDesign/Markdown', priority: 'high' },
-  { name: 'GlossiaApp', path: '/Users/Shared/htdocs/github/DVWDesign/GlossiaApp', priority: 'medium' },
-  { name: 'Contentful', path: '/Users/Shared/htdocs/github/DVWDesign/Contentful', priority: 'medium' },
-  { name: 'IconJar', path: '/Users/Shared/htdocs/github/DVWDesign/IconJar', priority: 'low' },
-  { name: 'AdobePlugIns', path: '/Users/Shared/htdocs/github/DVWDesign/AdobePlugIns', priority: 'low' },
+  { name: 'FigmailAPP', path: path.join(LOCAL_BASE_PATH, 'FigmaAPI/FigmailAPP'), priority: 'high' },
+  {
+    name: 'FigmaDSController',
+    path: path.join(LOCAL_BASE_PATH, 'FigmaAPI/FigmaDSController'),
+    priority: 'high',
+  },
+  {
+    name: '@figma-core',
+    path: path.join(LOCAL_BASE_PATH, 'FigmaAPI/@figma-core'),
+    priority: 'high',
+  },
+  {
+    name: '@figma-docs',
+    path: path.join(LOCAL_BASE_PATH, 'FigmaAPI/@figma-docs'),
+    priority: 'high',
+  },
+  { name: 'Figma-Plug-ins', path: path.join(LOCAL_BASE_PATH, 'Figma-Plug-ins'), priority: 'high' },
+  { name: 'Markdown', path: path.join(LOCAL_BASE_PATH, 'Markdown'), priority: 'high' },
+  { name: 'GlossiaApp', path: path.join(LOCAL_BASE_PATH, 'GlossiaApp'), priority: 'medium' },
+  { name: 'Contentful', path: path.join(LOCAL_BASE_PATH, 'Contentful'), priority: 'medium' },
+  { name: 'IconJar', path: path.join(LOCAL_BASE_PATH, 'IconJar'), priority: 'low' },
+  { name: 'AdobePlugIns', path: path.join(LOCAL_BASE_PATH, 'AdobePlugIns'), priority: 'low' },
 ];
 
 // Category detection
@@ -164,13 +177,16 @@ async function scanRepository(repo) {
     }
 
     // Check if document exists and if hash changed
-    const existing = db.prepare('SELECT content_hash FROM documents WHERE path = ?')
+    const existing = db
+      .prepare('SELECT content_hash FROM documents WHERE path = ?')
       .get(file.replace(repo.path, '').replace(/^\//, ''));
 
     if (existing && existing.content_hash === data.hash) {
       // No changes, just update last_scanned
-      db.prepare('UPDATE documents SET last_scanned = ? WHERE path = ?')
-        .run(new Date().toISOString(), file.replace(repo.path, '').replace(/^\//, ''));
+      db.prepare('UPDATE documents SET last_scanned = ? WHERE path = ?').run(
+        new Date().toISOString(),
+        file.replace(repo.path, '').replace(/^\//, '')
+      );
       skipped++;
     } else {
       const success = upsertDocument(repo, file, data);
@@ -186,7 +202,9 @@ async function scanRepository(repo) {
     }
   }
 
-  spinner.succeed(`${repo.name}: ${files.length} files scanned, ${added} added, ${updated} updated, ${skipped} skipped`);
+  spinner.succeed(
+    `${repo.name}: ${files.length} files scanned, ${added} added, ${updated} updated, ${skipped} skipped`
+  );
 
   return { scanned: files.length, added, updated, skipped };
 }
@@ -290,7 +308,7 @@ async function main() {
   db.close();
 }
 
-main().catch((error) => {
+main().catch(error => {
   console.error(chalk.red('Fatal error:'), error);
   db.close();
   process.exit(1);

@@ -12,17 +12,15 @@
 import chokidar from 'chokidar';
 import { spawn } from 'child_process';
 import path from 'path';
+import { LOCAL_BASE_PATH } from '../config/constants.mjs';
 
 // ============================================================================
 // Configuration
 // ============================================================================
 
-const BASE_PATH = '/Users/Shared/htdocs/github/DVWDesign';
+const BASE_PATH = LOCAL_BASE_PATH;
 
-const WATCH_PATTERNS = [
-  `${BASE_PATH}/**/*.md`,
-  `${BASE_PATH}/**/*.mdx`,
-];
+const WATCH_PATTERNS = [`${BASE_PATH}/**/*.md`, `${BASE_PATH}/**/*.mdx`];
 
 const IGNORE_PATTERNS = [
   '**/node_modules/**',
@@ -48,11 +46,11 @@ function runScanAndIndex() {
 
   const scan = spawn('npm', ['run', 'scan'], { stdio: 'inherit' });
 
-  scan.on('close', (code) => {
+  scan.on('close', code => {
     if (code === 0) {
       const index = spawn('npm', ['run', 'index'], { stdio: 'inherit' });
 
-      index.on('close', (indexCode) => {
+      index.on('close', indexCode => {
         if (indexCode === 0) {
           console.log('\n✅ Scan and index complete!\n');
         } else {
@@ -103,25 +101,25 @@ async function main() {
     },
   });
 
-  watcher.on('add', (filePath) => {
+  watcher.on('add', filePath => {
     const relativePath = path.relative(BASE_PATH, filePath);
     console.log(`➕ Added: ${relativePath}`);
     scheduleUpdate();
   });
 
-  watcher.on('change', (filePath) => {
+  watcher.on('change', filePath => {
     const relativePath = path.relative(BASE_PATH, filePath);
     console.log(`✏️  Changed: ${relativePath}`);
     scheduleUpdate();
   });
 
-  watcher.on('unlink', (filePath) => {
+  watcher.on('unlink', filePath => {
     const relativePath = path.relative(BASE_PATH, filePath);
     console.log(`➖ Removed: ${relativePath}`);
     scheduleUpdate();
   });
 
-  watcher.on('error', (error) => {
+  watcher.on('error', error => {
     console.error(`⚠️ Watcher error: ${error.message}`);
   });
 

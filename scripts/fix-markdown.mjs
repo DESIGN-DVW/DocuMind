@@ -11,6 +11,7 @@
 
 import fs from 'fs/promises';
 import path from 'path';
+import { LOCAL_BASE_PATH } from '../config/constants.mjs';
 
 // ============================================================================
 // Configuration
@@ -18,7 +19,7 @@ import path from 'path';
 
 const CONFIG = {
   // Base path for all repositories
-  basePath: '/Users/Shared/htdocs/github/DVWDesign',
+  basePath: LOCAL_BASE_PATH,
 
   // File patterns to process
   patterns: ['**/*.md', '**/*.mdx'],
