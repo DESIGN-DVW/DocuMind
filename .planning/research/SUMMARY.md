@@ -1,223 +1,271 @@
 # Project Research Summary
 
-**Project:** DocuMind v3.0 — Documentation Intelligence Platform
-**Domain:** Developer-facing documentation intelligence daemon with MCP server, classification, and context profiles
-**Researched:** 2026-03-15
-**Confidence:** HIGH (stack + architecture + pitfalls verified against codebase and official docs), MEDIUM (features)
+**Project:** DocuMind v3.2 — Docker Containerization + MCP HTTP Transport + GHCR Publishing
+**Domain:** Node.js documentation intelligence daemon — containerization and remote deployment
+**Researched:** 2026-03-23
+**Confidence:** HIGH
 
 ## Executive Summary
 
-DocuMind v3.0 is a documentation intelligence engine that evolves an already-functional v2.0 daemon into an AI-agent-callable system. The core v2.0 infrastructure — Express on port 9000, SQLite FTS5, PM2, node-cron, chokidar, and all processor modules — is production-ready. The v3.0 work is primarily wiring, schema evolution, and one new subsystem: a Model Context Protocol (MCP) server that exposes DocuMind's capabilities as tools callable by Claude Code agents. The recommended approach is to add one new npm package (`@modelcontextprotocol/sdk@^1.27.1`), bump `zod` to `^3.25.0`, and layer three abstractions on top of the existing stack: an `orchestrator.mjs` that consolidates processor wiring, a `context/loader.mjs` that externalizes configuration into portable JSON profiles, and a `daemon/mcp-server.mjs` that exposes read and write tools over stdio transport.
+DocuMind v3.2 is a containerization milestone for an existing, fully operational Node.js documentation daemon. The system (v3.1) already ships REST API on port 9000, MCP stdio server with 14 tools, SQLite FTS5 with graph/keywords/diagrams, PM2 daemon, cron scheduler, and context profiles. v3.2 wraps this in Docker for portability — CI pipelines, remote Linux servers, and other developers' machines — while keeping the local macOS PM2 workflow intact. The recommended approach is a Debian-based multi-stage build (`node:22-bookworm-slim`), direct `node` process execution as PID 1, named volumes for SQLite persistence, dual repo-access modes (volume-mount for local dev, git-clone for CI), and MCP over Streamable HTTP (`POST /mcp`) for remote tool access. All of this publishes via GitHub Actions to GHCR with multi-arch support (linux/amd64 + linux/arm64).
 
-The strategic differentiation over all competitors (Obsidian, Glean, Context7) is the combination of a typed 8-relationship document graph queryable by AI agents via MCP, write-capable MCP tools that allow autonomous document maintenance, and cross-repo multi-format coverage. None of these competitors offer all three. The context profile portability (swappable classification trees, lint rules, and keyword taxonomies per deployment) is the commercial differentiator for Step #3. The most important single unlock is wiring the scheduler: `buildRelationships()`, keyword extraction, and deviation detection all exist in code but are never called — scheduling them in production is what activates the graph, the keyword cloud, and staleness detection simultaneously.
+The most important technical decision — and the one most likely to waste a day if wrong — is base image selection. `better-sqlite3` is a native C++ addon with glibc-linked prebuilt binaries. Alpine Linux uses musl libc, which is fundamentally incompatible at runtime. This is not a configuration issue; it is a known architectural incompatibility with no workaround that does not introduce significant complexity. Node 24 has an equivalent blocking issue: prebuilt binaries for N-API 137 do not yet exist and compilation from source fails with deprecated V8 API errors. Use `node:22-bookworm-slim` unconditionally.
 
-The two highest-risk areas are schema migration safety and MCP stdout pollution. The live database already contains 8K+ indexed documents, making any unversioned schema change destructive. A `schema_migrations` table with numbered SQL files must be the first deliverable. MCP stdio transport uses stdout as a JSON-RPC wire protocol; any `console.log` call in an imported module will silently corrupt it. Both risks have clear mitigations documented in PITFALLS.md and must be addressed before any other feature work begins.
+The second critical risk is existing macOS-specific absolute paths hardcoded in at least 10 files across the codebase. These paths (`/Users/Shared/htdocs/github/DVWDesign/...`) do not exist inside a Linux container. Direct codebase inspection confirms `config/constants.mjs` line 42, `processors/tree-processor.mjs` line 12, and `scripts/scan/enhanced-scanner.mjs` lines 22-31 all contain hardcoded absolute paths that bypass the context profile. This path audit must happen before any Dockerfile is written — it is a pre-Docker refactor requirement. Beyond these two risks, the remaining work is well-understood container plumbing with clear patterns from official sources.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The v3.0 stack requires exactly one new dependency and one version bump against the v2.0 baseline. `@modelcontextprotocol/sdk@^1.27.1` is the official Anthropic SDK for building MCP servers — the only spec-compliant, actively maintained implementation with 33K+ npm dependents. `zod` must be bumped from `^3.22.4` to `^3.25.0` because the SDK internally uses `zod/v4` compatibility and sets 3.25 as its peer dependency floor. Everything else (Express 5, better-sqlite3, natural, node-cron, chokidar, fast-glob, gray-matter) stays at current versions with schema and wiring additions only. No TypeScript migration is warranted — the SDK works with plain `.mjs`.
+The existing runtime stack (Node 22+, Express 5, better-sqlite3 12.6.2, MCP SDK 1.27.1, zod 3.25.0) requires no version changes for v3.2. Three net-new packages are added: `simple-git` for git-clone ingestion (7.9M weekly downloads, wraps native git CLI for faster large-repo operations), `dotenv` for environment-variable loading that naturally defers to Docker-injected env vars, and `@godaddy/terminus` for graceful shutdown (15-line integration vs. 80 lines of error-prone manual SIGTERM wiring, critical for protecting SQLite WAL on shutdown).
+
+The MCP SDK already ships `StreamableHTTPServerTransport` at `dist/esm/server/streamableHttp.js` — confirmed present in installed node_modules. The SSE transport (`/sse` + `/messages`) is deprecated in MCP spec 2025-03-26; only Streamable HTTP (`POST /mcp`, single endpoint) should be implemented in new code.
 
 **Core technologies:**
 
-- `@modelcontextprotocol/sdk@^1.27.1`: MCP server transport layer — the only compliant way to expose DocuMind as an MCP server; provides `McpServer`, `StdioServerTransport`, `StreamableHTTPServerTransport`
-- `better-sqlite3@^12.6.2`: SQLite with FTS5 and WAL mode — stays; needs schema additions for classifications, tags, summary, context_profiles, and schema_migrations tables
-- `express@^5.2.1`: REST API on port 9000 — stays unchanged; MCP HTTP transport mounts on `POST /mcp` alongside existing routes
-- `natural@^8.1.1`: TF-IDF keyword extraction — stays; keyword-processor.mjs exists but is never called by the scheduler
-- `node-cron@^3.0.3`: Scheduled tasks — stays; cron jobs have TODO stubs that must be replaced with orchestrator calls
-- `zod@^3.25.0`: Schema validation + MCP tool schemas — version bump only; already used throughout codebase
-
-**What not to add:**
-
-- No sqlite-vec or vector embeddings (semantic search is out of scope; FTS5 + TF-IDF is sufficient for 8K docs in a controlled vocabulary)
-- No separate MCP daemon process (mount stdio and HTTP transports from shared modules; WAL mode handles concurrent DB reads safely)
-- No Nested Set Model for classification (materialized path strings with `LIKE 'api/%'` queries are faster for shallow, read-heavy trees)
+- `node:22-bookworm-slim` base image — glibc compatibility for better-sqlite3 prebuilt binaries; Node 22 is Active LTS through 2027; do not use Alpine (musl libc) or Node 24 (missing N-API 137 prebuilts)
+- `simple-git@^3.33.0` — git clone/pull at container runtime; requires git CLI in the runtime image layer; never copy or bake at build time
+- `dotenv@^16.4.7` — env-var loading; Docker `environment:` and `env_file:` overrides take precedence naturally without configuration
+- `@godaddy/terminus@^4.12.1` — graceful shutdown via `createTerminus(server, { healthChecks, onSignal })`; closes SQLite connection and chokidar watcher before exit
+- `StreamableHTTPServerTransport` (in existing MCP SDK 1.27.1) — remote MCP access on `POST /mcp`; no new package required
+- `docker/build-push-action@v6` + `docker/metadata-action@v5` — GHCR publishing with semver tags and multi-arch (amd64 + arm64) via buildx
 
 ### Expected Features
 
-**Must have (table stakes for v3.0 launch):**
+**Must have (table stakes) — v3.2 launch:**
 
-- Schema evolution: summary column, classification column, tags column, context_profiles table, schema_migrations table — everything downstream depends on this
-- Scheduler wired to all processors: cron jobs must actually call markdown-processor, keyword-processor, `buildRelationships()` — currently all TODO stubs
-- Document relationship graph populated: `buildRelationships()` executing on schedule; graph edges visible via `/graph` — the stated day-one success metric
-- Keyword TF-IDF running on schedule: keywords table populated; `/keywords` returns real data
-- Staleness detection: freshness score computed per scan; stale docs surfaced in search and stats
-- MCP server with read tools: search, graph, keywords, tree, diagrams — the primary agent interface
-- MCP server with write tools: index, lint, fix, convert, relink — agents can maintain docs autonomously
-- Context profile (minimal): JSON config externalizing repo paths, classification tree, lint rules — without this Step #3 is a rewrite
+- Non-root user in container (`USER node`, chown `/app/data`) — GHCR and Kubernetes block root-run images; one Dockerfile line
+- Graceful shutdown SIGTERM handler — Docker stop sends SIGTERM; unhandled leads to force-kill and SQLite WAL corruption
+- `HEALTHCHECK` instruction in Dockerfile pointing to existing `/health` endpoint — compose and CI service containers wait for healthy before routing traffic
+- `.dockerignore` excluding `node_modules/`, `.git/`, `data/`, `.env*`, `markdown.bbprojectd/` — excludes 100MB+ from build context and prevents credential leaks
+- Named volume for SQLite (`documind-data:/app/data`) — data must not be destroyed on container restart; bind-mounting from macOS host corrupts WAL mode on Docker Desktop
+- Environment variable configuration (`REPO_MODE`, `PORT`, `MCP_AUTH_TOKEN`, `SCAN_INTERVAL`, `FULL_SCAN_CRON`, `CHOKIDAR_USEPOLLING`) — portability across environments
+- `docker-compose.yml` with volume-mount mode, env var defaults, healthcheck, restart policy — `docker compose up` is the expected local dev UX
+- MCP HTTP transport (`StreamableHTTPServerTransport` on `POST /mcp`) — enables remote MCP clients; SDK already installed
+- Bearer token middleware on `/mcp` route — write-capable tools (lint, fix, index, scan) must not be callable without auth on a public image
+- GHCR GitHub Actions workflow — build + push on master + version tags; multi-arch
 
-**Should have (competitive differentiators, add after v3.0 core):**
+**Should have — v3.2.x after validation:**
 
-- Deviation detection wired to daily cron — script exists, not scheduled
-- MCP tool: `find_stale` — surfaces docs below freshness threshold
-- MCP tool: `find_duplicates` — surfaces similar document pairs
-- Document summary auto-generation (extractive TF-IDF, top-sentence approach) — summary column exists, population logic needed
-- Classification confidence scoring — detect uncertainty in auto-assignment
+- `docker-compose.ci.yml` for git-clone mode — enables CI without volume mounts
+- Periodic git pull cron in clone mode — repos go stale without it; trigger after CI deployments confirm the stale-index problem
+- SSH key auth for private repos in clone mode — HTTPS token covers most cases; SSH needed for specific cases
 
-**Defer to v2+ / Step #3:**
+**Defer to v4+:**
 
-- Context profiles per vertical (code docs, marketing, ops) — require Step #1/2 validation first
-- Docker packaging — required for self-hosted commercial; not before product-market fit
-- SQLite-per-tenant via Turso — required for SaaS path; premature now
-- Web dashboard — deferred per PROJECT.md; build only if CLI proves insufficient for demos
-- Semantic / embedding-based search — FTS5 is sufficient; massive complexity for marginal gain
+- Kubernetes Helm chart — SQLite single-writer constraint makes horizontal scaling impossible without a database migration to Postgres or Turso
+- OAuth 2.1 on MCP endpoint — appropriate for multi-tenant only; bearer token is explicitly acceptable for single-user per MCP authorization docs
+- Multi-container compose with separate MCP process — adds network RPC overhead and sync complexity for zero architectural gain
 
 ### Architecture Approach
 
-DocuMind v3.0 adds four new structural elements to the existing daemon without restructuring it: `orchestrator.mjs` (single wiring point for all processor calls, importable by scheduler, Express `/scan` endpoint, and MCP write tools alike), `context/loader.mjs` (loads and Zod-validates JSON profiles at startup, passes `ctx` object through all subsystems), `daemon/mcp-server.mjs` (separate stdio entry point — required because stdout is a JSON-RPC wire; cannot be embedded in server.mjs), and the `context/profiles/` directory for profile JSON files. The Express server and the MCP stdio process share the same SQLite database safely via WAL mode (multiple concurrent readers, single writer). MCP write tools should POST to `localhost:9000` endpoints rather than writing to SQLite directly, keeping Express as the sole writer process.
+The containerized architecture replaces PM2 with Docker's own supervisor: `restart: unless-stopped` handles crash restart, Docker log driver captures stdout/stderr, and one process per container is the container idiom. `node daemon/server.mjs` runs as PID 1 (no dumb-init required when SIGTERM handlers are registered), MCP HTTP (`daemon/mcp-http.mjs`) starts conditionally when `DOCUMIND_MCP_HTTP=true`, and the stdio MCP server (`daemon/mcp-server.mjs`) remains unchanged as the transport for local macOS development. All 7 existing processors, the graph layer, and CLI scripts are unchanged — Docker just runs them.
 
-**Major components:**
+**Major components (new and modified):**
 
-1. `daemon/mcp-server.mjs` (NEW) — stdio MCP entry point; thin tool wrappers calling shared service modules; no `console.log` in scope
-2. `orchestrator.mjs` (NEW) — exports `runIncrementalScan`, `runFullScan`, `runKeywordRefresh`, `runGraphRebuild`; eliminates logic duplication across scheduler, HTTP `/scan`, and MCP write tools
-3. `context/loader.mjs` (NEW) — reads profile JSON, validates with Zod, returns typed `ctx` object; crash-fast on invalid profile at startup
-4. `daemon/scheduler.mjs` (EXISTING — TODO stubs replaced) — cron callbacks now call `orchestrator.*` functions with `ctx` in closure
-5. `graph/relations.mjs` (EXISTING — never called) — `buildRelationships()` wired into orchestrator's full-scan pipeline
-6. `processors/keyword-processor.mjs` (EXISTING — never called) — wired into orchestrator's weekly keyword refresh
-7. `scripts/db/schema.sql` + `schema_migrations` table (EXTENDED) — authoritative schema with versioned migrations
+1. `Dockerfile` (NEW) — multi-stage `node:22-bookworm-slim`; builder stage installs native modules; runtime stage copies compiled `node_modules`; non-root user; `CMD ["node", "daemon/server.mjs"]`
+2. `docker-compose.yml` (NEW) — port mapping, named volume, env var defaults, healthcheck, restart policy
+3. `.dockerignore` (NEW) — excludes build noise and secrets from image context
+4. `daemon/server.mjs` (MODIFIED) — adds graceful shutdown via `@godaddy/terminus`; conditionally starts MCP HTTP server
+5. `daemon/scheduler.mjs` (MODIFIED) — cron intervals read from `process.env` with fallback defaults
+6. `daemon/mcp-http.mjs` (NEW) — Streamable HTTP transport on port 9001; same tools as stdio via shared `daemon/mcp-tools.mjs`
+7. `processors/git-ingestor.mjs` (NEW) — clone/pull repos into `/repos/` using `simple-git`; runs at startup and on periodic cron
+8. `docker-entrypoint.sh` (NEW) — runs git-ingestor before daemon start when `DOCUMIND_REPOS` env var is set
+9. `config/profiles/docker.json` (NEW) — Docker-specific context profile with `/repos/*` path convention
+10. `.github/workflows/docker-publish.yml` (NEW) — build + push to GHCR on version tag; multi-arch via buildx
 
 ### Critical Pitfalls
 
-1. **Non-idempotent schema migration destroys live data** — The current `init-database.mjs` uses `CREATE TABLE IF NOT EXISTS` with a hardcoded `db_version = '1.0.0'` and no migration tracking. Adding new columns (classifications, tags, summary) by re-running `db:init` silently skips table creation; the live 8K-document database is never updated. Fix: implement `schema_migrations` table before touching any schema; use numbered SQL files; use `ALTER TABLE ... ADD COLUMN` for nullable additions.
+1. **better-sqlite3 fails on Alpine / Node 24** — Alpine's musl libc breaks glibc-linked prebuilt binaries at runtime (`fcntl64: symbol not found`); Node 24 prebuilts for N-API 137 do not exist. Use `node:22-bookworm-slim` unconditionally. This is the first Dockerfile decision and the costliest to discover late.
 
-2. **MCP stdout pollution silently kills the protocol** — Every `console.log` in any module imported by `mcp-server.mjs` writes to stdout, which is the JSON-RPC wire. The existing codebase uses `console.log` throughout all processors. Fix: at the first line of `mcp-server.mjs`, redirect `console.log` to stderr; audit all imported modules before wiring as MCP tool handlers.
+2. **Hardcoded macOS paths block all scanning inside the container** — `config/constants.mjs` (line 42), `processors/tree-processor.mjs` (line 12), and `scripts/scan/enhanced-scanner.mjs` (lines 22-31) contain absolute `/Users/Shared/` paths confirmed by direct codebase inspection. Must be replaced with context-profile-driven lookups before Dockerfile authoring. This is the single mandatory pre-Docker step.
 
-3. **Graph population is O(n²) for same-folder sibling edges** — `buildRelationships()` creates `related_to` edges for every document pair in the same folder. With 8K docs and flat dispatch directories, this produces millions of low-value edges that bloat the `doc_relationships` table and slow all graph queries. Fix: remove or hard-cap sibling edges per folder (max 10, or skip entirely for directories with >20 docs); compute siblings lazily at query time if needed.
+3. **SQLite WAL corruption on macOS bind mounts** — Docker Desktop on macOS routes bind mounts through VirtioFS; WAL mode's shared memory locking breaks silently, producing `SQLITE_BUSY` errors or silent write loss after container restart. Use named Docker volumes (`documind-data:/app/data`), not bind mounts, for the database. Bind mounts are acceptable only with `PRAGMA journal_mode=DELETE`.
 
-4. **FTS5 virtual table goes out of sync after bulk writes** — Bulk UPDATE operations on `documents` (during graph population, keyword backfill, classification tagging) do not auto-update the `documents_fts` FTS5 content table. Fix: always call `INSERT INTO documents_fts(documents_fts) VALUES('rebuild')` after any bulk update operation.
+4. **`CMD ["npm", "start"]` swallows SIGTERM** — npm does not forward SIGTERM to its child Node process; Docker force-kills after 10 seconds, leaving the SQLite WAL unclosed. Use `CMD ["node", "daemon/server.mjs"]` and handle SIGTERM explicitly via `@godaddy/terminus`.
 
-5. **Context profile schema couples product to DVWDesign internals** — Designing the profile as "DVWDesign config with fields swapped" produces a schema that encodes DVW-specific assumptions, blocking portability for Step #3. Fix: design profile schema from a generic user's perspective first (generic `repoRoots[]`, `classificationTree{}`, `relationshipTypes[]`); map DVWDesign's setup onto it as the reference profile instance.
+5. **Chokidar watcher is silent on Docker Desktop volume mounts** — inotify events from the macOS host do not propagate through the Linux VM. Set `CHOKIDAR_USEPOLLING=true` and `CHOKIDAR_INTERVAL=2000` as env vars; rely on hourly cron as the authoritative scan source. Not an issue in git-clone mode (all writes happen inside the container's own filesystem).
+
+6. **Git credentials in image layers** — `ARG GITHUB_TOKEN` or `COPY .ssh` in Dockerfile embed credentials permanently into image layers visible via `docker history --no-trunc`. Pass credentials at container runtime via `environment:` in docker-compose; use BuildKit `--mount=type=ssh` only for build-time SSH access.
+
+7. **PM2 as Docker CMD exits the container immediately** — PM2 daemonizes, then the calling process exits, stopping the container. Keep `ecosystem.config.cjs` for local macOS use unchanged; run `node` directly in the container.
 
 ## Implications for Roadmap
 
-Based on the dependency graph in FEATURES.md and the build order in ARCHITECTURE.md, the correct phase sequence is driven by hard technical dependencies: nothing works until the schema exists; nothing is portable until the profile loader exists; nothing is scheduled until the orchestrator exists; MCP comes last because it depends on all service functions being available and correctly logging to stderr.
+The build order is driven by three hard constraints: (1) path audit must precede all container work, (2) container foundation must precede feature layers, and (3) MCP HTTP and git-clone are independent of each other after the foundation is established. ARCHITECTURE.md suggests a clean 6-step sequence that maps directly to phases.
 
-### Phase 1: Schema Migration Foundation
+### Phase 0: Pre-Docker Path Audit and Refactor
 
-**Rationale:** Every other phase reads or writes the new columns (classification, tags, summary, context_profiles). This is the blocking dependency — nothing downstream can proceed without it. The live database has 8K+ documents; destructive db:reset is not an option. A proper migration system protects the existing data while enabling all future schema evolution.
+**Rationale:** Hardcoded macOS paths are a blocking prerequisite confirmed by direct codebase inspection. No container will scan correctly until all path lookups flow through the context profile. This is the only phase that must precede all others and it has zero Docker dependencies.
 
-**Delivers:** `schema_migrations` table + migration runner; `ALTER TABLE documents ADD COLUMN` for classification, summary, tags; new tables: `classifications`, `tags`, `document_tags`, `context_profiles`; updated `schema.sql` as authoritative definition; FTS5 rebuild step built into migration tooling.
+**Delivers:** Codebase where all path resolution flows through `context/loader.mjs`; no `/Users/Shared/` strings in any production code path; `daemon/server.mjs` fails loudly on missing profile rather than falling back to macOS path.
 
-**Addresses:** Schema evolution table stakes; prerequisite for all downstream features.
+**Addresses:** Pitfall 2 (hardcoded paths), PITFALLS.md pre-Docker refactor requirement.
 
-**Avoids:** Pitfall 1 (non-idempotent migration), Pitfall 2 (FTS5 sync).
+**Tasks:** Audit and fix `config/constants.mjs`, `processors/tree-processor.mjs`, `scripts/scan/enhanced-scanner.mjs`; replace hardcoded fallbacks with context-profile lookups; define `/repos/<name>/` as the canonical container-internal path convention.
 
-**Research flag:** Standard patterns — skip phase research. SQLite `ALTER TABLE` and numbered migration files are well-documented.
+**Verification:** `grep -r '/Users/Shared' daemon/ processors/ config/constants.mjs` returns no results in production code paths.
 
-### Phase 2: Context Profile Loader
+**Research flag:** Standard patterns — no phase research needed. This is a straightforward code audit and refactor.
 
-**Rationale:** The context profile is the configuration contract for all other modules. `orchestrator.mjs` needs it to know which repos to scan. Processors need it to know scan roots. MCP server needs it for tool descriptions. Designing this before the orchestrator forces the correct generic schema (not DVW-coupled) and ensures the `ctx` object shape is stable before anything imports it.
+---
 
-**Delivers:** `context/` directory; `context/loader.mjs` with Zod validation and crash-fast startup behavior; `context/profiles/dvwdesign.json` as the reference profile; `DOCUMIND_PROFILE` env var support in `ecosystem.config.cjs`; profile persistence in `context_profiles` SQLite table.
+### Phase 1: Dockerfile Foundation
 
-**Addresses:** Portability table stake; gates Step #3; classification tree definition.
+**Rationale:** All subsequent phases depend on a working container. Establish production hygiene baselines before adding mode-specific features. This phase validates the critical base-image and signal-handling decisions.
 
-**Avoids:** Pitfall 5 (DVW-coupled profile schema).
+**Delivers:** Multi-stage `Dockerfile` with `node:22-bookworm-slim`, non-root user, graceful shutdown via `@godaddy/terminus`, `HEALTHCHECK` instruction, `.dockerignore`, named volume strategy, and `docker-compose.yml` with `restart: unless-stopped`.
 
-**Research flag:** Standard patterns — skip phase research. Externalized configuration with Zod validation is well-documented.
+**Addresses:** All P1 table-stakes Docker features (non-root, healthcheck, `.dockerignore`, named volume, graceful shutdown, multi-stage build).
 
-### Phase 3: Orchestrator + Scheduler Wiring
+**Avoids:** Pitfalls 1 (Alpine), 3 (WAL bind mount), 4 (npm CMD), 7 (PM2 CMD).
 
-**Rationale:** The orchestrator is the single place that sequences processor calls correctly. Once it exists, the three scheduler TODO stubs, the `/scan` HTTP endpoint, and all future MCP write tools call the same functions. Without this, scan logic duplicates across every entry point. The scheduler wiring (replacing TODO stubs) is a direct consequence of the orchestrator existing and is included in this phase.
+**Uses:** `node:22-bookworm-slim`, `@godaddy/terminus`, `CMD ["node", "daemon/server.mjs"]`, named Docker volumes, `CHOKIDAR_USEPOLLING` env var.
 
-**Delivers:** `orchestrator.mjs` with `runIncrementalScan`, `runFullScan`, `runKeywordRefresh`, `runGraphRebuild`; `daemon/scheduler.mjs` TODO stubs replaced with `orchestrator.*` calls; `/scan` endpoint in `server.mjs` updated to call `orchestrator.runFullScan()`; all processors (markdown-processor, keyword-processor, graph/relations) running on their correct schedules for the first time.
+**Verification gates:** `docker run --rm <image> node -e "require('better-sqlite3')"` exits 0; `docker stop` completes in under 5 seconds with exit code 0; `docker compose up` shows healthy status; build context under 10MB.
 
-**Addresses:** Scheduler wired to processors (P1 table stake); keyword TF-IDF running; staleness detection (freshness score computed during scan); duplicate/similarity detection running on daily cron; deviation detection wired.
+**Research flag:** Standard patterns — official nodejs/docker-node BestPractices.md covers this exactly. Skip phase research.
 
-**Avoids:** Pitfall 3 (graph O(n²) — cap sibling edges in `buildRelationships` before running against live corpus).
+---
 
-**Research flag:** Standard patterns — skip phase research. Orchestrator/coordinator pattern is well-documented in Node.js.
+### Phase 2: Environment Variable Configuration
 
-### Phase 4: MCP Server — Read Tools
+**Rationale:** Must be established before any mode-specific code since both git-clone and MCP HTTP depend on env vars to configure their behavior. Externalizes all hardcoded config into `process.env` with sane defaults.
 
-**Rationale:** Read tools have no side effects and are independently verifiable. They must come before write tools because (a) the tool descriptions and Zod schemas established here define the tool surface, and (b) stdout pollution must be resolved before any tools work — making read tools the safe environment to catch and fix the stdout problem. The MCP Inspector dev tool enables interactive testing before Claude Code integration.
+**Delivers:** All runtime behavior configurable via environment variables; `daemon/scheduler.mjs` reads cron expressions from `process.env`; chokidar polling mode controlled by `CHOKIDAR_USEPOLLING`; `context/loader.mjs` supports `DOCUMIND_REPOS_DIR` path prefix; `.env.example` file with all supported vars documented.
 
-**Delivers:** `daemon/mcp-server.mjs` entry point with stderr-only logging; `@modelcontextprotocol/sdk` installed; `zod` bumped to `^3.25.0`; read tools: `search_docs`, `get_graph`, `get_keywords`, `get_tree`, `get_diagrams`, `get_stats`; PM2 registration in `ecosystem.config.cjs`; Claude Code MCP config snippet in project docs; `mcp:inspect` npm script.
+**Addresses:** Portability table stake; enables CI compatibility; sets up infrastructure for both Phases 3 and 4.
 
-**Addresses:** MCP server read tools (P1 table stake); primary agent interface.
+**Uses:** `dotenv@^16.4.7`; new env vars `REPO_MODE`, `PORT`, `MCP_AUTH_TOKEN`, `SCAN_INTERVAL`, `FULL_SCAN_CRON`, `GIT_PULL_CRON`, `DOCUMIND_MCP_HTTP`, `DOCUMIND_MCP_HTTP_PORT`, `CHOKIDAR_USEPOLLING`, `CHOKIDAR_INTERVAL`.
 
-**Avoids:** Pitfall 4 (stdout pollution — addressed as first step in this phase).
+**Avoids:** Pitfall 5 (chokidar silent on Docker volumes — add `CHOKIDAR_USEPOLLING` here).
 
-**Research flag:** Needs phase research. MCP transport configuration, Claude Code project-level MCP settings, and the exact `server.tool()` API surface for descriptions that effectively guide model behavior are worth a targeted research pass before implementation.
+**Research flag:** Standard patterns — 12-factor config with dotenv is well-documented. Skip phase research.
 
-### Phase 5: MCP Server — Write Tools
+---
 
-**Rationale:** Write tools depend on read tools being stable (same transport) and on the orchestrator existing (write tools call `orchestrator.*` functions or POST to Express endpoints — not inline logic). This phase activates the autonomous maintenance capability that is DocuMind's primary differentiator over read-only MCP servers in the ecosystem.
+### Phase 3: Git-Clone Ingestion Mode
 
-**Delivers:** Write tools: `trigger_scan`, `lint_file`, `fix_file`, `index_file`, `convert_file`, `relink_diagrams`; rate limiting (per-tool call count per minute); path validation against `ctx.repoRoots` for all file path parameters; input validation via Zod enums for categorical parameters.
+**Rationale:** Independent of MCP HTTP after Phase 2. Enables CI deployments where repos cannot be volume-mounted. The git-clone pattern is the primary feature that differentiates a "works locally" container from a "works anywhere" container.
 
-**Addresses:** MCP write tools (P1 table stake); autonomous doc maintenance differentiator.
+**Delivers:** `processors/git-ingestor.mjs` using `simple-git`; `docker-entrypoint.sh` that runs ingestor before daemon when `DOCUMIND_REPOS` is set; `config/profiles/docker.json` with `/repos/*` path convention; periodic git pull cron job in scheduler; `docker-compose.ci.yml` for CI use.
 
-**Avoids:** Security mistakes (path traversal, prompt injection, runaway agent loops) from PITFALLS.md security section.
+**Addresses:** Dual repo access mode differentiator; CI compatibility (P2 features from FEATURES.md).
 
-**Research flag:** Standard patterns — skip phase research. Write tools are wrappers around existing CLI scripts; the pattern is established in Phase 4.
+**Uses:** `simple-git@^3.33.0`; `git` CLI installed in runtime image layer; `docker-entrypoint.sh`; `DOCUMIND_REPOS` env var (JSON array of `{ name, url, branch }`).
+
+**Avoids:** Pitfall 6 (git credentials in image layers — runtime env var injection only; never bake credentials at build time).
+
+**Research flag:** MEDIUM complexity — the dual-mode pattern is DocuMind-specific synthesis with no single reference confirming exactly this approach. Review kubernetes/git-sync sidecar for periodic-pull patterns before implementation. Confirm whether shallow clone (`--depth=1`) is sufficient for DVWDesign repo history sizes.
+
+---
+
+### Phase 4: MCP HTTP Transport
+
+**Rationale:** Independent of git-clone mode after Phase 2. Required before GHCR publish — a write-capable MCP endpoint with no auth on a public image would be irresponsible. Builds on the graceful shutdown infrastructure from Phase 1.
+
+**Delivers:** `daemon/mcp-http.mjs` using `StreamableHTTPServerTransport`; bearer token middleware on `/mcp` route; shared `daemon/mcp-tools.mjs` module to avoid duplicating 14 tool registrations between stdio and HTTP servers; HTTP MCP config snippet for `.claude/mcp.json`; Origin header validation per MCP spec 2025-03-26.
+
+**Addresses:** MCP HTTP transport (P1); bearer token auth (P1, security gate before GHCR publish).
+
+**Uses:** `StreamableHTTPServerTransport` confirmed at `dist/esm/server/streamableHttp.js` in installed SDK; stateful session mode (sessionId generator + transport Map) for multi-step tool operations; `MCP_AUTH_TOKEN` env var.
+
+**Avoids:** Anti-pattern: exposing `POST /mcp` without Origin header validation (DNS rebinding attack vector per MCP spec); duplicating tool registrations across stdio and HTTP entry points.
+
+**Research flag:** Standard patterns — MCP SDK confirmed installed with HTTP transport present; official MCP spec is the authoritative source. Skip phase research.
+
+---
+
+### Phase 5: GHCR Publishing and CI Workflow
+
+**Rationale:** Final phase — publishes only after the image is production-quality. Image must have non-root user, healthcheck, graceful shutdown, and bearer auth before making it public. Publishing is a one-way gate: leaked credentials in GHCR image layers require token rotation and image deletion.
+
+**Delivers:** `.github/workflows/docker-publish.yml` that builds and pushes multi-arch image to GHCR on version tag push; semantic version tags (`v3.2.0`, `v3.2`, `latest`) via `docker/metadata-action@v5`; layer caching via `cache-from/cache-to: type=gha`; `packages: write` permission configured.
+
+**Addresses:** GHCR publishing (P1); CI GitHub Actions workflow (P1); multi-arch build (P2); semantic version tags differentiator.
+
+**Uses:** `docker/build-push-action@v6`, `docker/metadata-action@v5`, `docker/login-action@v3`, `docker/setup-buildx-action@v3`, `docker/setup-qemu-action@v3`; `GITHUB_TOKEN` with auto-created `packages: write` scope.
+
+**Avoids:** Pitfall 6 corollary (credential audit — run `docker history --no-trunc` and `docker scout` or `trivy` before making image public).
+
+**Research flag:** Standard patterns — official GitHub docs confirm this workflow exactly. Skip phase research.
+
+---
 
 ### Phase Ordering Rationale
 
-- Schema first because columns must exist before any processor or tool can write to them
-- Profile loader second because the `ctx` object shape must be stable before orchestrator or MCP server import it
-- Orchestrator third because all three scheduler stubs, the HTTP endpoint, and all MCP write tools need it; building it once prevents logic duplication across five entry points
-- MCP read tools fourth because they depend on service functions being available and correctly logging; read-only tools are safer to debug than write tools
-- MCP write tools last because they depend on the read transport being stable and on the orchestrator being available for delegation
-
-The dependency chain from FEATURES.md confirms this ordering: graph population requires scheduler; scheduler requires orchestrator; orchestrator requires profile loader; profile loader requires schema.
+- Phase 0 before everything: hardcoded macOS paths are a blocking dependency confirmed by codebase inspection; no container runs correctly without this fix.
+- Phase 1 before Phases 3 and 4: both modes need a working container; graceful shutdown protects SQLite across both modes regardless of which mode is active.
+- Phase 2 before Phases 3 and 4: both modes are env-var-driven; config infrastructure must exist before mode-specific logic reads from it.
+- Phases 3 and 4 are independent of each other after Phase 2 and can be built in parallel.
+- Phase 5 only after Phases 1-4: GHCR publish is a publication gate gated on security (auth on MCP HTTP) and data integrity (graceful shutdown).
 
 ### Research Flags
 
-Phases likely needing deeper research during planning:
+Phases requiring deeper research during planning:
 
-- **Phase 4 (MCP Read Tools):** MCP tool description quality directly determines how well Claude Code invokes them; the exact API for `server.tool()` description fields, resource URIs, and response content block formats warrants a targeted research pass. Claude Code project-level MCP registration (vs. global `claude_desktop_config.json`) also needs verification.
+- **Phase 3 (Git-Clone Ingestion):** The dual-mode pattern is DocuMind-specific. Review kubernetes/git-sync for periodic-pull patterns. Confirm shallow clone suitability for DVWDesign repo sizes. Decide whether periodic pull cron belongs in scheduler or a separate entry point.
 
-Phases with standard patterns (skip research-phase):
+Phases with standard patterns (skip `/gsd:research-phase`):
 
-- **Phase 1 (Schema Migration):** SQLite `ALTER TABLE`, numbered migration files, FTS5 `rebuild` — well-documented, no ambiguity
-- **Phase 2 (Context Profile):** Externalized config + Zod validation — standard Node.js pattern
-- **Phase 3 (Orchestrator):** Coordinator/facade pattern over existing processors — no novel technology
-- **Phase 5 (MCP Write Tools):** Wrappers over existing CLI scripts using the same transport established in Phase 4
+- **Phase 0 (Path Audit):** Straightforward code audit; patterns are well-understood.
+- **Phase 1 (Dockerfile Foundation):** Official nodejs/docker-node BestPractices.md covers this exactly.
+- **Phase 2 (Env Config):** dotenv + process.env is a well-established 12-factor pattern.
+- **Phase 4 (MCP HTTP):** SDK confirmed installed; MCP spec is the authoritative source.
+- **Phase 5 (GHCR CI):** Official GitHub docs confirm the workflow pattern.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
-| ------ | ------------ | ------- |
-| Stack | HIGH | Official MCP SDK docs + GitHub verified; zod peer dep floor confirmed via issue tracker; all other deps already in production use |
-| Features | MEDIUM | Table stakes drawn from DMS market research and official MCP spec (verified); differentiators from DocuMind-specific context and absence of write-capable doc MCP servers in ecosystem |
-| Architecture | HIGH | Existing codebase directly analyzed; MCP transport architecture from official spec; WAL mode concurrency from SQLite documentation |
-| Pitfalls | HIGH | Three pitfalls identified from direct codebase inspection (scheduler TODOs, never-called buildRelationships, hardcoded migration version); two from official MCP documentation |
+| ------ | ---------- | ----- |
+| Stack | HIGH | Base image choice verified via open upstream issues in better-sqlite3 repo; GHCR workflow from official GitHub docs; MCP transport from official spec 2025-03-26; all new packages confirmed available |
+| Features | HIGH | Table stakes from official nodejs/docker-node BestPractices.md; MCP from official spec; GHCR from official GitHub docs; anti-features well-documented |
+| Architecture | HIGH | Based on direct codebase inspection + SDK presence confirmed in node_modules; component boundaries clearly drawn with specific file names and line numbers |
+| Pitfalls | HIGH | better-sqlite3 Alpine incompatibility confirmed via maintainer docs and open issues; WAL + Docker via SQLite official docs ("WAL does not work over a network filesystem"); hardcoded paths confirmed by direct file inspection with specific line numbers |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **MCP tool description quality:** The research confirms the API shape (`server.tool(name, description, schema, handler)`) but does not validate what description text reliably guides model behavior. This should be tested with MCP Inspector before finalizing tool definitions.
-- **`buildRelationships()` scaling against 8K docs:** The O(n²) sibling edge concern is identified but the actual row count is untested against the live corpus. Run with sibling edges capped before the first production execution; monitor `SELECT COUNT(*) FROM doc_relationships` as a go/no-go gate.
-- **Classification auto-assignment accuracy:** The classification tree from the context profile defines categories, but the inference logic (which keywords trigger which classification path) is not yet specified. MEDIUM confidence on classification accuracy — may need tuning after first full scan.
-- **FTS5 rebuild timing:** Research confirms `VALUES('rebuild')` is safe and fast (< 30s on 8K docs), but the exact trigger points (after bulk classification update, after graph population backfill) need to be enumerated during Phase 1 implementation.
+- **ARCHITECTURE.md base image inconsistency:** The architecture research suggests `node:22-alpine` in its Dockerfile code blocks while simultaneously documenting why it works (compile native modules inside Alpine). STACK.md and PITFALLS.md both recommend `node:22-bookworm-slim` with higher-confidence sourcing. **Resolution for roadmap: use `node:22-bookworm-slim`.** Alpine introduces the musl/glibc risk documented in Pitfall 1; Debian slim eliminates that class of issue for a ~30MB image size increase that is not worth debating.
+
+- **better-sqlite3 Node 24 status:** Incompatibility is confirmed as of 2026-03-23 but may resolve in a future release. Reassess when considering upgrades beyond v3.2. Flag this in implementation notes.
+
+- **Stateful vs stateless MCP session mode:** ARCHITECTURE.md recommends stateful sessions (sessionId generator + transport Map) for multi-step tool operations; STACK.md notes stateless mode (`sessionIdGenerator: undefined`) is correct for single-tenant. These are not contradictory — stateful is correct for DocuMind's use case. Validate during Phase 4 implementation.
+
+- **Chokidar in git-clone mode:** Research confirms chokidar still provides value in git-clone mode (picks up `git pull` file changes). In git-clone mode, git writes occur entirely inside the container's own filesystem where inotify works correctly — `CHOKIDAR_USEPOLLING` is therefore not needed in git-clone mode. Confirm this behavior during Phase 3 testing before documenting.
 
 ## Sources
 
 ### Primary (HIGH confidence)
 
-- MCP TypeScript SDK GitHub releases — v1.27.1 confirmed current stable
-- MCP official docs (modelcontextprotocol.io/specification/2025-11-25) — transport architecture, stdio constraints, tool schema API
-- MCP Build Server docs (modelcontextprotocol.io/docs/develop/build-server) — import paths, tool registration pattern
-- SQLite official docs (sqlite.org/lang_altertable.html) — ALTER TABLE constraints, 12-step rebuild procedure
-- DocuMind codebase direct inspection — scheduler.mjs TODO lines 44/68/75, init-database.mjs hardcoded version line 97, relations.mjs sibling loop lines 111–128
+- [WiseLibs/better-sqlite3 Issue #1384](https://github.com/WiseLibs/better-sqlite3/issues/1384) — Node 24 N-API 137 prebuilt binaries missing; open upstream issue
+- [WiseLibs/better-sqlite3 Discussion #1270](https://github.com/WiseLibs/better-sqlite3/discussions/1270) — Alpine vs Debian: maintainer explicitly recommends Debian slim
+- [Docker Hub node:22-bookworm-slim](https://hub.docker.com/layers/library/node/22-bookworm-slim/) — Active LTS tag confirmed
+- [MCP Specification 2025-03-26 — Transports](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports) — Streamable HTTP current standard, SSE deprecated; Origin header validation required
+- [GitHub Publishing Docker Images docs](https://docs.github.com/en/actions/publishing-packages/publishing-docker-images) — GHCR workflow with GITHUB_TOKEN and packages: write
+- [nodejs/docker-node BestPractices.md](https://github.com/nodejs/docker-node/blob/main/docs/BestPractices.md) — non-root user, signal handling, healthcheck patterns
+- [Express.js graceful shutdown guide](https://expressjs.com/en/advanced/healthcheck-graceful-shutdown.html) — SIGTERM via npm swallows signal; direct node exec required
+- [SQLite WAL official docs](https://www.sqlite.org/wal.html) — "WAL does not work over a network filesystem"
+- [chokidar Issue #1051](https://github.com/paulmillr/chokidar/issues/1051) — Docker volume mount inotify issue; `usePolling=true` is the documented fix
+- Codebase direct inspection — `daemon/server.mjs` line 56 (WAL confirmed), line 50 (macOS path fallback confirmed); `daemon/mcp-server.mjs` line 31 (WAL in MCP server); `config/constants.mjs` line 42 (`LOCAL_BASE_PATH` hardcoded); `processors/tree-processor.mjs` line 12 (`REPOS_ROOT` hardcoded); `scripts/scan/enhanced-scanner.mjs` lines 22-31 (14 hardcoded absolute paths); zero SIGTERM handlers across all 5 daemon files
+- MCP SDK installed in project — `StreamableHTTPServerTransport` confirmed present at `dist/esm/server/streamableHttp.js`
 
 ### Secondary (MEDIUM confidence)
 
-- MCP SDK zod compat issue #925 (GitHub) — zod 3.25 minimum peer dep floor confirmed
-- Integrating MCP into Express (dev.to) — `POST /mcp` mount pattern
-- SQLite hierarchical data strategies (moldstud.com, teddysmith.io) — materialized path vs. nested sets vs. closure tables
-- MCP and Context Overload (eclipsesource.com, 2026) — keep tool count under 40; description quality affects model behavior
-- MCP Tips and Pitfalls (nearform.com) — stdout pollution pattern confirmed
-- RAG freshness scoring patterns (ragaboutit.com) — staleness detection as table stakes for agent-facing systems
-- Codebase Context Spec (github.com/Agentic-Insights) — portable JSON config pattern for developer tools
+- [Node Best Practices — Graceful Shutdown](https://github.com/goldbergyoni/nodebestpractices/blob/master/sections/docker/graceful-shutdown.md) — terminus recommendation; SIGTERM forwarding behavior
+- [godaddy/terminus GitHub](https://github.com/godaddy/terminus) — createTerminus API reference
+- [kubernetes/git-sync](https://github.com/kubernetes/git-sync) — periodic git pull sidecar pattern reference for clone mode design
+- [How to Run SQLite in Docker](https://oneuptime.com/blog/post/2026-02-08-how-to-run-sqlite-in-docker-when-and-how/view) — named volume strategy for WAL safety
+- [MCP bearer token auth discussion #1247](https://github.com/modelcontextprotocol/modelcontextprotocol/discussions/1247) — bearer token acceptable for single-user deployments per MCP authorization docs
+- [simple-git npm](https://www.npmjs.com/package/simple-git) — v3.33.0 current; 7.9M weekly downloads vs 628K for isomorphic-git
 
 ### Tertiary (LOW confidence)
 
-- Codebase context spec as portability pattern precedent — single source; validate the DVWDesign profile design against a hypothetical second profile before committing the schema
+- [Vaultwarden SQLite corruption discussion](https://github.com/dani-garcia/vaultwarden/discussions/2965) — WAL corruption reports on Docker bind mounts; corroborates SQLite official docs but is a different project
+- [MCP stdio Docker -i flag guide](https://mcpcat.io/guides/configuring-mcp-transport-protocols-docker-containers/) — `-i` required for stdin; `-t` corrupts binary JSON-RPC stream
 
 ---
-*Research completed: 2026-03-15*
+
+*Research completed: 2026-03-23*
 *Ready for roadmap: yes*

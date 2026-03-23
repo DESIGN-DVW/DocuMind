@@ -1,290 +1,348 @@
 # Stack Research
 
-**Domain:** Documentation intelligence daemon — MCP server, classification/tagging, context profiles
-**Researched:** 2026-03-15
-**Confidence:** HIGH (MCP SDK), MEDIUM (classification patterns), MEDIUM (context profiles)
+**Domain:** Docker containerization + MCP HTTP transport + git-clone ingestion + GHCR publishing
+**Researched:** 2026-03-23
+**Confidence:** HIGH (Docker/Node base image, GHCR CI), MEDIUM (MCP HTTP transport current pattern, simple-git), LOW (better-sqlite3 Node 24 status — active upstream issue)
 
 ---
 
 ## Context
 
-DocuMind v2.0 has a production-ready stack: Node.js 20+, Express 5, SQLite via better-sqlite3, PM2, node-cron, chokidar, natural (TF-IDF), zod. This research answers one question: **what new packages and schema patterns are needed for the three active milestone features** — MCP server, document classification/tagging, and context profiles?
+DocuMind v3.1 ships with a validated stack (Node 20+, Express 5, better-sqlite3, MCP SDK 1.27.1, zod 3.25.0). This research answers one question: **what additions and changes are needed for v3.2 — Docker containerization, MCP dual-mode transport, git-clone repo ingestion, environment-based config, graceful shutdown, and GHCR publishing?**
 
-The answer: one new npm package (`@modelcontextprotocol/sdk`) and one version bump (`zod` from `^3.22.4` to `^3.25.0`). Everything else is schema and code additions to the existing stack.
+The answer: three new npm packages, no version bumps required, and specific Docker build decisions driven by better-sqlite3 native module constraints.
 
 ---
 
 ## Recommended Stack
 
-### New Additions (Net-New to package.json)
+### New Dependencies (Net-New to package.json)
 
 | Library | Version | Purpose | Why Recommended |
 | ------- | ------- | ------- | --------------- |
-| `@modelcontextprotocol/sdk` | `^1.27.1` | MCP server + transport layer | The official Anthropic SDK. Only non-fork way to build a compliant MCP server. 33K+ npm dependents confirms it is the ecosystem standard. Provides `McpServer`, `StdioServerTransport`, `StreamableHTTPServerTransport`. |
+| `simple-git` | `^3.33.0` | Git clone/pull for remote repo ingestion | 7.9M weekly downloads vs 628K for isomorphic-git. Wraps native git CLI — faster for large repos, no pure-JS overhead. Native CLI dependency is a non-issue in Docker where git is installed. Simpler API for clone/pull/status use cases. |
+| `dotenv` | `^16.4.7` | Environment variable loading from `.env` files | Zero-dependency. Works with Docker `env_file:` compose directive and `--env-file` flag. The `process.env` fallback means Docker-injected env vars override `.env` naturally — correct behavior for containerized config. Node 20.6+ has `--env-file` native flag but dotenv is still needed for programmatic loading and `.env.example` workflow. |
 
-### Version Bumps Required (Existing Dependencies)
+### New Dev Dependencies
 
-| Library | Current | Required | Why |
-| ------- | ------- | -------- | --- |
-| `zod` | `^3.22.4` | `^3.25.0` | `@modelcontextprotocol/sdk` internally imports from `zod/v4` but requires zod `>=3.25.0` as a peer dependency. The current pinned range `^3.22.4` may resolve to a version below that floor, causing SDK import errors at runtime. |
+| Library | Version | Purpose | Why Recommended |
+| ------- | ------- | ------- | --------------- |
+| `@godaddy/terminus` | `^4.12.1` | Graceful shutdown + health check middleware | Handles SIGTERM/SIGINT, drains in-flight requests, runs cleanup hooks (close DB connection, flush file watcher). Used by Node Best Practices guide. Integrates with Express via `createTerminus(server, { healthChecks, onSignal, onShutdown })`. Prevents SQLite WAL corruption on abrupt stops. |
 
-**Confidence:** HIGH — verified against official MCP SDK GitHub issue tracker and npm package metadata.
+### Existing Dependencies — No Changes Required
 
-### Core Technologies (Already Present — No Changes)
+All existing runtime dependencies stay. The MCP SDK (`@modelcontextprotocol/sdk@^1.27.1`) already ships `StreamableHTTPServerTransport` — no separate package needed for HTTP transport. The `@modelcontextprotocol/express` middleware package exists but is a thin optional wrapper; mount directly via `StreamableHTTPServerTransport` as already documented in v3.0 STACK.md.
 
-| Technology | Version | Purpose | Status |
-| ---------- | ------- | ------- | ------ |
-| `better-sqlite3` | `^12.6.2` | SQLite for graph, classification, profiles | Stays. Schema additions only. |
-| `express` | `^5.2.1` | REST API + MCP HTTP transport mount point | Stays. MCP mounts on `POST /mcp`. |
-| `natural` | `^8.1.1` | TF-IDF keyword extraction | Stays. Already wired to keywords table. |
-| `node-cron` | `^3.0.3` | Scheduled tasks | Stays. Needs wiring to processors. |
-| `zod` | bump to `^3.25.0` | Schema validation + MCP tool schemas | Bump version only. |
-| `fast-glob` | `^3.3.2` | Repo scanning | Stays. |
-| `gray-matter` | `^4.0.3` | Frontmatter parsing | Stays. |
+| Existing | Current Version | Status |
+| -------- | --------------- | ------ |
+| `@modelcontextprotocol/sdk` | `^1.27.1` | Stays — already includes HTTP transport |
+| `better-sqlite3` | `^12.6.2` | Stays — but drives Docker base image choice (see below) |
+| `express` | `^5.2.1` | Stays |
+| `zod` | `^3.25.0` | Stays |
 
 ---
 
-## MCP Server Implementation Details
+## Docker Base Image Decision
 
-### Transport Strategy
+**Use `node:22-bookworm-slim` for both build and runtime stages.**
 
-DocuMind should expose two transports from the same process:
+Do NOT use Alpine. Do NOT use Node 24.
 
-1. **Stdio** — for Claude Code integration (`claude_desktop_config.json`, Claude Code MCP settings). Claude Code launches DocuMind as a subprocess and communicates over stdin/stdout. This is the primary integration target for Step #2.
+### Why node:22, not node:24
 
-2. **StreamableHTTP mounted on Express** — for remote clients, future CI integrations, and Step #3 portability. Mount at `POST /mcp` on the existing port 9000 Express server.
+better-sqlite3 prebuilt binaries are missing for Node 24 / N-API 137 (tracked in [WiseLibs/better-sqlite3#1384](https://github.com/WiseLibs/better-sqlite3/issues/1384)). Node 24 compilation from source fails with deprecated V8 API errors on the current published versions of better-sqlite3. Node 22 is Active LTS (codename "Jod", supported through 2027) — it is the correct production target.
 
-Do NOT run two separate server processes. Mount both transports from `daemon/server.mjs`.
+**Confidence:** MEDIUM — Node 24 incompatibility verified via multiple GitHub issues. Node 22 LTS status verified via official Docker Hub tags. This may resolve in a future better-sqlite3 release; re-evaluate when upgrading beyond v3.2.
 
-### Key Import Paths (verified)
+### Why bookworm-slim, not Alpine
 
-```javascript
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+better-sqlite3 links against glibc. Alpine uses musl libc, which causes `fcntl64: symbol not found` and similar relocation errors at runtime. Even with a multi-stage build that compiles on Debian and copies binaries to Alpine, the linked glibc symbols break on musl. Community consensus: "Use Debian slim — image will be slightly larger but everything just works out of the box." ([WiseLibs/better-sqlite3 discussion #1270](https://github.com/WiseLibs/better-sqlite3/discussions/1270))
+
+`node:22-bookworm-slim` adds ~30MB vs Alpine but eliminates an entire class of native module debugging.
+
+### Multi-Stage Build Pattern
+
+```dockerfile
+# Stage 1: builder — compiles native modules
+FROM node:22-bookworm-slim AS builder
+WORKDIR /app
+
+# Install build tools required by better-sqlite3
+RUN apt-get update && apt-get install -y \
+    python3 make g++ git \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY package*.json ./
+RUN npm ci --include=dev
+
+COPY . .
+
+# Stage 2: runtime — clean image, no build tools
+FROM node:22-bookworm-slim AS runtime
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    git curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy compiled node_modules (including better-sqlite3.node binary)
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package*.json ./
+COPY . .
+
+# Non-root user for security
+RUN groupadd -r documind && useradd -r -g documind documind \
+    && chown -R documind:documind /app
+USER documind
+
+EXPOSE 9000
+HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:9000/health || exit 1
+
+# Use node directly (not npm) so SIGTERM propagates correctly
+CMD ["node", "daemon/server.mjs"]
 ```
 
-### Express Mount Pattern
+**Critical:** `CMD ["node", "daemon/server.mjs"]` not `CMD ["npm", "run", "daemon:dev"]`. npm does not forward SIGTERM to the Node process — the container will hang on `docker stop` and eventually force-kill, risking SQLite WAL corruption.
+
+**Critical:** `git` must be in the runtime stage (not just builder). simple-git shells out to the native git CLI — if git is absent at runtime, clone/pull fails silently.
+
+---
+
+## MCP HTTP Transport — Current State
+
+### Transport Status (2026)
+
+SSE (`/sse` + `/messages` dual endpoint) is deprecated as of MCP spec 2025-03-26. Streamable HTTP (`POST /mcp`, single endpoint, optional SSE upgrade) is the current standard. The existing SDK version (`^1.27.1`) supports `StreamableHTTPServerTransport` — no package change needed.
+
+**Confidence:** HIGH — [MCP spec 2025-03-26 transports](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports) confirms Streamable HTTP as current, SSE as deprecated.
+
+### Dual-Mode Transport (Stdio + HTTP)
+
+Run both transports from the same process. Stdio for local Claude Code, HTTP for containerized/remote consumers. The existing v3.0 STACK.md documents the correct mount pattern — no changes needed.
+
+Do NOT implement the deprecated SSE transport. Even though the SDK maintains backward compat, new implementations should use Streamable HTTP only.
+
+---
+
+## Environment-Based Configuration
+
+### Pattern: Native Node + dotenv fallback
 
 ```javascript
-// In daemon/server.mjs — add alongside existing routes
-app.post('/mcp', express.json(), async (req, res) => {
-  const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-  await mcpServer.connect(transport);
-  await transport.handleRequest(req, res, req.body);
+// In daemon/server.mjs — load at startup
+import 'dotenv/config';  // no-op if vars already set by Docker
+
+const config = {
+  port:      parseInt(process.env.PORT ?? '9000'),
+  repoMode:  process.env.REPO_MODE ?? 'volume',       // 'volume' | 'clone'
+  repoRoots: (process.env.REPO_ROOTS ?? '').split(':').filter(Boolean),
+  cloneBase: process.env.CLONE_BASE ?? '/repos',
+  cronHourly: process.env.CRON_HOURLY ?? '0 * * * *',
+  cronDaily:  process.env.CRON_DAILY  ?? '0 2 * * *',
+  cronWeekly: process.env.CRON_WEEKLY ?? '0 3 * * 0',
+};
+```
+
+`dotenv/config` only populates `process.env` keys not already set — Docker `environment:` and `env_file:` injections take precedence naturally.
+
+**No additional library.** `dotenv` is sufficient. Do not add `convict`, `config`, or `nconf` — they add complexity without benefit for a single-tenant daemon.
+
+---
+
+## Graceful Shutdown Pattern
+
+### Why @godaddy/terminus
+
+`@godaddy/terminus` is the established Express graceful shutdown library (Node Best Practices guide). It handles:
+
+1. Routes `/health` and `/readiness` checks
+2. On SIGTERM: stops accepting new requests, waits for in-flight to drain
+3. Runs `onSignal` callbacks (close SQLite connection, stop chokidar watcher, flush cron jobs)
+4. Exits cleanly
+
+SQLite WAL mode keeps a write-ahead log. If the process is force-killed mid-write, the WAL may be in an inconsistent state. `terminus` prevents this by ensuring `db.close()` runs before exit.
+
+```javascript
+import { createTerminus } from '@godaddy/terminus';
+
+createTerminus(server, {
+  healthChecks: {
+    '/health': async () => ({ status: 'ok', uptime: process.uptime() }),
+  },
+  onSignal: async () => {
+    db.close();
+    watcher.close();
+    // cron jobs stop automatically when process exits
+  },
+  timeout: 10000,  // 10s drain window
 });
 ```
 
-`sessionIdGenerator: undefined` = stateless mode (correct for a single-tenant daemon).
+**Alternative considered:** Bare `process.on('SIGTERM', ...)`. This works but requires manually handling drain timing and health check endpoints. terminus is 15 lines vs ~80 lines of error-prone manual handling. Worth the dependency.
 
-### Stdio Logging Constraint
+---
 
-When the stdio transport is active, **never write to stdout** — it carries JSON-RPC messages. All logs must go to `stderr` or the PM2 log file. This is a hard constraint that affects `daemon/server.mjs` and all processors when called from MCP context.
+## GHCR Publishing — GitHub Actions
 
-### MCP Inspector (Dev Tool)
+### Actions Required
 
-```bash
-npx @modelcontextprotocol/inspector node daemon/mcp-server.mjs
+| Action | Version | Purpose |
+| ------ | ------- | ------- |
+| `docker/login-action` | `v3` | Authenticate to ghcr.io using `GITHUB_TOKEN` |
+| `docker/metadata-action` | `v5` | Generate tags (semver, latest, sha) from git refs |
+| `docker/setup-buildx-action` | `v3` | Enable multi-platform builds via BuildKit |
+| `docker/setup-qemu-action` | `v3` | QEMU for cross-platform (arm64 on amd64 runner) |
+| `docker/build-push-action` | `v6` | Build + push to GHCR with caching |
+
+### Workflow Pattern
+
+```yaml
+name: Publish to GHCR
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-qemu-action@v3
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 ```
 
-Use this to test tools interactively before wiring into Claude Code. Add to `package.json` scripts as `mcp:inspect`.
+`GITHUB_TOKEN` is auto-created per workflow run — no secret configuration needed for GHCR. The `packages: write` permission is required.
 
-### Zod and Tool Schema
+**Confidence:** HIGH — official [GitHub Publishing Docker Images docs](https://docs.github.com/en/actions/publishing-packages/publishing-docker-images) confirm this pattern.
 
-Each MCP tool definition takes a Zod schema for parameters. All field descriptions are mandatory — Claude reads them to decide how to call the tool:
+---
 
-```javascript
-server.tool('search', 'Full-text search across all indexed documents', {
-  query: z.string().describe('The search query string'),
-  repo: z.string().optional().describe('Filter results to a specific repository name'),
-  limit: z.number().default(20).describe('Maximum number of results to return'),
-}, async ({ query, repo, limit }) => {
-  // Call existing search logic
-});
+## docker-compose.yml Pattern (Volume Mount Mode)
+
+```yaml
+services:
+  documind:
+    build: .
+    image: ghcr.io/dvwdesign/documind:latest
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./data:/app/data                          # SQLite database persistence
+      - /Users/Shared/htdocs/github:/repos:ro     # Local repo access (volume mode)
+    environment:
+      - REPO_MODE=volume
+      - REPO_ROOTS=/repos/DVWDesign/DocuMind:/repos/DVWDesign/RootDispatcher
+      - PORT=9000
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 ```
 
-The existing `zod` dependency in DocuMind covers this — no separate install needed after the version bump.
+For git-clone mode (CI/remote), set `REPO_MODE=clone` and provide `REPO_URLS` instead of `REPO_ROOTS`. The clone processor uses simple-git to fetch repos into `CLONE_BASE` at startup and on the hourly cron.
 
-## Document Classification and Tagging — Schema Pattern
-
-### Approach: Two-Level System in SQLite
-
-Classification (hierarchical tree) and tagging (flat, multi-value) serve different purposes and need different schema patterns.
-
-**Classification = where in the taxonomy a document lives** (single parent path, e.g., `architecture/decisions`). Use the **Adjacency List with recursive CTE** — SQLite supports this natively and the project already uses recursive CTEs in `graph/queries.mjs`.
-
-**Tags = cross-cutting labels** (many per document, e.g., `api`, `draft`, `reviewed`). Use a **normalized tag table + junction table** — standard many-to-many, fast with composite indexes.
-
-### Classification Schema (Adjacency List)
-
-```sql
--- Already partially exists as folder_nodes. Extend documents table:
-ALTER TABLE documents ADD COLUMN classification TEXT;         -- e.g. 'architecture/decisions'
-ALTER TABLE documents ADD COLUMN classification_depth INTEGER DEFAULT 0;  -- 0=root, 1=second, etc.
-ALTER TABLE documents ADD COLUMN summary TEXT;               -- 500-word auto-generated summary
-```
-
-Store the full path string (`architecture/decisions`) rather than a foreign key to a separate taxonomy table. Rationale: DocuMind's classification tree is defined per context profile (see below), not universally. Storing the path string means the classification is portable — the documents table doesn't need to reference a taxonomy table that varies per deployment.
-
-### Tagging Schema (Many-to-Many)
-
-```sql
-CREATE TABLE tags (
-  id INTEGER PRIMARY KEY,
-  name TEXT NOT NULL UNIQUE,
-  category TEXT,  -- 'status' | 'type' | 'audience' | 'custom'
-  color TEXT,     -- For future UI rendering
-  created_at TEXT DEFAULT (datetime('now'))
-);
-
-CREATE TABLE document_tags (
-  document_id INTEGER NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
-  tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
-  tagged_at TEXT DEFAULT (datetime('now')),
-  tagged_by TEXT DEFAULT 'system',  -- 'system' | 'user' | 'mcp'
-  PRIMARY KEY (document_id, tag_id)
-);
-
-CREATE INDEX idx_document_tags_doc ON document_tags(document_id);
-CREATE INDEX idx_document_tags_tag ON document_tags(tag_id);
-CREATE INDEX idx_tags_name ON tags(name);
-```
-
-**Confidence:** MEDIUM — standard relational pattern, verified against SQLite forum discussions and closure table research. Not novel technology.
-
-### What NOT to Use for Classification
-
-Do NOT use the Nested Set Model (left/right integers). Insertions and moves require recalculating all left/right values — expensive for a live-indexed system where documents are added continuously. The Adjacency List + CTE pattern that already exists in `graph/queries.mjs` is the right choice.
-
-Do NOT use a Closure Table for classification at this scale. Closure Tables precompute every ancestor-descendant pair — valuable when you have thousands of tree traversals per second. DocuMind's classification is read occasionally; the overhead is not justified.
-
-## Context Profiles — Schema and File Pattern
-
-### What a Context Profile Is
-
-A JSON config file that makes DocuMind's behavior portable across deployments. It defines: which repos to scan, how to classify documents, what lint rules to enforce, and what keyword taxonomies to use. Swapping the profile adapts DocuMind for a marketing team vs. an engineering team without code changes.
-
-### Profile Schema (JSON)
-
-```json
-{
-  "id": "dvwdesign-internal",
-  "name": "DVWDesign Internal",
-  "version": "1.0.0",
-  "repositories": [
-    { "name": "DocuMind", "path": "/Users/Shared/htdocs/github/DVWDesign/DocuMind", "active": true }
-  ],
-  "classification_tree": {
-    "architecture": ["decisions", "diagrams", "patterns"],
-    "operations": ["runbooks", "incidents", "deploy"],
-    "product": ["specs", "roadmaps", "changelogs"]
-  },
-  "keyword_taxonomy": {
-    "technology": ["sqlite", "node", "express", "mcp"],
-    "action": ["implement", "refactor", "deprecate", "migrate"]
-  },
-  "lint_rules": {
-    "profile": "strict",
-    "custom_patterns": "config/custom-error-patterns.json"
-  },
-  "relationship_types": ["imports", "parent_of", "variant_of", "supersedes", "depends_on", "related_to", "generated_from", "dispatched_to"]
-}
-```
-
-### Profile Storage in SQLite
-
-```sql
-CREATE TABLE context_profiles (
-  id TEXT PRIMARY KEY,               -- slug, e.g. 'dvwdesign-internal'
-  name TEXT NOT NULL,
-  version TEXT NOT NULL,
-  config_json TEXT NOT NULL,         -- Full JSON blob
-  is_active INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT DEFAULT (datetime('now')),
-  updated_at TEXT DEFAULT (datetime('now'))
-);
-
--- Only one profile can be active
-CREATE UNIQUE INDEX idx_active_profile ON context_profiles(is_active) WHERE is_active = 1;
-```
-
-Also write the active profile to disk at `config/context-profile.json` on activation. This enables both database-driven and file-driven profile loading — important for CLI workflows where the DB may not be running.
-
-### Profile Loading Pattern
-
-```javascript
-// In daemon/server.mjs — load at startup, no external library needed
-async function loadContextProfile() {
-  const row = db.prepare('SELECT config_json FROM context_profiles WHERE is_active = 1').get();
-  if (row) return JSON.parse(row.config_json);
-  // Fallback: load from disk
-  const file = await fs.readFile('./config/context-profile.json', 'utf8');
-  return JSON.parse(file);
-}
-```
-
-No external library needed — native `JSON.parse` + `fs.readFile`. Validate the loaded profile with a Zod schema to catch malformed profiles at startup.
-
-**Confidence:** MEDIUM — pattern derived from multi-tenant Node.js SaaS conventions and MCP specification's use of JSON Schema 2020-12. No specific library exists for this pattern; it is intentionally hand-rolled.
-
-## Graph Population — No New Libraries Needed
-
-The `graph/relations.mjs` module (`buildRelationships`) exists but is never called from the scheduler. The `doc_relationships` table schema exists. No new library is needed — the gap is wiring, not technology.
-
-The existing `fast-levenshtein` and `string-similarity` packages cover similarity scoring. The existing `natural` package covers TF-IDF for keyword extraction. The existing recursive CTE support in better-sqlite3 covers graph traversal.
-
-Action: wire `buildRelationships()` into the hourly cron job in `daemon/scheduler.mjs`.
+---
 
 ## What NOT to Use
 
 | Avoid | Why | Use Instead |
 | ----- | --- | ----------- |
-| Forked or third-party MCP SDKs | The official `@modelcontextprotocol/sdk` is the only actively maintained, spec-compliant implementation. Forks risk falling behind the protocol. | `@modelcontextprotocol/sdk` |
-| sqlite-vec / vector embeddings for similarity | Semantic search via embeddings is explicitly out of scope (PROJECT.md). TF-IDF + Levenshtein is sufficient for the 50K doc ceiling. | `natural` (TF-IDF) + `fast-levenshtein` |
-| Nested Set Model for classification | Expensive inserts/moves, complex queries. Not suitable for a continuously-indexed system. | Adjacency List path strings + recursive CTE |
-| Closure Table for classification | Overkill at DocuMind scale; precomputes every ancestor pair, adds write overhead. | Adjacency List path strings |
-| Separate MCP daemon process | Running MCP as a separate PM2 process adds coordination overhead. Mount on existing Express server. | `StreamableHTTPServerTransport` on existing Express port 9000 |
-| TypeScript migration for MCP | DocuMind is `.mjs` (ES modules, plain JavaScript). The SDK works with plain JS — TypeScript is optional. Migrating for MCP alone is not justified. | Plain `.mjs` with JSDoc types |
+| `node:24-*` base image | better-sqlite3 prebuilt binaries missing for N-API 137; compilation from source fails with deprecated V8 API. Active upstream issue as of 2026-03. | `node:22-bookworm-slim` (Active LTS) |
+| `node:*-alpine` base image | musl libc incompatible with better-sqlite3 glibc-linked binaries. Results in `fcntl64: symbol not found` at runtime even with multi-stage builds. | `node:22-bookworm-slim` (Debian glibc) |
+| `isomorphic-git` | Pure JS reimplementation of git — slower for large repos, 10x fewer downloads than simple-git. Only useful in browser environments, which Docker containers are not. | `simple-git` |
+| `CMD ["npm", "run", "daemon:start"]` | npm does not forward SIGTERM to child Node process. Container hangs on `docker stop`, eventually force-killed, risks SQLite WAL corruption. | `CMD ["node", "daemon/server.mjs"]` |
+| SSE transport (`/sse` endpoint) | Deprecated in MCP spec 2025-03-26. Dual-endpoint design requires persistent connections that complicate health checks and load balancers. | `StreamableHTTPServerTransport` on `POST /mcp` |
+| `@modelcontextprotocol/express` middleware | Thin optional wrapper around `StreamableHTTPServerTransport`. Adds a dependency for what is 3 lines of code. DocuMind already mounts transports directly. | Direct `StreamableHTTPServerTransport` mount |
+| `convict` / `nconf` for config | Schema-heavy config frameworks designed for complex multi-environment apps. Single-tenant daemon with Docker `ENV` injection needs `dotenv` + plain object, not a config DSL. | `dotenv` + `process.env` |
+| Pre-copying `node_modules` from host into image | Compiled native addon binaries are architecture-specific. Copying macOS-compiled `better_sqlite3.node` into a Linux container will fail. | Always run `npm ci` inside the builder stage |
+
+---
 
 ## Installation
 
 ```bash
-# New dependency
-npm install @modelcontextprotocol/sdk
+# New runtime dependencies
+npm install simple-git dotenv
 
-# Version bump (edit package.json then install)
-# Change: "zod": "^3.22.4"
-# To:     "zod": "^3.25.0"
-npm install
+# New dev dependency
+npm install -D @godaddy/terminus
 ```
+
+---
 
 ## Alternatives Considered
 
 | Recommended | Alternative | When to Use Alternative |
 | ----------- | ----------- | ----------------------- |
-| `@modelcontextprotocol/sdk` | `mcp-framework` (third-party) | Never for this project — framework abstracts too much, less control, diverges from spec faster |
-| Stdio + StreamableHTTP dual transport | Stdio-only | If DocuMind never goes remote or commercial. For Step #3 portability, StreamableHTTP is required. |
-| Adjacency List path strings for classification | Foreign key taxonomy table | If classification tree needs to be queried hierarchically at high frequency. Not the case here — profiles define the tree, not DocuMind's tables. |
-| JSON file + SQLite for context profiles | Database-only profiles | The file fallback enables CLI workflows without the daemon running. Both are needed. |
+| `node:22-bookworm-slim` | `node:20-bookworm-slim` | If existing CI/CD is pinned to Node 20 and cannot be updated. Node 22 is preferred — it is Active LTS and eliminates some Node-version CVEs. |
+| `simple-git` | `isomorphic-git` | Only if DocuMind needs to run in a browser context (never) or needs git operations without a native git CLI installed. Not applicable in Docker. |
+| `@godaddy/terminus` | Manual SIGTERM handler | Acceptable if keeping dependencies minimal. Requires ~80 lines of careful manual implementation to match terminus behavior. Not worth the risk for a system with SQLite WAL. |
+| `dotenv` | Node `--env-file` flag (native, Node 20.6+) | For config loading in scripts invoked via `node --env-file .env script.mjs`. Cannot be used programmatically from inside `server.mjs` at module load time — dotenv covers both CLI and programmatic use. |
+| Single `node:22-bookworm-slim` for both stages | Separate `node:22-bookworm` (full) for builder | Full Debian image in builder is not needed. `node:22-bookworm-slim` with `apt-get install python3 make g++` in the builder stage is sufficient and keeps both stages on the same base. |
+
+---
 
 ## Version Compatibility
 
 | Package | Compatible With | Notes |
 | ------- | --------------- | ----- |
-| `@modelcontextprotocol/sdk@^1.27.1` | `zod@>=3.25.0` | SDK internally uses `zod/v4` compat layer. Peer dep floor is 3.25. Current DocuMind zod `^3.22.4` must be bumped. |
-| `@modelcontextprotocol/sdk@^1.27.1` | `express@5.x` | No conflict. MCP HTTP transport uses raw Node `http.IncomingMessage` / `http.ServerResponse` — compatible with Express 5 handlers. |
-| `@modelcontextprotocol/sdk@^1.27.1` | `node@>=18` | SDK requires Node 18+. DocuMind already requires Node 20+. No issue. |
+| `better-sqlite3@^12.6.2` | `node:22-bookworm-slim` | Prebuilt binaries available for Node 22 / N-API 131. No compilation from source needed in builder stage (prebuilt binary downloaded during `npm ci`). |
+| `better-sqlite3@^12.6.2` | `node:24-*` | INCOMPATIBLE. N-API 137 binaries missing. Node 24 V8 API changes break compilation from source. Do not use Node 24 until better-sqlite3 publishes Node 24 prebuilts. |
+| `simple-git@^3.33.0` | `node@>=20` | No native bindings. Requires git CLI available at runtime. |
+| `@godaddy/terminus@^4.12.1` | `express@5.x` | Wraps the `http.Server` instance, not the Express app — compatible with Express 5. |
+| `docker/build-push-action@v6` | `docker/setup-buildx-action@v3` | Must use Buildx for multi-platform builds. Both actions required together. |
+
+---
 
 ## Sources
 
-- [@modelcontextprotocol/sdk npm page](https://www.npmjs.com/package/@modelcontextprotocol/sdk) — version 1.27.1 confirmed current stable (MEDIUM confidence — could not fetch npm page directly, verified via search)
-- [MCP TypeScript SDK GitHub releases](https://github.com/modelcontextprotocol/typescript-sdk/releases) — v1.27.1 confirmed via WebFetch (HIGH confidence)
-- [MCP Build a Server docs](https://modelcontextprotocol.io/docs/develop/build-server) — Key imports, stdio/StreamableHTTP transports (HIGH confidence — official docs)
-- [MCP SDK zod compat issue #925](https://github.com/modelcontextprotocol/typescript-sdk/issues/925) — Zod 3.25 minimum requirement confirmed (HIGH confidence)
-- [SQLite hierarchical data strategies](https://moldstud.com/articles/p-strategies-for-managing-hierarchical-data-structures-in-sqlite) — Adjacency List vs Closure Table tradeoffs (MEDIUM confidence)
-- [Closure Tables in SQL 2025](https://www.vibepanda.io/resources/guide/handling-hierarchical-data-closure-tables-sql) — Confirmed Closure Table is read-optimized, not write-optimized (MEDIUM confidence)
-- [Integrating MCP into Express](https://dev.to/udarabibile/integrating-mcp-tools-into-express-with-minimal-changes-28e6) — `POST /mcp` mount pattern confirmed (MEDIUM confidence — community article, not official docs)
-- [MCP 2026 security audit (43% command injection)](https://atlan.com/know/mcp-server-implementation-guide/) — Zod validation on all tool inputs is non-optional (MEDIUM confidence)
+- [WiseLibs/better-sqlite3 Discussion #1270](https://github.com/WiseLibs/better-sqlite3/discussions/1270) — Alpine vs Debian: community consensus that Debian slim is correct for better-sqlite3 (MEDIUM confidence)
+- [WiseLibs/better-sqlite3 Issue #1384](https://github.com/WiseLibs/better-sqlite3/issues/1384) — Node 24 / N-API 137 prebuilt binaries missing (HIGH confidence — open upstream issue)
+- [Docker Hub node:22-bookworm-slim](https://hub.docker.com/layers/library/node/22-bookworm-slim/) — Confirmed Active LTS tag exists (HIGH confidence)
+- [MCP Specification 2025-03-26 — Transports](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports) — Streamable HTTP current standard, SSE deprecated (HIGH confidence — official spec)
+- [GitHub Publishing Docker Images docs](https://docs.github.com/en/actions/publishing-packages/publishing-docker-images) — GHCR workflow pattern with GITHUB_TOKEN (HIGH confidence — official docs)
+- [Node Best Practices — Graceful Shutdown](https://github.com/goldbergyoni/nodebestpractices/blob/master/sections/docker/graceful-shutdown.md) — SIGTERM handling, terminus recommendation (MEDIUM confidence)
+- [godaddy/terminus GitHub](https://github.com/godaddy/terminus) — API reference for createTerminus (MEDIUM confidence)
+- [simple-git npm](https://www.npmjs.com/package/simple-git) — v3.33.0 confirmed current (MEDIUM confidence — search result, not direct npm page fetch)
+- [Express Healthcheck and Graceful Shutdown](https://expressjs.com/en/advanced/healthcheck-graceful-shutdown.html) — Official Express guidance confirming node direct exec over npm for SIGTERM (HIGH confidence — official Express docs)
+- [How to Run SQLite in Docker](https://oneuptime.com/blog/post/2026-02-08-how-to-run-sqlite-in-docker-when-and-how/view) — Named volume pattern for SQLite persistence (MEDIUM confidence)
 
-*Stack research for: DocuMind v3.0 — MCP server + classification + context profiles*
-*Researched: 2026-03-15*
+---
+
+*Stack research for: DocuMind v3.2 — Docker + MCP HTTP + git-clone + GHCR*
+*Researched: 2026-03-23*
