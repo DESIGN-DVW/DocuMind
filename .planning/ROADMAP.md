@@ -58,7 +58,12 @@ Full details: `.planning/milestones/v3.1-ROADMAP.md`
 3. PORT, DB path, and cron schedules can each be changed via env var without touching source files
 4. A `.env` file with documented defaults exists and the daemon loads it at startup
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 11-01-PLAN.md — Create centralized config/env.mjs + .env.example
+- [ ] 11-02-PLAN.md — Refactor daemon/processor modules to use config/env.mjs
+- [ ] 11-03-PLAN.md — Replace hardcoded paths in scripts/ + update CLAUDE.md
 
 ### Phase 12: Dockerfile + Docker Compose
 
@@ -73,7 +78,12 @@ Full details: `.planning/milestones/v3.1-ROADMAP.md`
 4. `docker build` produces an image under 400MB and the build context is under 10MB
 5. `docker run --rm <image> whoami` outputs a non-root user
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 11-01-PLAN.md — Create centralized config/env.mjs + .env.example
+- [ ] 11-02-PLAN.md — Refactor daemon/processor modules to use config/env.mjs
+- [ ] 11-03-PLAN.md — Replace hardcoded paths in scripts/ + update CLAUDE.md
 
 ### Phase 13: Git-Clone Ingestion + Dual Mode
 
@@ -87,7 +97,12 @@ Full details: `.planning/milestones/v3.1-ROADMAP.md`
 3. In clone mode, repos are re-pulled on the configured cron schedule without container restart
 4. Git credentials are provided via env var at runtime and are not visible in `docker history --no-trunc` output
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 11-01-PLAN.md — Create centralized config/env.mjs + .env.example
+- [ ] 11-02-PLAN.md — Refactor daemon/processor modules to use config/env.mjs
+- [ ] 11-03-PLAN.md — Replace hardcoded paths in scripts/ + update CLAUDE.md
 
 ### Phase 14: MCP HTTP Transport
 
@@ -101,7 +116,12 @@ Full details: `.planning/milestones/v3.1-ROADMAP.md`
 3. Local Claude Code with stdio MCP config continues to invoke all 14 tools without modification
 4. MCP mode switches between stdio and http via env var; the other mode does not start
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 11-01-PLAN.md — Create centralized config/env.mjs + .env.example
+- [ ] 11-02-PLAN.md — Refactor daemon/processor modules to use config/env.mjs
+- [ ] 11-03-PLAN.md — Replace hardcoded paths in scripts/ + update CLAUDE.md
 
 ### Phase 15: CI & Distribution
 
@@ -115,7 +135,12 @@ Full details: `.planning/milestones/v3.1-ROADMAP.md`
 3. The published image runs on both Apple Silicon (arm64) and Linux CI runners (amd64)
 4. The image is tagged with both the specific version (`v3.2.0`) and `latest`
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 11-01-PLAN.md — Create centralized config/env.mjs + .env.example
+- [ ] 11-02-PLAN.md — Refactor daemon/processor modules to use config/env.mjs
+- [ ] 11-03-PLAN.md — Replace hardcoded paths in scripts/ + update CLAUDE.md
 
 ## Progress
 
@@ -131,7 +156,7 @@ Full details: `.planning/milestones/v3.1-ROADMAP.md`
 | 8. Slash Command Updates             | v3.1      | 2/2            | Complete    | 2026-03-22 |
 | 9. Markdown Tooling Propagation      | v3.1      | 1/1            | Complete    | 2026-03-22 |
 | 10. Documentation Fixes              | v3.1      | 2/2            | Complete    | 2026-03-22 |
-| 11. Foundation                       | v3.2      | 0/TBD          | Not started | -          |
+| 11. Foundation                       | v3.2      | 0/3            | Planning    | -          |
 | 12. Dockerfile + Docker Compose      | v3.2      | 0/TBD          | Not started | -          |
 | 13. Git-Clone Ingestion + Dual Mode  | v3.2      | 0/TBD          | Not started | -          |
 | 14. MCP HTTP Transport               | v3.2      | 0/TBD          | Not started | -          |
