@@ -52,5 +52,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-23
-Stopped at: Milestone v3.2 initialization — defining requirements
-Resume file: None
+Stopped at: Phase 11 context gathered
+Resume file: .planning/phases/11-foundation/11-CONTEXT.md
