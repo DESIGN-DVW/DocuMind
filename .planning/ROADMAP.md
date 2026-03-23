@@ -38,7 +38,7 @@ Full details: `.planning/milestones/v3.1-ROADMAP.md`
 
 **Milestone Goal:** Containerize DocuMind as a CI-ready, published image that runs anywhere — with both volume-mount and git-clone repo access, and MCP available via stdio or HTTP.
 
-- [ ] **Phase 11: Foundation** — Eliminate all hardcoded macOS paths; externalize configuration to env vars
+- [x] **Phase 11: Foundation** — Eliminate all hardcoded macOS paths; externalize configuration to env vars (completed 2026-03-23)
 - [ ] **Phase 12: Dockerfile + Docker Compose** — Multi-stage Docker image with production hygiene; `docker compose up` starts daemon
 - [ ] **Phase 13: Git-Clone Ingestion + Dual Mode** — Container can fetch repos itself; REPO_MODE switches between mount and clone
 - [ ] **Phase 14: MCP HTTP Transport** — MCP tools accessible over HTTP with bearer auth for remote consumers
@@ -156,7 +156,7 @@ Plans:
 | 8. Slash Command Updates             | v3.1      | 2/2            | Complete    | 2026-03-22 |
 | 9. Markdown Tooling Propagation      | v3.1      | 1/1            | Complete    | 2026-03-22 |
 | 10. Documentation Fixes              | v3.1      | 2/2            | Complete    | 2026-03-22 |
-| 11. Foundation                       | 1/3 | In Progress|  | -          |
+| 11. Foundation                       | 3/3 | Complete   | 2026-03-23 | -          |
 | 12. Dockerfile + Docker Compose      | v3.2      | 0/TBD          | Not started | -          |
 | 13. Git-Clone Ingestion + Dual Mode  | v3.2      | 0/TBD          | Not started | -          |
 | 14. MCP HTTP Transport               | v3.2      | 0/TBD          | Not started | -          |
