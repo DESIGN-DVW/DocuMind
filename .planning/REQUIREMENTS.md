@@ -9,10 +9,10 @@ Requirements for Docker containerization milestone. Each maps to roadmap phases.
 
 ### Foundation
 
-- [ ] **FNDTN-01**: All hardcoded macOS paths replaced with configurable env vars
+- [x] **FNDTN-01**: All hardcoded macOS paths replaced with configurable env vars
 - [ ] **FNDTN-02**: Repository paths resolved from DOCUMIND_REPOS_DIR env var
-- [ ] **FNDTN-03**: Port, DB path, and cron schedules configurable via env vars
-- [ ] **FNDTN-04**: .env file with documented defaults for local development
+- [x] **FNDTN-03**: Port, DB path, and cron schedules configurable via env vars
+- [x] **FNDTN-04**: .env file with documented defaults for local development
 
 ### Docker Image
 
@@ -75,10 +75,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 | ----------- | ----- | ------ |
-| FNDTN-01 | Phase 11 | Pending |
+| FNDTN-01 | Phase 11 | Complete |
 | FNDTN-02 | Phase 11 | Pending |
-| FNDTN-03 | Phase 11 | Pending |
-| FNDTN-04 | Phase 11 | Pending |
+| FNDTN-03 | Phase 11 | Complete |
+| FNDTN-04 | Phase 11 | Complete |
 | DOCK-01 | Phase 12 | Pending |
 | DOCK-02 | Phase 12 | Pending |
 | DOCK-03 | Phase 12 | Pending |
