@@ -61,9 +61,10 @@ Full details: `.planning/milestones/v3.1-ROADMAP.md`
 **Plans**: 3 plans
 
 Plans:
-- [ ] 11-01-PLAN.md — Create centralized config/env.mjs + .env.example
-- [ ] 11-02-PLAN.md — Refactor daemon/processor modules to use config/env.mjs
-- [ ] 11-03-PLAN.md — Replace hardcoded paths in scripts/ + update CLAUDE.md
+
+- [x] 11-01-PLAN.md — Create centralized config/env.mjs + .env.example
+- [x] 11-02-PLAN.md — Refactor daemon/processor modules to use config/env.mjs
+- [x] 11-03-PLAN.md — Replace hardcoded paths in scripts/ + update CLAUDE.md
 
 ### Phase 12: Dockerfile + Docker Compose
 
@@ -78,12 +79,12 @@ Plans:
 4. `docker build` produces an image under 400MB and the build context is under 10MB
 5. `docker run --rm <image> whoami` outputs a non-root user
 
-**Plans**: 3 plans
+**Plans**: 2 plans
 
 Plans:
-- [ ] 11-01-PLAN.md — Create centralized config/env.mjs + .env.example
-- [ ] 11-02-PLAN.md — Refactor daemon/processor modules to use config/env.mjs
-- [ ] 11-03-PLAN.md — Replace hardcoded paths in scripts/ + update CLAUDE.md
+
+- [ ] 12-01-PLAN.md — Add graceful shutdown, DB health probe, and chokidar polling support
+- [ ] 12-02-PLAN.md — Create Dockerfile, .dockerignore, docker-compose.yml and verify image
 
 ### Phase 13: Git-Clone Ingestion + Dual Mode
 
@@ -97,12 +98,7 @@ Plans:
 3. In clone mode, repos are re-pulled on the configured cron schedule without container restart
 4. Git credentials are provided via env var at runtime and are not visible in `docker history --no-trunc` output
 
-**Plans**: 3 plans
-
-Plans:
-- [ ] 11-01-PLAN.md — Create centralized config/env.mjs + .env.example
-- [ ] 11-02-PLAN.md — Refactor daemon/processor modules to use config/env.mjs
-- [ ] 11-03-PLAN.md — Replace hardcoded paths in scripts/ + update CLAUDE.md
+**Plans**: [To be planned]
 
 ### Phase 14: MCP HTTP Transport
 
@@ -116,12 +112,7 @@ Plans:
 3. Local Claude Code with stdio MCP config continues to invoke all 14 tools without modification
 4. MCP mode switches between stdio and http via env var; the other mode does not start
 
-**Plans**: 3 plans
-
-Plans:
-- [ ] 11-01-PLAN.md — Create centralized config/env.mjs + .env.example
-- [ ] 11-02-PLAN.md — Refactor daemon/processor modules to use config/env.mjs
-- [ ] 11-03-PLAN.md — Replace hardcoded paths in scripts/ + update CLAUDE.md
+**Plans**: [To be planned]
 
 ### Phase 15: CI & Distribution
 
@@ -135,12 +126,7 @@ Plans:
 3. The published image runs on both Apple Silicon (arm64) and Linux CI runners (amd64)
 4. The image is tagged with both the specific version (`v3.2.0`) and `latest`
 
-**Plans**: 3 plans
-
-Plans:
-- [ ] 11-01-PLAN.md — Create centralized config/env.mjs + .env.example
-- [ ] 11-02-PLAN.md — Refactor daemon/processor modules to use config/env.mjs
-- [ ] 11-03-PLAN.md — Replace hardcoded paths in scripts/ + update CLAUDE.md
+**Plans**: [To be planned]
 
 ## Progress
 
@@ -156,8 +142,8 @@ Plans:
 | 8. Slash Command Updates             | v3.1      | 2/2            | Complete    | 2026-03-22 |
 | 9. Markdown Tooling Propagation      | v3.1      | 1/1            | Complete    | 2026-03-22 |
 | 10. Documentation Fixes              | v3.1      | 2/2            | Complete    | 2026-03-22 |
-| 11. Foundation                       | 3/3 | Complete    | 2026-03-23 | -          |
-| 12. Dockerfile + Docker Compose      | v3.2      | 0/TBD          | Not started | -          |
+| 11. Foundation                       | v3.2      | 3/3            | Complete    | 2026-03-23 |
+| 12. Dockerfile + Docker Compose      | v3.2      | 0/2            | Not started | -          |
 | 13. Git-Clone Ingestion + Dual Mode  | v3.2      | 0/TBD          | Not started | -          |
 | 14. MCP HTTP Transport               | v3.2      | 0/TBD          | Not started | -          |
 | 15. CI & Distribution                | v3.2      | 0/TBD          | Not started | -          |
