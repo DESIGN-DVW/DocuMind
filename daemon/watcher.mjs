@@ -58,6 +58,8 @@ export function initWatcher(db, root, ctx) {
     ignored: IGNORE_PATTERNS,
     persistent: true,
     ignoreInitial: true,
+    usePolling: process.env.CHOKIDAR_USEPOLLING === 'true',
+    interval: parseInt(process.env.CHOKIDAR_INTERVAL || '1000', 10),
     awaitWriteFinish: {
       stabilityThreshold: 2000,
       pollInterval: 100,
