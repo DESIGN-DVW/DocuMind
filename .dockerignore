@@ -1,0 +1,12 @@
+node_modules
+.git
+data
+.planning
+.env
+*.db
+*.db-wal
+*.db-shm
+dashboard/diagrams.html
+docs
+markdown.bbprojectd
+SETUP-COMPLETE.md
