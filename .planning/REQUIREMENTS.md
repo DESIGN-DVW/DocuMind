@@ -19,8 +19,8 @@ Requirements for Docker containerization milestone. Each maps to roadmap phases.
 - [ ] **DOCK-01**: Multi-stage Dockerfile using node:22-bookworm-slim base
 - [ ] **DOCK-02**: .dockerignore excludes node_modules, .git, data/, .planning/
 - [ ] **DOCK-03**: Container runs as non-root user
-- [ ] **DOCK-04**: SIGTERM/SIGINT triggers graceful shutdown (close DB, drain requests)
-- [ ] **DOCK-05**: /health endpoint returns container status for Docker HEALTHCHECK
+- [x] **DOCK-04**: SIGTERM/SIGINT triggers graceful shutdown (close DB, drain requests)
+- [x] **DOCK-05**: /health endpoint returns container status for Docker HEALTHCHECK
 - [ ] **DOCK-06**: Named volume for SQLite DB persists across container restarts
 - [ ] **DOCK-07**: docker-compose.yml starts daemon with volume-mount mode
 
@@ -82,8 +82,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DOCK-01 | Phase 12 | Pending |
 | DOCK-02 | Phase 12 | Pending |
 | DOCK-03 | Phase 12 | Pending |
-| DOCK-04 | Phase 12 | Pending |
-| DOCK-05 | Phase 12 | Pending |
+| DOCK-04 | Phase 12 | Complete |
+| DOCK-05 | Phase 12 | Complete |
 | DOCK-06 | Phase 12 | Pending |
 | DOCK-07 | Phase 12 | Pending |
 | INGEST-01 | Phase 13 | Pending |

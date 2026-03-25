@@ -143,7 +143,7 @@ Plans:
 | 9. Markdown Tooling Propagation      | v3.1      | 1/1            | Complete    | 2026-03-22 |
 | 10. Documentation Fixes              | v3.1      | 2/2            | Complete    | 2026-03-22 |
 | 11. Foundation                       | v3.2      | 3/3            | Complete    | 2026-03-23 |
-| 12. Dockerfile + Docker Compose      | v3.2      | 0/2            | Not started | -          |
+| 12. Dockerfile + Docker Compose      | 1/2 | In Progress|  | -          |
 | 13. Git-Clone Ingestion + Dual Mode  | v3.2      | 0/TBD          | Not started | -          |
 | 14. MCP HTTP Transport               | v3.2      | 0/TBD          | Not started | -          |
 | 15. CI & Distribution                | v3.2      | 0/TBD          | Not started | -          |
