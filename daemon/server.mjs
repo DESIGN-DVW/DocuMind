@@ -55,9 +55,14 @@ app.use(express.json({ limit: '10mb' }));
 // Dashboard static files
 app.use('/dashboard', express.static(path.join(ROOT, 'dashboard')));
 
-// Health check
+// Health check — includes DB liveness probe for Docker HEALTHCHECK
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', version: '2.0.0', uptime: process.uptime() });
+  try {
+    db.prepare('SELECT 1').get();
+    res.json({ status: 'ok', version: '2.0.0', uptime: process.uptime() });
+  } catch (err) {
+    res.status(503).json({ status: 'error', error: err.message });
+  }
 });
 
 // Stats dashboard
@@ -512,7 +517,7 @@ app.post('/diagrams/reverse-sync', async (req, res) => {
 });
 
 // --- Start ---
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`DocuMind v2.0 listening on port ${PORT}`);
   console.log(`Database: ${DB_PATH}`);
 
@@ -521,4 +526,23 @@ app.listen(PORT, () => {
   initWatcher(db, ROOT, ctx);
 });
 
-export { app, db };
+// --- Graceful Shutdown ---
+function shutdown(signal) {
+  console.error(`[DocuMind] ${signal} received — shutting down gracefully`);
+  server.close(() => {
+    try {
+      db.pragma('wal_checkpoint(TRUNCATE)');
+      db.close();
+    } catch (_err) {
+      // Ignore errors during cleanup
+    }
+    process.exit(0);
+  });
+  // Safety valve: force exit after 5 seconds
+  setTimeout(() => process.exit(1), 5000).unref();
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
+export { app, db, server };
