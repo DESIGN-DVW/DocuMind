@@ -6,8 +6,8 @@ WORKDIR /app
 # Install build tools required for native modules (better-sqlite3 uses node-gyp)
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 
-# Copy package manifests first for layer cache
-COPY package*.json ./
+# Copy package manifests and npm config first for layer cache
+COPY package*.json .npmrc* ./
 
 # Full install to compile native modules with Linux toolchain
 RUN npm ci

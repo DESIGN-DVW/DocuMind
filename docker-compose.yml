@@ -1,0 +1,17 @@
+services:
+  documind:
+    build: .
+    ports:
+      - "${DOCUMIND_PORT:-9000}:9000"
+    volumes:
+      - documind_data:/app/data
+      # Mount host repos read-only. Adjust the left side to your repos path.
+      # Example: /Users/Shared/htdocs/github/DVWDesign:/repos:ro
+    environment:
+      DOCUMIND_REPOS_DIR: /repos
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "2000"
+    restart: unless-stopped
+
+volumes:
+  documind_data:
