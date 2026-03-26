@@ -189,7 +189,7 @@ Plans:
 
 | 11. Foundation                       | v3.2      | 3/3            | Complete    | 2026-03-23 |
 
-| 12. Dockerfile + Docker Compose      | 2/2 | Complete   | 2026-03-26 | -          |
+| 12. Dockerfile + Docker Compose      | 2/2 | Complete    | 2026-03-26 | -          |
 
 | 13. Git-Clone Ingestion + Dual Mode  | v3.2      | 0/TBD          | Not started | -          |
 

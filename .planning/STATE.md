@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Dockerize
 status: unknown
-last_updated: "2026-03-23T16:28:40.891Z"
+last_updated: "2026-03-26T23:12:21.726Z"
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 17
-  completed_plans: 17
+  total_phases: 7
+  completed_phases: 7
+  total_plans: 19
+  completed_plans: 19
 ---
 
 # Project State
@@ -29,10 +29,12 @@ Last activity: 2026-03-25 — Completed 12-01 (graceful shutdown + DB health + p
 
 ## Performance Metrics
 
-**Velocity (v3.0 baseline):**
+### Velocity (v3.0 baseline):
 
 - Total plans completed: 14 (v3.0)
+
 - Average duration: 4m 31s
+
 - Total execution time: ~49m 22s
 
 ## Accumulated Context
@@ -40,12 +42,19 @@ Last activity: 2026-03-25 — Completed 12-01 (graceful shutdown + DB health + p
 ### Decisions
 
 - config/env.mjs is the single source of truth for all runtime config; no module reads process.env directly
+
 - REPOS_DIR is null (not empty string) when DOCUMIND_REPOS_DIR unset — callers use null check for profile vs dir discovery
+
 - macOS fallback path lives only in constants.mjs so env.mjs stays path-agnostic
+
 - No new npm deps for env loading — process.loadEnvFile() is built into Node 22
+
 - Manual SIGTERM handler instead of @godaddy/terminus — no new dependency needed for Phase 12 scope
+
 - Safety valve exits with code 1 (not 0) to signal abnormal forced exit to Docker
+
 - usePolling defaults to false when CHOKIDAR_USEPOLLING unset — zero behavior change on macOS native
+
 - server exported from server.mjs for downstream MCP HTTP transport use in later phases
 
 ### Pending Todos
@@ -59,8 +68,11 @@ None.
 ## Performance Metrics (v3.2)
 
 | Plan  | Duration | Tasks | Files |
+
 | ----- | -------- | ----- | ----- |
+
 | 11-01 | 2 min    | 2     | 4     |
+
 | 12-01 | 1 min    | 2     | 2     |
 
 ## Session Continuity
