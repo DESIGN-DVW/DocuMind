@@ -5,13 +5,26 @@ services:
       - "${DOCUMIND_PORT:-9000}:9000"
     volumes:
       - documind_data:/app/data
-      # Mount host repos read-only. Adjust the left side to your repos path.
-      # Example: /Users/Shared/htdocs/github/DVWDesign:/repos:ro
+      # --- Mount mode (REPO_MODE=mount, default) ---
+      # Bind-mount host repos read-only. Adjust left side to your repos path.
+      - ${REPOS_HOST_PATH:-/Users/Shared/htdocs/github/DVWDesign}:/repos:ro
+      # --- Clone mode (REPO_MODE=clone) ---
+      # Named volume persists cloned repos across container restarts.
+      # Uncomment the line below and comment out the bind mount above.
+      # - documind_repos:/app/repos
     environment:
-      DOCUMIND_REPOS_DIR: /repos
+      # --- Mode selection ---
+      REPO_MODE: "${REPO_MODE:-mount}"
+      # --- Mount mode ---
+      DOCUMIND_REPOS_DIR: "${DOCUMIND_REPOS_DIR:-/repos}"
       CHOKIDAR_USEPOLLING: "true"
       CHOKIDAR_INTERVAL: "2000"
+      # --- Clone mode (set these when REPO_MODE=clone) ---
+      # DOCUMIND_REPOS: "${DOCUMIND_REPOS}"
+      # GIT_TOKEN: "${GIT_TOKEN}"
     restart: unless-stopped
 
 volumes:
   documind_data:
+  # Uncomment for clone mode to persist cloned repos
+  # documind_repos:
