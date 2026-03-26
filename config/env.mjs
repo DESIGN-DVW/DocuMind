@@ -96,6 +96,14 @@ export const REPOS_LIST = process.env.DOCUMIND_REPOS
       .filter(Boolean)
   : null;
 
+/**
+ * Repository ingestion mode.
+ * 'mount' — repos are provided via host bind mount (default, macOS dev).
+ * 'clone' — repos are cloned from GitHub on startup (Docker production).
+ * @constant {string}
+ */
+export const REPO_MODE = process.env.REPO_MODE ?? 'mount';
+
 // ============================================================================
 // CRON SCHEDULES
 // ============================================================================
