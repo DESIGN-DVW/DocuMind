@@ -23,14 +23,17 @@ FROM node:22-bookworm-slim AS runtime
 
 WORKDIR /app
 
-# Install dumb-init (PID 1 signal forwarding) and curl (for HEALTHCHECK)
-RUN apt-get update && apt-get install -y dumb-init curl && rm -rf /var/lib/apt/lists/*
+# Install dumb-init (PID 1 signal forwarding), curl (for HEALTHCHECK), and git (for clone mode)
+RUN apt-get update && apt-get install -y dumb-init curl git && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
 RUN groupadd -r documind && useradd -r -g documind -d /app documind
 
 # Create data directory owned by documind (named volume will mount here)
 RUN mkdir -p /app/data && chown documind:documind /app/data
+
+# Create repos directory owned by documind (used by clone mode to store cloned repos)
+RUN mkdir -p /app/repos && chown documind:documind /app/repos
 
 # Copy production node_modules from builder (Linux-compiled binaries)
 COPY --from=builder /app/node_modules ./node_modules
