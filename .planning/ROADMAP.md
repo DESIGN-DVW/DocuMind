@@ -197,7 +197,7 @@ Plans:
 
 | 12. Dockerfile + Docker Compose      | 2/2 | Complete    | 2026-03-26 | -          |
 
-| 13. Git-Clone Ingestion + Dual Mode  | 2/2 | Complete   | 2026-03-26 | -          |
+| 13. Git-Clone Ingestion + Dual Mode  | 2/2 | Complete    | 2026-03-26 | -          |
 
 | 14. MCP HTTP Transport               | v3.2      | 0/TBD          | Not started | -          |
 
