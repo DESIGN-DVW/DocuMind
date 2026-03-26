@@ -125,7 +125,13 @@ Plans:
 
 4. Git credentials are provided via env var at runtime and are not visible in `docker history --no-trunc` output
 
-**Plans**: [To be planned]
+**Plans**: 2 plans
+
+Plans:
+
+- [ ] 13-01-PLAN.md — Create ingestion module + REPO_MODE env var + wire into server and scheduler
+
+- [ ] 13-02-PLAN.md — Update Dockerfile (git + /app/repos), docker-compose.yml dual mode, .env.example
 
 ### Phase 14: MCP HTTP Transport
 
