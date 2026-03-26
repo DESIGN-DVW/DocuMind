@@ -22,10 +22,16 @@ import {
   computeStatus,
 } from '../processors/relink-processor.mjs';
 import { processHook } from './hooks.mjs';
+import { initIngestion } from './ingestion.mjs';
 import { loadProfile } from '../context/loader.mjs';
 import { commonDir } from '../context/utils.mjs';
 import { ROOT, PORT, DB_PATH, REPOS_DIR } from '../config/env.mjs';
 import { LOCAL_BASE_PATH } from '../config/constants.mjs';
+
+// --- Repository Ingestion (clone mode) ---
+// No-op in mount mode; clones repos from GitHub in clone mode.
+// Must run before loadProfile() so REPOS_DIR already points to cloned repos.
+await initIngestion();
 
 // --- Context Profile ---
 let ctx;

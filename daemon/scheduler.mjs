@@ -7,12 +7,14 @@
 
 import cron from 'node-cron';
 import { runScan, generateDiagramSnapshot } from '../orchestrator.mjs';
+import { pullAllRepos } from './ingestion.mjs';
 import {
   CRON_HEARTBEAT,
   CRON_HOURLY,
   CRON_DAILY,
   CRON_WEEKLY,
   CRON_RELINK,
+  REPO_MODE,
 } from '../config/env.mjs';
 
 /**
@@ -186,10 +188,34 @@ export function initScheduler(db, root, ctx) {
     ).run(String(pending.length), now, String(pending.length), now);
   });
 
+  // Clone mode: pull repos and re-scan changed ones on hourly schedule
+  if (REPO_MODE === 'clone') {
+    cron.schedule(CRON_HOURLY, async () => {
+      console.log('[scheduler] Pulling cloned repos...');
+      try {
+        const updated = await pullAllRepos();
+        if (updated.length === 0) {
+          console.log('[scheduler] All repos up to date');
+          return;
+        }
+        for (const name of updated) {
+          console.log(`[scheduler] Re-scanning ${name} after pull...`);
+          await runScan(db, ctx, { mode: 'incremental', repo: name });
+        }
+        console.log(`[scheduler] Pull + re-scan complete: ${updated.length} repo(s) updated`);
+      } catch (err) {
+        console.error('[scheduler] Pull cron failed:', err.message);
+      }
+    });
+  }
+
   console.log('[scheduler] Cron jobs registered:');
   console.log(`  ${CRON_HEARTBEAT}  — heartbeat + stats`);
   console.log(`  ${CRON_HOURLY}     — hourly incremental scan`);
   console.log(`  ${CRON_RELINK}   — pending diagram relinks check`);
   console.log(`  ${CRON_DAILY}     — daily full scan + analysis + diagram snapshot`);
   console.log(`  ${CRON_WEEKLY}     — weekly deep analysis + diagram snapshot`);
+  if (REPO_MODE === 'clone') {
+    console.log(`  ${CRON_HOURLY}     — clone mode: git pull + re-scan`);
+  }
 }
