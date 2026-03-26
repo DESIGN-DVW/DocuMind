@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Dockerize
 status: unknown
-last_updated: "2026-03-26T23:30:00.000Z"
+last_updated: "2026-03-26T23:35:00.000Z"
 progress:
   total_phases: 7
   completed_phases: 7
-  total_plans: 19
-  completed_plans: 19
+  total_plans: 20
+  completed_plans: 20
 ---
 
 # Project State
@@ -22,10 +22,10 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 
 ## Current Position
 
-Phase: 13-git-clone-ingestion-dual-mode (Plan 1 of 1 complete)
-Plan: 13-01
+Phase: 13-git-clone-ingestion-dual-mode (Plan 2 of 2 complete)
+Plan: 13-02
 Status: Complete
-Last activity: 2026-03-26 — Completed 13-01 (ingestion module + REPO_MODE dual-mode wiring)
+Last activity: 2026-03-26 — Completed 13-02 (Docker infrastructure dual-mode: git in runtime, /app/repos, docker-compose restructured)
 
 ## Performance Metrics
 
@@ -65,6 +65,14 @@ Last activity: 2026-03-26 — Completed 13-01 (ingestion module + REPO_MODE dual
 
 - Pull cron registered as second CRON_HOURLY job in clone mode — scan is content-hash idempotent so double-scanning is harmless
 
+- git installed in runtime stage only (not builder) — runtime needs it for clone/pull, builder does not
+
+- Clone mode config shipped as commented YAML blocks in docker-compose.yml — mount mode is always the safe default
+
+- REPOS_HOST_PATH variable makes bind mount configurable without editing docker-compose.yml
+
+- /app/repos chowned before USER documind directive — chown requires root
+
 ### Pending Todos
 
 None.
@@ -85,8 +93,10 @@ None.
 
 | 13-01 | 1m 35s   | 2     | 4     |
 
+| 13-02 | 2 min    | 2     | 3     |
+
 ## Session Continuity
 
 Last session: 2026-03-26
-Stopped at: Completed 13-01-PLAN.md
-Resume file: .planning/phases/13-git-clone-ingestion-dual-mode/13-01-PLAN.md
+Stopped at: Completed 13-02-PLAN.md
+Resume file: .planning/phases/13-git-clone-ingestion-dual-mode/13-02-PLAN.md

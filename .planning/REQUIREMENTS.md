@@ -35,15 +35,15 @@ Requirements for Docker containerization milestone. Each maps to roadmap phases.
 
 ### Ingestion
 
-- [ ] **INGEST-01**: Volume mount mode scans mounted repo directories
+- [x] **INGEST-01**: Volume mount mode scans mounted repo directories
 
-- [ ] **INGEST-02**: Git-clone mode clones configured repos on container start
+- [x] **INGEST-02**: Git-clone mode clones configured repos on container start
 
-- [ ] **INGEST-03**: Git-clone mode pulls repos on cron schedule
+- [x] **INGEST-03**: Git-clone mode pulls repos on cron schedule
 
-- [ ] **INGEST-04**: REPO_MODE env var switches between mount and clone modes
+- [x] **INGEST-04**: REPO_MODE env var switches between mount and clone modes
 
-- [ ] **INGEST-05**: Git credentials accepted via env vars (not baked into image)
+- [x] **INGEST-05**: Git credentials accepted via env vars (not baked into image)
 
 ### MCP Transport
 
@@ -127,15 +127,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | DOCK-07 | Phase 12 | Complete |
 
-| INGEST-01 | Phase 13 | Pending |
+| INGEST-01 | Phase 13 | Complete |
 
-| INGEST-02 | Phase 13 | Pending |
+| INGEST-02 | Phase 13 | Complete |
 
-| INGEST-03 | Phase 13 | Pending |
+| INGEST-03 | Phase 13 | Complete |
 
-| INGEST-04 | Phase 13 | Pending |
+| INGEST-04 | Phase 13 | Complete |
 
-| INGEST-05 | Phase 13 | Pending |
+| INGEST-05 | Phase 13 | Complete |
 
 | MCPT-01 | Phase 14 | Pending |
 

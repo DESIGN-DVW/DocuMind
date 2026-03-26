@@ -52,7 +52,7 @@ Full details: `.planning/milestones/v3.1-ROADMAP.md`
 
 - [x] **Phase 12: Dockerfile + Docker Compose** — Multi-stage Docker image with production hygiene; `docker compose up` starts daemon (completed 2026-03-26)
 
-- [ ] **Phase 13: Git-Clone Ingestion + Dual Mode** — Container can fetch repos itself; REPO_MODE switches between mount and clone
+- [x] **Phase 13: Git-Clone Ingestion + Dual Mode** — Container can fetch repos itself; REPO_MODE switches between mount and clone (completed 2026-03-26)
 
 - [ ] **Phase 14: MCP HTTP Transport** — MCP tools accessible over HTTP with bearer auth for remote consumers
 
@@ -197,7 +197,7 @@ Plans:
 
 | 12. Dockerfile + Docker Compose      | 2/2 | Complete    | 2026-03-26 | -          |
 
-| 13. Git-Clone Ingestion + Dual Mode  | 1/2 | In Progress|  | -          |
+| 13. Git-Clone Ingestion + Dual Mode  | 2/2 | Complete   | 2026-03-26 | -          |
 
 | 14. MCP HTTP Transport               | v3.2      | 0/TBD          | Not started | -          |
 
