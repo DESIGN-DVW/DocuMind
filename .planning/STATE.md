@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Dockerize
 status: unknown
-last_updated: "2026-03-26T23:12:21.726Z"
+last_updated: "2026-03-26T23:30:00.000Z"
 progress:
   total_phases: 7
   completed_phases: 7
@@ -22,10 +22,10 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 
 ## Current Position
 
-Phase: 12-dockerfile-docker-compose (Plan 1 of N complete)
-Plan: 12-02
-Status: In progress
-Last activity: 2026-03-25 — Completed 12-01 (graceful shutdown + DB health + polling watcher)
+Phase: 13-git-clone-ingestion-dual-mode (Plan 1 of 1 complete)
+Plan: 13-01
+Status: Complete
+Last activity: 2026-03-26 — Completed 13-01 (ingestion module + REPO_MODE dual-mode wiring)
 
 ## Performance Metrics
 
@@ -57,6 +57,14 @@ Last activity: 2026-03-25 — Completed 12-01 (graceful shutdown + DB health + p
 
 - server exported from server.mjs for downstream MCP HTTP transport use in later phases
 
+- GIT_TOKEN read from process.env at runtime inside initIngestion() — secrets must not be module-level env.mjs exports
+
+- initIngestion() does not mutate DOCUMIND_REPOS_DIR — docker-compose sets it before container start; env.mjs reads it at import time
+
+- execFile (not exec) used for all git commands in ingestion module to prevent shell injection
+
+- Pull cron registered as second CRON_HOURLY job in clone mode — scan is content-hash idempotent so double-scanning is harmless
+
 ### Pending Todos
 
 None.
@@ -75,8 +83,10 @@ None.
 
 | 12-01 | 1 min    | 2     | 2     |
 
+| 13-01 | 1m 35s   | 2     | 4     |
+
 ## Session Continuity
 
-Last session: 2026-03-25
-Stopped at: Completed 12-01-PLAN.md
-Resume file: .planning/phases/12-dockerfile-docker-compose/12-02-PLAN.md
+Last session: 2026-03-26
+Stopped at: Completed 13-01-PLAN.md
+Resume file: .planning/phases/13-git-clone-ingestion-dual-mode/13-01-PLAN.md
