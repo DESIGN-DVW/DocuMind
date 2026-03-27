@@ -60,6 +60,35 @@ The `.mmd` source file has been modified since the FigJam view was last generate
 
 ---
 
+## Diagram Types
+
+The registry supports seven diagram types. Choose the type that best fits the content — this helps with filtering, dashboard display, and ensures agents pick the right Mermaid syntax.
+
+| Type                 | Mermaid Syntax                             | When to Use                                            | Example Use Cases                                                          |
+| -------------------- | ------------------------------------------ | ------------------------------------------------------ | -------------------------------------------------------------------------- |
+| `flowchart`          | `flowchart TD` / `flowchart LR`            | Process flows, data pipelines, decision logic          | Scan pipeline, API request handling, build process                         |
+| `folder_tree`        | `graph TD` with directory/folder nodes     | Repository structure, file organization                | Repo structure, config hierarchy, monorepo layout                          |
+| `relationship_graph` | `classDiagram`                             | Entity relationships, module dependencies, inheritance | Document relationships, agent inheritance, package dependencies            |
+| `decision_tree`      | `flowchart TD` with diamond decision nodes | Decision logic, troubleshooting guides, routing        | Error handling flow, permission checks, dispatch routing                   |
+| `sequence`           | `sequenceDiagram`                          | Interactions over time between actors/systems          | API call chains, MCP tool flows, webhook handshakes                        |
+| `state`              | `stateDiagram-v2`                          | Lifecycle stages, status transitions                   | Document lifecycle, diagram lifecycle (generated/curated/stale), PR states |
+| `gantt`              | `gantt`                                    | Timelines, schedules, phased work                      | Milestone phases, release schedule, migration plan                         |
+
+### Type auto-detection
+
+The `register_diagram` MCP tool detects the type automatically from Mermaid syntax:
+
+- `sequenceDiagram` in source → `sequence`
+- `stateDiagram` in source → `state`
+- `gantt` in source → `gantt`
+- `classDiagram` in source → `relationship_graph`
+- `graph` with folder/directory keywords → `folder_tree`
+- Everything else → `flowchart`
+
+If auto-detection picks the wrong type, the `.mmd` syntax can usually be adjusted to match the intended type more clearly.
+
+---
+
 ## How to Create a Diagram
 
 Use the `/figma-diagram` slash command. The process has six steps, all handled by the command:
