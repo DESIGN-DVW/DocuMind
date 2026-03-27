@@ -63,7 +63,7 @@ DocuMind/
 │   └── generate-tree-schema.mjs  # Tree schema generator
 ├── data/
 │   ├── documind.db               # SQLite database (FTS5 + graph)
-│   └── mermaid/                  # Generated .mmd diagram files
+│   └── diagrams/                 # Generated .mmd diagram files (per-repo: docs/diagrams/)
 ├── config/
 │   ├── .markdownlint.json        # Linting rules
 │   └── .markdown-link-check.json # Link validation config
@@ -108,16 +108,27 @@ npm run daemon:logs         # pm2 logs documind
 DocuMind loads configuration from environment variables, with optional `.env` file support via Node 22's `process.loadEnvFile()`. All config is centralized in `config/env.mjs`.
 
 | Variable                  | Default                                          | Description                                                                                       |
+
 | ------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+
 | `PORT`                    | `9000`                                           | HTTP server port                                                                                  |
+
 | `DOCUMIND_DB`             | `data/documind.db`                               | Path to SQLite database (relative to project root)                                                |
+
 | `DOCUMIND_PROFILE`        | `config/profiles/dvwdesign.json`                 | Active repository profile JSON                                                                    |
+
 | `DOCUMIND_REPOS_DIR`      | *(unset — uses macOS fallback in constants.mjs)* | Base directory containing all repositories to scan. When set, overrides the hardcoded macOS path. |
+
 | `DOCUMIND_REPOS`          | *(unset — all repos)*                            | Comma-separated list of repo names to scan (overrides profile)                                    |
+
 | `DOCUMIND_CRON_HEARTBEAT` | `*/15 * * * *`                                   | Cron for file watcher heartbeat check                                                             |
+
 | `DOCUMIND_CRON_HOURLY`    | `0 * * * *`                                      | Cron for incremental scan                                                                         |
+
 | `DOCUMIND_CRON_DAILY`     | `0 2 * * *`                                      | Cron for full scan + analysis                                                                     |
+
 | `DOCUMIND_CRON_WEEKLY`    | `0 3 * * 0`                                      | Cron for PDF re-index + keyword refresh                                                           |
+
 | `DOCUMIND_CRON_RELINK`    | `0 */6 * * *`                                    | Cron for relink processor check                                                                   |
 
 Copy `.env.example` to `.env` for local development. In Docker, pass vars directly. The daemon starts without `.env` — macOS defaults are used as fallbacks.
