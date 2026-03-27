@@ -185,11 +185,9 @@ These are one-time redirect URLs that create the FigJam file when first opened. 
 
 **Implication:** `generate_diagram` is currently a fire-and-forget tool. Once the diagram is created, there is no API path back to it.
 
-### Figma plan/seat constraints on the central board
+### File access errors on `get_figjam`
 
-Our central FigJam board lives under a Starter plan with a View seat. The `use_figma` tool requires a Full seat to write. Even read operations via `get_figjam` failed on this board. Enterprise org files (DDB Worldwide) are accessible, but personal/team boards used for development coordination are not.
-
-This creates a split where diagram generation works (it creates files in the user's drafts) but diagram management on shared boards does not.
+During testing, `get_figjam` returned "This figma file could not be accessed" on the central FigJam board. The root cause is unclear — it may be a transient error, a file-sharing permission issue, or a mismatch between how the MCP resolves workspace membership. The board owner has a Pro Full seat, so plan-level access should not be the issue. This warrants further investigation with Figma support.
 
 ---
 
@@ -197,7 +195,7 @@ This creates a split where diagram generation works (it creates files in the use
 
 - **Figma MCP servers:** `claude.ai Figma` (remote), `figma-desktop` (local, port 3845)
 - **Figma REST API:** Used via FigmailAPP (comments, file reads, design tokens) and Figma plugins (stickies, connectors via Plugin API)
-- **Figma plan:** DDB Worldwide (Enterprise, Full seat) + personal team (Starter, View seat)
+- **Figma plan:** Pro (Full seat) + DDB Worldwide (Enterprise, Full seat)
 - **Usage pattern:** 10 diagrams across 6 repositories, growing; centralized on one FigJam board
 - **Diagram types:** flowchart, folder_tree, relationship_graph, sequence, state, gantt, decision_tree
 - **Integration:** Claude Code CLI with MCP, Node.js documentation daemon, SQLite FTS5 database
@@ -211,7 +209,7 @@ The `use_figma` tool theoretically enables write operations on existing FigJam f
 
 1. **`generate_diagram` returns redirect URLs** — no file key is available to target with `use_figma`
 2. **Mermaid rendering logic is internal** — reproducing `generate_diagram`'s layout in raw Plugin API JS is impractical
-3. **Plan/seat constraints** — shared boards may not be accessible for writes depending on the org
+3. **File access inconsistencies** — `get_figjam` failed on the central board for reasons that need investigation
 
 The simplest path forward remains: **add `fileKey` (and optionally `pageId`) to `generate_diagram`** so it can render into an existing file. Alternatively, have `generate_diagram` return a real file key instead of a redirect URL, enabling `use_figma` follow-up calls.
 
