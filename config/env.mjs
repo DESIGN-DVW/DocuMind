@@ -137,3 +137,29 @@ export const CRON_WEEKLY = process.env.DOCUMIND_CRON_WEEKLY ?? '0 3 * * 0';
  * @constant {string}
  */
 export const CRON_RELINK = process.env.DOCUMIND_CRON_RELINK ?? '0 */6 * * *';
+
+// ============================================================================
+// MCP TRANSPORT
+// ============================================================================
+
+/**
+ * MCP transport mode.
+ * 'stdio' — JSON-RPC over stdin/stdout for local Claude Code (default).
+ * 'http'  — Streamable HTTP on Express /mcp route for remote consumers.
+ * @constant {string}
+ */
+export const MCP_MODE = process.env.DOCUMIND_MCP_MODE ?? 'stdio';
+
+/**
+ * Bearer token(s) for MCP HTTP auth (comma-separated for multiple consumers).
+ * Required when MCP_MODE is 'http'. Null when unset.
+ * @constant {string|null}
+ */
+export const MCP_TOKEN = process.env.DOCUMIND_MCP_TOKEN ?? null;
+
+/**
+ * Allowed CORS origins for MCP HTTP endpoint (comma-separated).
+ * Empty string disables CORS headers. Use '*' to allow all origins.
+ * @constant {string}
+ */
+export const MCP_CORS_ORIGINS = process.env.DOCUMIND_MCP_CORS_ORIGINS ?? '';
