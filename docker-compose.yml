@@ -22,6 +22,12 @@ services:
       # --- Clone mode (set these when REPO_MODE=clone) ---
       # DOCUMIND_REPOS: "${DOCUMIND_REPOS}"
       # GIT_TOKEN: "${GIT_TOKEN}"
+      # --- MCP transport ---
+      DOCUMIND_MCP_MODE: "${DOCUMIND_MCP_MODE:-stdio}"
+      # Required when DOCUMIND_MCP_MODE=http:
+      # DOCUMIND_MCP_TOKEN: "${DOCUMIND_MCP_TOKEN}"
+      # Optional CORS origins (comma-separated):
+      # DOCUMIND_MCP_CORS_ORIGINS: "${DOCUMIND_MCP_CORS_ORIGINS:-}"
     restart: unless-stopped
 
 volumes:

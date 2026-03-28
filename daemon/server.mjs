@@ -25,7 +25,7 @@ import { processHook } from './hooks.mjs';
 import { initIngestion } from './ingestion.mjs';
 import { loadProfile } from '../context/loader.mjs';
 import { commonDir } from '../context/utils.mjs';
-import { ROOT, PORT, DB_PATH, REPOS_DIR } from '../config/env.mjs';
+import { ROOT, PORT, DB_PATH, REPOS_DIR, MCP_MODE } from '../config/env.mjs';
 import { LOCAL_BASE_PATH } from '../config/constants.mjs';
 
 // --- Repository Ingestion (clone mode) ---
@@ -65,7 +65,7 @@ app.use('/dashboard', express.static(path.join(ROOT, 'dashboard')));
 app.get('/health', (_req, res) => {
   try {
     db.prepare('SELECT 1').get();
-    res.json({ status: 'ok', version: '2.0.0', uptime: process.uptime() });
+    res.json({ status: 'ok', version: '2.0.0', uptime: process.uptime(), mcp_mode: MCP_MODE });
   } catch (err) {
     res.status(503).json({ status: 'error', error: err.message });
   }
