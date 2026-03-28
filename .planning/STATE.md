@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Dockerize
 status: unknown
-last_updated: "2026-03-28T23:01:09.473Z"
+last_updated: "2026-03-28T23:00:32Z"
 progress:
   total_phases: 10
   completed_phases: 10
@@ -87,6 +87,9 @@ Last activity: 2026-03-28 — Completed 15-02 (DOCKER-USAGE.md extended with Pub
 
 - DOCUMIND_MCP_TOKEN and CORS vars commented in docker-compose.yml — stdio is default, http vars only needed when opting in
 - [Phase 15-ci-distribution]: Step labels in Manual Publishing subsection use h4 headings not bold text — avoids MD036 linting violation
+- Builder stage pinned to ${BUILDPLATFORM:-linux/amd64} so npm ci compiles better-sqlite3 natively on GitHub runner, not under QEMU
+- GITHUB_TOKEN with permissions: packages: write used for GHCR auth — no PAT rotation burden; credentials auto-expire per workflow run
+- metadata-action flavor: latest=auto + type=semver produces both version and latest tags automatically from a single git tag push
 
 ### Pending Todos
 
