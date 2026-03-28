@@ -47,13 +47,13 @@ Requirements for Docker containerization milestone. Each maps to roadmap phases.
 
 ### MCP Transport
 
-- [ ] **MCPT-01**: MCP HTTP endpoint on POST /mcp using StreamableHTTPServerTransport
+- [x] **MCPT-01**: MCP HTTP endpoint on POST /mcp using StreamableHTTPServerTransport
 
-- [ ] **MCPT-02**: Bearer token auth protects MCP HTTP endpoint
+- [x] **MCPT-02**: Bearer token auth protects MCP HTTP endpoint
 
-- [ ] **MCPT-03**: MCP stdio mode continues to work for local Claude Code
+- [x] **MCPT-03**: MCP stdio mode continues to work for local Claude Code
 
-- [ ] **MCPT-04**: MCP mode (stdio/http) selectable via env var
+- [x] **MCPT-04**: MCP mode (stdio/http) selectable via env var
 
 ### CI & Distribution
 
@@ -137,13 +137,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | INGEST-05 | Phase 13 | Complete |
 
-| MCPT-01 | Phase 14 | Pending |
+| MCPT-01 | Phase 14 | Complete |
 
-| MCPT-02 | Phase 14 | Pending |
+| MCPT-02 | Phase 14 | Complete |
 
-| MCPT-03 | Phase 14 | Pending |
+| MCPT-03 | Phase 14 | Complete |
 
-| MCPT-04 | Phase 14 | Pending |
+| MCPT-04 | Phase 14 | Complete |
 
 | CICD-01 | Phase 15 | Pending |
 
@@ -164,4 +164,5 @@ Which phases cover which requirements. Updated during roadmap creation.
 ---
 
 ### Requirements defined: 2026-03-23
+
 ### Last updated: 2026-03-23 after initial definition

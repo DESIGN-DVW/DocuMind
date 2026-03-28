@@ -205,6 +205,6 @@ Plans:
 
 | 13. Git-Clone Ingestion + Dual Mode  | 2/2 | Complete    | 2026-03-26 | -          |
 
-| 14. MCP HTTP Transport               | v3.2      | 0/TBD          | Not started | -          |
+| 14. MCP HTTP Transport               | 1/2 | In Progress|  | -          |
 
 | 15. CI & Distribution                | v3.2      | 0/TBD          | Not started | -          |

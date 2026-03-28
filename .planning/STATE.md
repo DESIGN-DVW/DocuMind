@@ -4,12 +4,12 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Dockerize
 status: unknown
-last_updated: "2026-03-26T23:37:51.449Z"
+last_updated: "2026-03-28T15:49:03Z"
 progress:
-  total_phases: 8
-  completed_phases: 8
-  total_plans: 21
-  completed_plans: 21
+  total_phases: 9
+  completed_phases: 9
+  total_plans: 22
+  completed_plans: 22
 
 ---
 
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 
 ## Current Position
 
-Phase: 13-git-clone-ingestion-dual-mode (Plan 2 of 2 complete)
-Plan: 13-02
+Phase: 14-mcp-http-transport (Plan 1 of 1 complete)
+Plan: 14-01
 Status: Complete
-Last activity: 2026-03-26 — Completed 13-02 (Docker infrastructure dual-mode: git in runtime, /app/repos, docker-compose restructured)
+Last activity: 2026-03-28 — Completed 14-01 (MCP HTTP transport with bearer auth, switchable via DOCUMIND_MCP_MODE)
 
 ## Performance Metrics
 
@@ -75,6 +75,16 @@ Last activity: 2026-03-26 — Completed 13-02 (Docker infrastructure dual-mode: 
 
 - /app/repos chowned before USER documind directive — chown requires root
 
+- MCP_MODE defaults to 'stdio' — no behavior change for existing local Claude Code users without env var set
+
+- Hand-written bearerAuthMiddleware used instead of SDK requireBearerAuth — SDK version requires expiresAt field on static tokens
+
+- Stateless StreamableHTTPServerTransport (sessionIdGenerator undefined) — DocuMind tools are synchronous DB/file ops, no session state needed
+
+- Token Set built once at startup, O(1) per-request lookup, not rebuilt per request
+
+- CORS middleware scope-limited to /mcp route only — existing REST endpoints unaffected
+
 ### Pending Todos
 
 None.
@@ -97,8 +107,10 @@ None.
 
 | 13-02 | 2 min    | 2     | 3     |
 
+| 14-01 | 2 min    | 2     | 2     |
+
 ## Session Continuity
 
-Last session: 2026-03-26
-Stopped at: Completed 13-02-PLAN.md
-Resume file: .planning/phases/13-git-clone-ingestion-dual-mode/13-02-PLAN.md
+Last session: 2026-03-28
+Stopped at: Completed 14-01-PLAN.md
+Resume file: .planning/phases/14-mcp-http-transport/14-01-PLAN.md
