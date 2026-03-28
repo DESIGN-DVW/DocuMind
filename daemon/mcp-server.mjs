@@ -23,7 +23,14 @@ import { writingNow } from './registry-lock.mjs';
 const require = createRequire(import.meta.url);
 const { sync: markdownlintSync, applyFixes } = require('markdownlint');
 
-import { ROOT, DB_PATH, PROFILE_PATH } from '../config/env.mjs';
+import {
+  ROOT,
+  DB_PATH,
+  PROFILE_PATH,
+  MCP_MODE,
+  MCP_TOKEN,
+  MCP_CORS_ORIGINS,
+} from '../config/env.mjs';
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
@@ -1067,8 +1074,117 @@ server.tool(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Start transport
+// Start transport — mode determined by DOCUMIND_MCP_MODE env var
 // ─────────────────────────────────────────────────────────────────────────────
-const transport = new StdioServerTransport();
-await server.connect(transport);
-console.log('[mcp-server] DocuMind MCP ready');
+
+if (MCP_MODE === 'stdio') {
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+  console.log('[mcp-server] DocuMind MCP ready (stdio)');
+} else if (MCP_MODE === 'http') {
+  // --- Validate token requirement ---
+  if (!MCP_TOKEN) {
+    console.error('[MCP] DOCUMIND_MCP_TOKEN is required in HTTP mode. Exiting.');
+    process.exit(1);
+  }
+
+  const VALID_TOKENS = new Set(
+    MCP_TOKEN.split(',')
+      .map(t => t.trim())
+      .filter(Boolean)
+  );
+
+  if (VALID_TOKENS.size === 0) {
+    console.error('[MCP] DOCUMIND_MCP_TOKEN is set but contains no valid tokens. Exiting.');
+    process.exit(1);
+  }
+
+  // --- Bearer auth middleware ---
+  function bearerAuthMiddleware(req, res, next) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      const ip = req.ip || req.socket?.remoteAddress;
+      console.error(
+        `[MCP] Auth failed: missing token | ${new Date().toISOString()} | ${ip} | ${req.headers.origin ?? ''}`
+      );
+      return res.status(401).json({
+        jsonrpc: '2.0',
+        error: { code: -32001, message: 'Unauthorized' },
+        id: null,
+      });
+    }
+    const token = authHeader.slice(7).trim();
+    if (!VALID_TOKENS.has(token)) {
+      const ip = req.ip || req.socket?.remoteAddress;
+      console.error(
+        `[MCP] Auth failed: invalid token | ${new Date().toISOString()} | ${ip} | ${req.headers.origin ?? ''}`
+      );
+      return res.status(401).json({
+        jsonrpc: '2.0',
+        error: { code: -32001, message: 'Unauthorized' },
+        id: null,
+      });
+    }
+    next();
+  }
+
+  // --- CORS middleware for /mcp (browser-based MCP clients) ---
+  const CORS_ORIGINS = MCP_CORS_ORIGINS
+    ? MCP_CORS_ORIGINS.split(',')
+        .map(o => o.trim())
+        .filter(Boolean)
+    : [];
+
+  function corsMiddleware(req, res, next) {
+    const origin = req.headers.origin;
+    if (CORS_ORIGINS.length === 0 || !origin) return next();
+    if (CORS_ORIGINS.includes('*') || CORS_ORIGINS.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+      res.setHeader(
+        'Access-Control-Allow-Headers',
+        'Authorization, Content-Type, Mcp-Session-Id, MCP-Protocol-Version'
+      );
+    }
+    if (req.method === 'OPTIONS') return res.status(204).end();
+    next();
+  }
+
+  // --- Import Express app from server.mjs ---
+  // server.mjs already exports { app, db, server } and is running on port 9000.
+  // We add /mcp routes to the existing app.
+  const { app } = await import('./server.mjs');
+
+  // --- Mount StreamableHTTPServerTransport ---
+  const { StreamableHTTPServerTransport } = await import(
+    '@modelcontextprotocol/sdk/server/streamableHttp.js'
+  );
+
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: undefined, // stateless — no session tracking
+  });
+
+  await server.connect(transport);
+
+  // Mount routes: CORS first, then auth, then transport handler
+  app.use('/mcp', corsMiddleware);
+
+  app.post('/mcp', bearerAuthMiddleware, async (req, res) => {
+    await transport.handleRequest(req, res, req.body);
+  });
+
+  app.get('/mcp', bearerAuthMiddleware, async (req, res) => {
+    await transport.handleRequest(req, res);
+  });
+
+  app.delete('/mcp', bearerAuthMiddleware, async (req, res) => {
+    await transport.handleRequest(req, res);
+  });
+
+  console.log('[mcp-server] DocuMind MCP ready (http on /mcp)');
+} else {
+  console.error(
+    `[MCP] Invalid DOCUMIND_MCP_MODE "${MCP_MODE}". Must be "stdio" or "http". Exiting.`
+  );
+  process.exit(1);
+}
