@@ -213,4 +213,4 @@ Plans:
 
 | 14. MCP HTTP Transport               | 2/2 | Complete   | 2026-03-28 | -          |
 
-| 15. CI & Distribution                | 2/2 | Complete   | 2026-03-28 | -          |
+| 15. CI & Distribution                | 2/2 | Complete    | 2026-03-28 | -          |
