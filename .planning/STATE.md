@@ -1,4 +1,5 @@
 ---
+
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Dockerize
@@ -9,6 +10,7 @@ progress:
   completed_phases: 8
   total_plans: 21
   completed_plans: 21
+
 ---
 
 # Project State
