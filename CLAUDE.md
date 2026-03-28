@@ -131,6 +131,12 @@ DocuMind loads configuration from environment variables, with optional `.env` fi
 
 | `DOCUMIND_CRON_RELINK`    | `0 */6 * * *`                                    | Cron for relink processor check                                                                   |
 
+| `DOCUMIND_MCP_MODE`         | `stdio`                                          | MCP transport mode: `stdio` (local Claude Code) or `http` (remote consumers over HTTP)            |
+
+| `DOCUMIND_MCP_TOKEN`        | *(unset)*                                        | Bearer token(s) for MCP HTTP endpoint (comma-separated). Required when MCP mode is `http`.        |
+
+| `DOCUMIND_MCP_CORS_ORIGINS` | *(unset)*                                        | Allowed CORS origins for MCP HTTP endpoint (comma-separated). Empty disables CORS.                |
+
 Copy `.env.example` to `.env` for local development. In Docker, pass vars directly. The daemon starts without `.env` — macOS defaults are used as fallbacks.
 
 ## API Endpoints (port 9000)
@@ -160,6 +166,8 @@ Copy `.env.example` to `.env` for local development. In Docker, pass vars direct
 | `/convert`    | POST   | Convert file (DOCX/RTF/PDF)         |
 
 | `/hook`       | POST   | Claude hook receiver                |
+
+| `/mcp`        | POST/GET/DELETE | MCP Streamable HTTP endpoint (requires bearer token; active only in `http` mode) |
 
 ### Scheduled Tasks
 
@@ -500,6 +508,16 @@ Enforced by MD040 (markdownlint) + auto-detected by `fix-markdown.mjs`.
 - `post-commit` triggers scan of changed files
 
 - Hook endpoint: `POST http://localhost:9000/hook`
+
+### MCP HTTP Transport
+
+- When `DOCUMIND_MCP_MODE=http`, MCP tools are available at `POST /mcp` on port 9000
+
+- Requires `Authorization: Bearer <token>` header (token from `DOCUMIND_MCP_TOKEN`)
+
+- Supports `GET /mcp` (SSE) and `DELETE /mcp` (session termination) per MCP spec
+
+- Default mode is `stdio` — no changes needed for local Claude Code usage
 
 ### All DVWDesign Repositories
 
