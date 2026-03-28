@@ -56,7 +56,7 @@ Full details: `.planning/milestones/v3.1-ROADMAP.md`
 
 - [x] **Phase 14: MCP HTTP Transport** — MCP tools accessible over HTTP with bearer auth for remote consumers (completed 2026-03-28)
 
-- [ ] **Phase 15: CI & Distribution** — Multi-arch image published to GHCR via GitHub Actions
+- [x] **Phase 15: CI & Distribution** — Multi-arch image published to GHCR via GitHub Actions (completed 2026-03-28)
 
 ## Phase Details
 
@@ -213,4 +213,4 @@ Plans:
 
 | 14. MCP HTTP Transport               | 2/2 | Complete   | 2026-03-28 | -          |
 
-| 15. CI & Distribution                | v3.2      | 0/2            | Not started | -          |
+| 15. CI & Distribution                | 2/2 | Complete   | 2026-03-28 | -          |

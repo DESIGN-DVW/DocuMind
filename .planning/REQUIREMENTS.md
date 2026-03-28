@@ -57,7 +57,7 @@ Requirements for Docker containerization milestone. Each maps to roadmap phases.
 
 ### CI & Distribution
 
-- [ ] **CICD-01**: Documentation for manual docker build and push to GHCR
+- [x] **CICD-01**: Documentation for manual docker build and push to GHCR
 
 - [ ] **CICD-02**: GitHub Actions workflow builds and pushes image on release
 
@@ -145,7 +145,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | MCPT-04 | Phase 14 | Complete |
 
-| CICD-01 | Phase 15 | Pending |
+| CICD-01 | Phase 15 | Complete |
 
 | CICD-02 | Phase 15 | Pending |
 

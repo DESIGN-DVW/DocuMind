@@ -1,16 +1,14 @@
 ---
-
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Dockerize
 status: unknown
-last_updated: "2026-03-28T15:49:03Z"
+last_updated: "2026-03-28T23:01:09.473Z"
 progress:
-  total_phases: 9
-  completed_phases: 9
-  total_plans: 22
-  completed_plans: 22
-
+  total_phases: 10
+  completed_phases: 10
+  total_plans: 25
+  completed_plans: 25
 ---
 
 # Project State
@@ -24,10 +22,10 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 
 ## Current Position
 
-Phase: 14-mcp-http-transport (Plan 2 of 2 complete)
-Plan: 14-02
+Phase: 15-ci-distribution (Plan 2 of 2 complete)
+Plan: 15-02
 Status: Complete
-Last activity: 2026-03-28 — Completed 14-02 (MCP mode observable via /health; docker-compose and .env.example and CLAUDE.md updated)
+Last activity: 2026-03-28 — Completed 15-02 (DOCKER-USAGE.md extended with Publishing to GHCR section: automated tag workflow, manual buildx multi-arch steps, pull instructions)
 
 ## Performance Metrics
 
@@ -88,6 +86,7 @@ Last activity: 2026-03-28 — Completed 14-02 (MCP mode observable via /health; 
 - mcp_mode exposed in /health for observability — consumers can verify transport without env inspection
 
 - DOCUMIND_MCP_TOKEN and CORS vars commented in docker-compose.yml — stdio is default, http vars only needed when opting in
+- [Phase 15-ci-distribution]: Step labels in Manual Publishing subsection use h4 headings not bold text — avoids MD036 linting violation
 
 ### Pending Todos
 
@@ -115,8 +114,12 @@ None.
 
 | 14-02 | 2 min    | 2     | 4     |
 
+| 15-01 | 1 min    | 2     | 2     |
+
+| 15-02 | 1 min    | 1     | 1     |
+
 ## Session Continuity
 
 Last session: 2026-03-28
-Stopped at: Completed 14-02-PLAN.md
-Resume file: .planning/phases/14-mcp-http-transport/14-02-PLAN.md
+Stopped at: Completed 15-02-PLAN.md
+Resume file: .planning/phases/15-ci-distribution/15-02-PLAN.md
