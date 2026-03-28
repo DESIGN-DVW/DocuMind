@@ -148,7 +148,13 @@ Plans:
 
 4. MCP mode switches between stdio and http via env var; the other mode does not start
 
-**Plans**: [To be planned]
+**Plans**: 2 plans
+
+Plans:
+
+- [ ] 14-01-PLAN.md — Add MCP env vars + HTTP transport mode with bearer auth to mcp-server.mjs
+
+- [ ] 14-02-PLAN.md — Update /health endpoint, docker-compose.yml, .env.example, CLAUDE.md
 
 ### Phase 15: CI & Distribution
 
