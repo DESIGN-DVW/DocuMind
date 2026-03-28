@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 
 ## Current Position
 
-Phase: 14-mcp-http-transport (Plan 1 of 1 complete)
-Plan: 14-01
+Phase: 14-mcp-http-transport (Plan 2 of 2 complete)
+Plan: 14-02
 Status: Complete
-Last activity: 2026-03-28 — Completed 14-01 (MCP HTTP transport with bearer auth, switchable via DOCUMIND_MCP_MODE)
+Last activity: 2026-03-28 — Completed 14-02 (MCP mode observable via /health; docker-compose and .env.example and CLAUDE.md updated)
 
 ## Performance Metrics
 
@@ -85,6 +85,10 @@ Last activity: 2026-03-28 — Completed 14-01 (MCP HTTP transport with bearer au
 
 - CORS middleware scope-limited to /mcp route only — existing REST endpoints unaffected
 
+- mcp_mode exposed in /health for observability — consumers can verify transport without env inspection
+
+- DOCUMIND_MCP_TOKEN and CORS vars commented in docker-compose.yml — stdio is default, http vars only needed when opting in
+
 ### Pending Todos
 
 None.
@@ -109,8 +113,10 @@ None.
 
 | 14-01 | 2 min    | 2     | 2     |
 
+| 14-02 | 2 min    | 2     | 4     |
+
 ## Session Continuity
 
 Last session: 2026-03-28
-Stopped at: Completed 14-01-PLAN.md
-Resume file: .planning/phases/14-mcp-http-transport/14-01-PLAN.md
+Stopped at: Completed 14-02-PLAN.md
+Resume file: .planning/phases/14-mcp-http-transport/14-02-PLAN.md

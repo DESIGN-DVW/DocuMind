@@ -54,7 +54,7 @@ Full details: `.planning/milestones/v3.1-ROADMAP.md`
 
 - [x] **Phase 13: Git-Clone Ingestion + Dual Mode** — Container can fetch repos itself; REPO_MODE switches between mount and clone (completed 2026-03-26)
 
-- [ ] **Phase 14: MCP HTTP Transport** — MCP tools accessible over HTTP with bearer auth for remote consumers
+- [x] **Phase 14: MCP HTTP Transport** — MCP tools accessible over HTTP with bearer auth for remote consumers (completed 2026-03-28)
 
 - [ ] **Phase 15: CI & Distribution** — Multi-arch image published to GHCR via GitHub Actions
 
@@ -205,6 +205,6 @@ Plans:
 
 | 13. Git-Clone Ingestion + Dual Mode  | 2/2 | Complete    | 2026-03-26 | -          |
 
-| 14. MCP HTTP Transport               | 1/2 | In Progress|  | -          |
+| 14. MCP HTTP Transport               | 2/2 | Complete   | 2026-03-28 | -          |
 
 | 15. CI & Distribution                | v3.2      | 0/TBD          | Not started | -          |
