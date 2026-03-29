@@ -11,6 +11,22 @@
         "DOCUMIND_DB": "/Users/Shared/htdocs/github/DVWDesign/DocuMind/data/documind.db",
         "DOCUMIND_PROFILE": "/Users/Shared/htdocs/github/DVWDesign/DocuMind/config/profiles/dvwdesign.json"
       }
+    },
+    "agenthub": {
+      "command": "npx",
+      "args": ["tsx", "/Users/Shared/htdocs/github/DVWDesign/AgentHub/src/mcp-server.ts"],
+      "env": {
+        "SUPABASE_URL": "https://enfkrofkqfgxkequgcpi.supabase.co",
+        "SUPABASE_SERVICE_ROLE_KEY": "${SUPABASE_SERVICE_ROLE_KEY}"
+      }
+    },
+    "productmarketing": {
+      "command": "npx",
+      "args": ["tsx", "/Users/Shared/htdocs/github/DVWDesign/ProductMarketing/src/mcp-server.ts"],
+      "env": {
+        "SUPABASE_URL": "https://enfkrofkqfgxkequgcpi.supabase.co",
+        "SUPABASE_SERVICE_ROLE_KEY": "${SUPABASE_SERVICE_ROLE_KEY}"
+      }
     }
   }
 }
