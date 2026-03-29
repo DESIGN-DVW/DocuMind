@@ -101,18 +101,21 @@ async function generateDiagramSnapshot(db) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Tool 1: search_docs — Full-text search via FTS5
 // ─────────────────────────────────────────────────────────────────────────────
-server.tool(
+server.registerTool(
   'search_docs',
-  'Full-text search across all DocuMind-indexed documentation. Returns ranked results with path, repository, classification, and content snippet. Use this to find existing docs before creating new ones.',
   {
-    query: z.string().describe('Search query string'),
-    repo: z.string().optional().describe('Filter by repository name'),
-    category: z.string().optional().describe('Filter by category (e.g. api, guide, readme)'),
-    classification: z
-      .string()
-      .optional()
-      .describe('Filter by classification prefix (e.g. reference, decision, guide)'),
-    limit: z.number().int().min(1).max(100).default(20).describe('Maximum results (1-100)'),
+    description:
+      'Full-text search across all DocuMind-indexed documentation. Returns ranked results with path, repository, classification, and content snippet. Use this to find existing docs before creating new ones.',
+    inputSchema: {
+      query: z.string().describe('Search query string'),
+      repo: z.string().optional().describe('Filter by repository name'),
+      category: z.string().optional().describe('Filter by category (e.g. api, guide, readme)'),
+      classification: z
+        .string()
+        .optional()
+        .describe('Filter by classification prefix (e.g. reference, decision, guide)'),
+      limit: z.number().int().min(1).max(100).default(20).describe('Maximum results (1-100)'),
+    },
   },
   async ({ query, repo, category, classification, limit }) => {
     try {
@@ -164,12 +167,15 @@ server.tool(
 // ─────────────────────────────────────────────────────────────────────────────
 // Tool 2: get_related — Document relationship graph traversal
 // ─────────────────────────────────────────────────────────────────────────────
-server.tool(
+server.registerTool(
   'get_related',
-  'Get documents related to a given document ID (from search_docs results) via relationship graph traversal. Returns paths, relationship types, and traversal depth up to N hops.',
   {
-    doc_id: z.number().int().describe('Document ID to traverse from'),
-    hops: z.number().int().min(1).max(3).default(2).describe('Maximum traversal depth (1-3)'),
+    description:
+      'Get documents related to a given document ID (from search_docs results) via relationship graph traversal. Returns paths, relationship types, and traversal depth up to N hops.',
+    inputSchema: {
+      doc_id: z.number().int().describe('Document ID to traverse from'),
+      hops: z.number().int().min(1).max(3).default(2).describe('Maximum traversal depth (1-3)'),
+    },
   },
   async ({ doc_id, hops }) => {
     try {
@@ -198,16 +204,19 @@ server.tool(
 // ─────────────────────────────────────────────────────────────────────────────
 // Tool 3: get_keywords — TF-IDF keyword cloud
 // ─────────────────────────────────────────────────────────────────────────────
-server.tool(
+server.registerTool(
   'get_keywords',
-  'Get TF-IDF keyword cloud. Filter by repository and/or keyword category (technology, action, topic). Returns keywords ranked by score.',
   {
-    repo: z.string().optional().describe('Filter by repository name'),
-    category: z
-      .enum(['technology', 'action', 'topic'])
-      .optional()
-      .describe('Keyword category filter'),
-    limit: z.number().int().min(1).max(200).default(50).describe('Maximum results (1-200)'),
+    description:
+      'Get TF-IDF keyword cloud. Filter by repository and/or keyword category (technology, action, topic). Returns keywords ranked by score.',
+    inputSchema: {
+      repo: z.string().optional().describe('Filter by repository name'),
+      category: z
+        .enum(['technology', 'action', 'topic'])
+        .optional()
+        .describe('Keyword category filter'),
+      limit: z.number().int().min(1).max(200).default(50).describe('Maximum results (1-200)'),
+    },
   },
   async ({ repo, category, limit }) => {
     try {
@@ -254,11 +263,14 @@ server.tool(
 // ─────────────────────────────────────────────────────────────────────────────
 // Tool 4: get_tree — Folder hierarchy for a repository
 // ─────────────────────────────────────────────────────────────────────────────
-server.tool(
+server.registerTool(
   'get_tree',
-  'Get folder hierarchy for a repository. Returns classified folder structure with document counts and folder types.',
   {
-    repo: z.string().describe('Repository name (required)'),
+    description:
+      'Get folder hierarchy for a repository. Returns classified folder structure with document counts and folder types.',
+    inputSchema: {
+      repo: z.string().describe('Repository name (required)'),
+    },
   },
   async ({ repo }) => {
     try {
@@ -286,18 +298,21 @@ server.tool(
 // ─────────────────────────────────────────────────────────────────────────────
 // Tool 5: check_existing — Check if docs covering a topic already exist
 // ─────────────────────────────────────────────────────────────────────────────
-server.tool(
+server.registerTool(
   'check_existing',
-  'Check whether documentation covering a topic already exists. Returns existence boolean, confidence score, and matching documents. Use before creating new docs to avoid duplication.',
   {
-    query: z.string().describe('Topic or subject to check for'),
-    repo: z.string().optional().describe('Limit check to a specific repository'),
-    threshold: z
-      .number()
-      .min(0)
-      .max(1)
-      .default(0.5)
-      .describe('Confidence threshold for existence (0-1, default 0.5)'),
+    description:
+      'Check whether documentation covering a topic already exists. Returns existence boolean, confidence score, and matching documents. Use before creating new docs to avoid duplication.',
+    inputSchema: {
+      query: z.string().describe('Topic or subject to check for'),
+      repo: z.string().optional().describe('Limit check to a specific repository'),
+      threshold: z
+        .number()
+        .min(0)
+        .max(1)
+        .default(0.5)
+        .describe('Confidence threshold for existence (0-1, default 0.5)'),
+    },
   },
   async ({ query, repo, threshold }) => {
     try {
@@ -362,13 +377,16 @@ server.tool(
 // ─────────────────────────────────────────────────────────────────────────────
 // Tool 6: get_diagrams — Diagram registry
 // ─────────────────────────────────────────────────────────────────────────────
-server.tool(
+server.registerTool(
   'get_diagrams',
-  'Get diagram registry. Filter by repository and/or stale status. Returns diagram names, URLs, and staleness information.',
   {
-    repo: z.string().optional().describe('Filter by repository name'),
-    stale_only: z.boolean().default(false).describe('Return only stale diagrams'),
-    limit: z.number().int().min(1).max(100).default(50).describe('Maximum results (1-100)'),
+    description:
+      'Get diagram registry. Filter by repository and/or stale status. Returns diagram names, URLs, and staleness information.',
+    inputSchema: {
+      repo: z.string().optional().describe('Filter by repository name'),
+      stale_only: z.boolean().default(false).describe('Return only stale diagrams'),
+      limit: z.number().int().min(1).max(100).default(50).describe('Maximum results (1-100)'),
+    },
   },
   async ({ repo, stale_only, limit }) => {
     try {
@@ -418,22 +436,25 @@ server.tool(
 // ─────────────────────────────────────────────────────────────────────────────
 // Tool 7: get_similarities — Similar/duplicate document pairs (MCPI-01)
 // ─────────────────────────────────────────────────────────────────────────────
-server.tool(
+server.registerTool(
   'get_similarities',
-  'Get similar or duplicate document pairs with similarity scores. Returns document paths, repositories, similarity scores, and deviation types. Filter by repository and/or minimum score threshold.',
   {
-    repo: z
-      .string()
-      .optional()
-      .describe('Filter to pairs where at least one doc is in this repository'),
-    min_score: z
-      .number()
-      .min(0)
-      .max(1)
-      .default(0.7)
-      .describe('Minimum similarity score threshold (0-1)'),
-    include_reviewed: z.boolean().default(false).describe('Include already-reviewed pairs'),
-    limit: z.number().int().min(1).max(100).default(50).describe('Maximum results (1-100)'),
+    description:
+      'Get similar or duplicate document pairs with similarity scores. Returns document paths, repositories, similarity scores, and deviation types. Filter by repository and/or minimum score threshold.',
+    inputSchema: {
+      repo: z
+        .string()
+        .optional()
+        .describe('Filter to pairs where at least one doc is in this repository'),
+      min_score: z
+        .number()
+        .min(0)
+        .max(1)
+        .default(0.7)
+        .describe('Minimum similarity score threshold (0-1)'),
+      include_reviewed: z.boolean().default(false).describe('Include already-reviewed pairs'),
+      limit: z.number().int().min(1).max(100).default(50).describe('Maximum results (1-100)'),
+    },
   },
   async ({ repo, min_score, include_reviewed, limit }) => {
     try {
@@ -484,27 +505,30 @@ server.tool(
 // ─────────────────────────────────────────────────────────────────────────────
 // Tool 8: get_deviations — Convention deviations across documentation (MCPI-02)
 // ─────────────────────────────────────────────────────────────────────────────
-server.tool(
+server.registerTool(
   'get_deviations',
-  'Get convention deviations detected across documentation. Returns deviation type, severity, affected document path, and description. Covers all 5 types: content_drift, structure_change, rule_violation, version_mismatch, metadata_inconsistency.',
   {
-    repo: z.string().optional().describe('Filter by repository name'),
-    deviation_type: z
-      .enum([
-        'content_drift',
-        'structure_change',
-        'rule_violation',
-        'version_mismatch',
-        'metadata_inconsistency',
-      ])
-      .optional()
-      .describe('Filter by deviation type'),
-    severity: z
-      .enum(['critical', 'major', 'minor', 'info'])
-      .optional()
-      .describe('Filter by severity level'),
-    include_resolved: z.boolean().default(false).describe('Include resolved deviations'),
-    limit: z.number().int().min(1).max(200).default(50).describe('Maximum results (1-200)'),
+    description:
+      'Get convention deviations detected across documentation. Returns deviation type, severity, affected document path, and description. Covers all 5 types: content_drift, structure_change, rule_violation, version_mismatch, metadata_inconsistency.',
+    inputSchema: {
+      repo: z.string().optional().describe('Filter by repository name'),
+      deviation_type: z
+        .enum([
+          'content_drift',
+          'structure_change',
+          'rule_violation',
+          'version_mismatch',
+          'metadata_inconsistency',
+        ])
+        .optional()
+        .describe('Filter by deviation type'),
+      severity: z
+        .enum(['critical', 'major', 'minor', 'info'])
+        .optional()
+        .describe('Filter by severity level'),
+      include_resolved: z.boolean().default(false).describe('Include resolved deviations'),
+      limit: z.number().int().min(1).max(200).default(50).describe('Maximum results (1-200)'),
+    },
   },
   async ({ repo, deviation_type, severity, include_resolved, limit }) => {
     try {
@@ -571,11 +595,14 @@ server.tool(
 // ─────────────────────────────────────────────────────────────────────────────
 // Tool 9: index_file — Re-index a single markdown file (MCPW-01)
 // ─────────────────────────────────────────────────────────────────────────────
-server.tool(
+server.registerTool(
   'index_file',
-  'Re-index a single markdown file after editing. Updates search index, summary, classification, and tags. Use after modifying a doc to keep DocuMind in sync.',
   {
-    file: z.string().describe('Absolute path to the markdown file to index'),
+    description:
+      'Re-index a single markdown file after editing. Updates search index, summary, classification, and tags. Use after modifying a doc to keep DocuMind in sync.',
+    inputSchema: {
+      file: z.string().describe('Absolute path to the markdown file to index'),
+    },
   },
   async ({ file }) => {
     const startMs = Date.now();
@@ -621,11 +648,14 @@ server.tool(
 // ─────────────────────────────────────────────────────────────────────────────
 // Tool 10: lint_file — Lint a markdown file (MCPW-02)
 // ─────────────────────────────────────────────────────────────────────────────
-server.tool(
+server.registerTool(
   'lint_file',
-  'Lint a markdown file using DocuMind markdownlint config. Returns issues with line numbers, rule codes, and fixability. Read-only — does not modify the file. Use before fix_file to preview changes.',
   {
-    file: z.string().describe('Absolute path to the markdown file to lint'),
+    description:
+      'Lint a markdown file using DocuMind markdownlint config. Returns issues with line numbers, rule codes, and fixability. Read-only — does not modify the file. Use before fix_file to preview changes.',
+    inputSchema: {
+      file: z.string().describe('Absolute path to the markdown file to lint'),
+    },
   },
   async ({ file }) => {
     const startMs = Date.now();
@@ -697,11 +727,14 @@ server.tool(
 // ─────────────────────────────────────────────────────────────────────────────
 // Tool 11: fix_file — Auto-fix markdown issues (MCPW-03)
 // ─────────────────────────────────────────────────────────────────────────────
-server.tool(
+server.registerTool(
   'fix_file',
-  'Auto-fix markdown issues in a file. Applies markdownlint auto-fixes (trailing spaces, tabs, etc.) plus custom DocuMind fixes (code block languages, bold-italic conversion). Re-indexes the file after fixing.',
   {
-    file: z.string().describe('Absolute path to the markdown file to fix'),
+    description:
+      'Auto-fix markdown issues in a file. Applies markdownlint auto-fixes (trailing spaces, tabs, etc.) plus custom DocuMind fixes (code block languages, bold-italic conversion). Re-indexes the file after fixing.',
+    inputSchema: {
+      file: z.string().describe('Absolute path to the markdown file to fix'),
+    },
   },
   async ({ file }) => {
     const startMs = Date.now();
@@ -809,12 +842,15 @@ server.tool(
 // ─────────────────────────────────────────────────────────────────────────────
 // Tool 12: trigger_scan — Trigger documentation scan (MCPW-04)
 // ─────────────────────────────────────────────────────────────────────────────
-server.tool(
+server.registerTool(
   'trigger_scan',
-  'Trigger a documentation scan across repositories. Incremental (default) scans only changed files. Full re-indexes everything. Optionally limit to a single repo.',
   {
-    mode: z.enum(['incremental', 'full']).default('incremental').describe('Scan mode'),
-    repo: z.string().optional().describe('Limit scan to a single repository name'),
+    description:
+      'Trigger a documentation scan across repositories. Incremental (default) scans only changed files. Full re-indexes everything. Optionally limit to a single repo.',
+    inputSchema: {
+      mode: z.enum(['incremental', 'full']).default('incremental').describe('Scan mode'),
+      repo: z.string().optional().describe('Limit scan to a single repository name'),
+    },
   },
   async ({ mode, repo }) => {
     const startMs = Date.now();
@@ -856,12 +892,15 @@ server.tool(
 // ─────────────────────────────────────────────────────────────────────────────
 // Tool 13: curate_diagram — Set curated FigJam URL and propagate (MCPW-05)
 // ─────────────────────────────────────────────────────────────────────────────
-server.tool(
+server.registerTool(
   'curate_diagram',
-  'Set a curated FigJam URL for a diagram and propagate the URL change across all repository markdown files. Regenerates the consolidated diagram registry snapshot. Changes are left unstaged for review.',
   {
-    name: z.string().describe('Diagram name from the diagrams table (use get_diagrams to find)'),
-    curated_url: z.string().url().describe('New curated FigJam URL to set for this diagram'),
+    description:
+      'Set a curated FigJam URL for a diagram and propagate the URL change across all repository markdown files. Regenerates the consolidated diagram registry snapshot. Changes are left unstaged for review.',
+    inputSchema: {
+      name: z.string().describe('Diagram name from the diagrams table (use get_diagrams to find)'),
+      curated_url: z.string().url().describe('New curated FigJam URL to set for this diagram'),
+    },
   },
   async ({ name, curated_url: curatedUrl }) => {
     const startMs = Date.now();
@@ -939,14 +978,17 @@ server.tool(
 // ─────────────────────────────────────────────────────────────────────────────
 // Tool 14: register_diagram — Register a new diagram from .mmd file (DIAG-02)
 // ─────────────────────────────────────────────────────────────────────────────
-server.tool(
+server.registerTool(
   'register_diagram',
-  'Register a new diagram in the DocuMind database from a .mmd (Mermaid) file. Auto-detects diagram type from content. Use this after generating a new diagram to track it in the registry.',
   {
-    mermaid_path: z.string().describe('Absolute path to the .mmd file'),
-    name: z.string().describe('Human-readable diagram name (e.g. "DocuMind Architecture")'),
-    repository: z.string().describe('Repository name the diagram belongs to (e.g. "DocuMind")'),
-    figjam_url: z.string().url().optional().describe('FigJam URL if already generated'),
+    description:
+      'Register a new diagram in the DocuMind database from a .mmd (Mermaid) file. Auto-detects diagram type from content. Use this after generating a new diagram to track it in the registry.',
+    inputSchema: {
+      mermaid_path: z.string().describe('Absolute path to the .mmd file'),
+      name: z.string().describe('Human-readable diagram name (e.g. "DocuMind Architecture")'),
+      repository: z.string().describe('Repository name the diagram belongs to (e.g. "DocuMind")'),
+      figjam_url: z.string().url().optional().describe('FigJam URL if already generated'),
+    },
   },
   async ({ mermaid_path: mermaidPath, name, repository, figjam_url: figjamUrl }) => {
     const startMs = Date.now();
