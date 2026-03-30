@@ -11,28 +11,35 @@
 
 **What it does:** Automatically runs linting before commits
 
-**Benefits:**
+#### Benefits:
 
 - Prevents committing invalid markdown
+
 - Auto-fixes issues before commit
+
 - Ensures all commits pass validation
 
-**Installation:**
+#### Installation:
 
 ```bash
+
 npm install --save-dev husky lint-staged
 
 # Initialize husky
+
 npx husky init
 
 # Add pre-commit hook
+
 echo "npx lint-staged" > .husky/pre-commit
 chmod +x .husky/pre-commit
+
 ```
 
-**Add to package.json:**
+## Add to package.json:
 
 ```json
+
 {
   "lint-staged": {
     "**/*.md": [
@@ -45,6 +52,7 @@ chmod +x .husky/pre-commit
     ]
   }
 }
+
 ```
 
 **Impact:** 🔥 High - Prevents bad commits
@@ -55,19 +63,23 @@ chmod +x .husky/pre-commit
 
 **What it does:** Create diagrams from text in markdown
 
-**Benefits:**
+### Benefits:
 
 - Create flowcharts, sequences, class diagrams
+
 - Version-controlled (text-based)
+
 - Renders in GitHub, VS Code
 
-**Installation:**
+### Installation:
 
 ```bash
+
 npm install --save-dev @mermaid-js/mermaid-cli
+
 ```
 
-**Usage in markdown:**
+### Usage in markdown:
 
 \`\`\`mermaid
 graph TD
@@ -77,10 +89,12 @@ graph TD
     D --> E[Fix Issues]
 \`\`\`
 
-**Generate PNG/SVG:**
+### Generate PNG/SVG:
 
 ```bash
+
 npx mmdc -i docs/diagram.md -o docs/diagram.png
+
 ```
 
 **Impact:** 🔥 High - Visual documentation
@@ -91,26 +105,32 @@ npx mmdc -i docs/diagram.md -o docs/diagram.png
 
 **What it does:** Validates all links (internal & external)
 
-**Benefits:**
+#### Benefits:
 
 - Catches broken links
+
 - Validates cross-repo references
+
 - Checks external URLs
 
-**Installation:**
+#### Installation:
 
 ```bash
+
 npm install --save-dev markdown-link-check
+
 ```
 
-**Add script to package.json:**
+#### Add script to package.json:
 
 ```json
+
 {
   "scripts": {
     "links:check": "find . -name '*.md' -not -path './node_modules/*' -not -path './index/*' | xargs markdown-link-check"
   }
 }
+
 ```
 
 **Impact:** 🔥 High - Prevents broken links
@@ -119,15 +139,18 @@ npm install --save-dev markdown-link-check
 
 **What it does:** Run tasks automatically when VS Code opens
 
-**Benefits:**
+#### Benefits:
 
 - Auto-start watcher
+
 - Auto-run validation
+
 - Background processes
 
-**Create `.vscode/tasks.json`:**
+#### Create `.vscode/tasks.json`:
 
 ```json
+
 {
   "version": "2.0.0",
   "tasks": [
@@ -152,6 +175,7 @@ npm install --save-dev markdown-link-check
     }
   ]
 }
+
 ```
 
 **Impact:** 🔥 High - Automation
@@ -160,28 +184,36 @@ npm install --save-dev markdown-link-check
 
 **What it does:** Generates beautiful static documentation site
 
-**Benefits:**
+#### Benefits:
 
 - Professional documentation site
+
 - Auto-deploys to GitHub Pages
+
 - Full-text search
+
 - Mobile-friendly
 
-**Installation:**
+#### Installation:
 
 ```bash
+
 npm install --save-dev vitepress
+
 ```
 
-**Setup:**
+#### Setup:
 
 ```bash
+
 mkdir -p docs/.vitepress
+
 ```
 
-**Add to package.json:**
+#### Add to package.json:
 
 ```json
+
 {
   "scripts": {
     "docs:dev": "vitepress dev docs",
@@ -190,6 +222,7 @@ mkdir -p docs/.vitepress
     "docs:deploy": "npm run docs:build && gh-pages -d docs/.vitepress/dist"
   }
 }
+
 ```
 
 **Impact:** 🔥🔥 Very High - Professional site
@@ -200,15 +233,18 @@ mkdir -p docs/.vitepress
 
 **What it does:** Auto-formats JavaScript, JSON, Markdown
 
-**Installation:**
+#### Installation:
 
 ```bash
+
 npm install --save-dev prettier
+
 ```
 
-**Create `.prettierrc.json`:**
+#### Create `.prettierrc.json`:
 
 ```json
+
 {
   "semi": true,
   "singleQuote": true,
@@ -216,17 +252,20 @@ npm install --save-dev prettier
   "tabWidth": 2,
   "proseWrap": "always"
 }
+
 ```
 
-**Add to package.json:**
+#### Add to package.json:
 
 ```json
+
 {
   "scripts": {
     "format": "prettier --write '**/*.{js,mjs,json,md}'",
     "format:check": "prettier --check '**/*.{js,mjs,json,md}'"
   }
 }
+
 ```
 
 **Impact:** 🔥 High - Consistency
@@ -235,15 +274,18 @@ npm install --save-dev prettier
 
 **What it does:** Catches typos in documentation
 
-**Installation:**
+#### Installation:
 
 ```bash
+
 npm install --save-dev cspell
+
 ```
 
-**Create `cspell.json`:**
+#### Create `cspell.json`:
 
 ```json
+
 {
   "version": "0.2",
   "language": "en",
@@ -261,16 +303,19 @@ npm install --save-dev cspell
     "*.log"
   ]
 }
+
 ```
 
-**Add to package.json:**
+#### Add to package.json:
 
 ```json
+
 {
   "scripts": {
     "spell:check": "cspell '**/*.md'"
   }
 }
+
 ```
 
 **Impact:** 🔥 Medium - Quality
@@ -279,21 +324,25 @@ npm install --save-dev cspell
 
 **What it does:** Auto-generates TOC for markdown files
 
-**Installation:**
+#### Installation:
 
 ```bash
+
 npm install --save-dev markdown-toc
+
 ```
 
-**Add to package.json:**
+#### Add to package.json:
 
 ```json
+
 {
   "scripts": {
     "toc:generate": "markdown-toc -i README.md",
     "toc:all": "find . -name '*.md' -not -path './node_modules/*' -exec markdown-toc -i {} \\;"
   }
 }
+
 ```
 
 **Impact:** 🔥 Medium - Navigation
@@ -304,22 +353,26 @@ npm install --save-dev markdown-toc
 
 **What it does:** Converts markdown to PDF
 
-**Installation:**
+#### Installation:
 
 ```bash
+
 brew install pandoc
 brew install --cask basictex  # LaTeX for PDF
+
 ```
 
-**Add to package.json:**
+#### Add to package.json:
 
 ```json
+
 {
   "scripts": {
     "pdf:generate": "pandoc README.md -o README.pdf --pdf-engine=xelatex",
     "pdf:all": "node scripts/generate-all-pdfs.mjs"
   }
 }
+
 ```
 
 **Impact:** 🔥 Medium - Export
@@ -328,21 +381,25 @@ brew install --cask basictex  # LaTeX for PDF
 
 **What it does:** Analyzes documentation readability
 
-**Installation:**
+#### Installation:
 
 ```bash
+
 npm install --save-dev text-readability
+
 ```
 
-**Create script `scripts/readability-check.mjs`:**
+#### Create script `scripts/readability-check.mjs`:
 
 ```javascript
+
 import { readFileSync } from 'fs';
 import { fleschReadingEase, fleschKincaidGrade } from 'text-readability';
 
 const content = readFileSync('README.md', 'utf8');
 console.log('Flesch Reading Ease:', fleschReadingEase(content));
 console.log('Grade Level:', fleschKincaidGrade(content));
+
 ```
 
 **Impact:** 🔥 Low - Analytics
@@ -351,20 +408,24 @@ console.log('Grade Level:', fleschKincaidGrade(content));
 
 **What it does:** Auto-generates changelog from git commits
 
-**Installation:**
+#### Installation:
 
 ```bash
+
 npm install --save-dev conventional-changelog-cli
+
 ```
 
-**Add to package.json:**
+#### Add to package.json:
 
 ```json
+
 {
   "scripts": {
     "changelog:generate": "conventional-changelog -p angular -i CHANGELOG.md -s"
   }
 }
+
 ```
 
 **Impact:** 🔥 Medium - Tracking
@@ -373,16 +434,20 @@ npm install --save-dev conventional-changelog-cli
 
 **What it does:** Connect to Figma, Notion, other tools
 
-**Setup Figma MCP:**
+#### Setup Figma MCP:
 
 ```bash
+
 # Install Figma MCP server
+
 npm install -g @anthropic-ai/mcp-server-figma
+
 ```
 
-**Add to Claude Code config:**
+## Add to Claude Code config:
 
 ```json
+
 {
   "mcpServers": {
     "figma": {
@@ -393,6 +458,7 @@ npm install -g @anthropic-ai/mcp-server-figma
     }
   }
 }
+
 ```
 
 **Impact:** 🔥🔥 High - Integration
@@ -403,9 +469,10 @@ npm install -g @anthropic-ai/mcp-server-figma
 
 **What it does:** Auto-runs validation on push
 
-**Create `.github/workflows/validate-docs.yml`:**
+#### Create `.github/workflows/validate-docs.yml`:
 
 ```yaml
+
 name: Validate Documentation
 
 on: [push, pull_request]
@@ -414,14 +481,22 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
+
   - uses: actions/checkout@v3
+
   - uses: actions/setup-node@v3
+
         with:
           node-version: '20'
+
   - run: npm install
+
   - run: npm run lint
+
   - run: npm run validate
+
   - run: npm run links:check
+
 ```
 
 **Impact:** 🔥🔥 Very High - Quality
@@ -430,9 +505,10 @@ jobs:
 
 **What it does:** Auto-deploy docs to GitHub Pages
 
-**Create `.github/workflows/deploy-docs.yml`:**
+#### Create `.github/workflows/deploy-docs.yml`:
 
 ```yaml
+
 name: Deploy Documentation
 
 on:
@@ -443,14 +519,21 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+
   - uses: actions/checkout@v3
+
   - uses: actions/setup-node@v3
+
   - run: npm install
+
   - run: npm run docs:build
+
   - uses: peaceiris/actions-gh-pages@v3
+
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs/.vitepress/dist
+
 ```
 
 **Impact:** 🔥🔥 Very High - Publishing
@@ -458,20 +541,35 @@ jobs:
 ## Summary of Recommended Tools
 
 | Tool                  | Priority | Impact | Effort | Status        |
+
 | --------------------- | -------- | ------ | ------ | ------------- |
+
 | **Husky (Git Hooks)** | P1       | 🔥🔥🔥 | Low    | Not installed |
+
 | **Mermaid Diagrams**  | P1       | 🔥🔥🔥 | Low    | Not installed |
+
 | **Link Checker**      | P1       | 🔥🔥   | Low    | Not installed |
+
 | **VS Code Tasks**     | P1       | 🔥🔥   | Low    | Not installed |
+
 | **VitePress**         | P1       | 🔥🔥🔥 | Medium | Not installed |
+
 | **Prettier**          | P2       | 🔥🔥   | Low    | Not installed |
+
 | **cSpell**            | P2       | 🔥     | Low    | Not installed |
+
 | **TOC Generator**     | P2       | 🔥     | Low    | Not installed |
+
 | **Pandoc/PDF**        | P3       | 🔥     | Medium | Not installed |
+
 | **Readability**       | P3       | 🔥     | Low    | Not installed |
+
 | **Changelog**         | P3       | 🔥     | Low    | Not installed |
+
 | **MCP Integration**   | P3       | 🔥🔥   | High   | Not installed |
+
 | **GitHub Actions**    | P4       | 🔥🔥🔥 | Medium | Not installed |
+
 | **Auto-Deploy**       | P4       | 🔥🔥   | Medium | Not installed |
 
 ## Quick Install: Priority 1 Tools
@@ -479,7 +577,9 @@ jobs:
 To install all Priority 1 tools at once:
 
 ```bash
+
 # Install dependencies
+
 npm install --save-dev \
   husky \
   lint-staged \
@@ -488,27 +588,35 @@ npm install --save-dev \
   vitepress
 
 # Setup husky
+
 npx husky init
 echo "npx lint-staged" > .husky/pre-commit
 chmod +x .husky/pre-commit
 
 # Add scripts to package.json (manually or use script)
+
 ```
 
 ## What to Install First?
 
-**My Recommendation:**
+### My Recommendation:
 
 1. **Start with:** Husky + Link Checker + VS Code Tasks
+
    - Time: 15 minutes
+
    - Impact: Immediate quality improvement
 
 2. **Then add:** VitePress
+
    - Time: 30 minutes
+
    - Impact: Professional documentation site
 
 3. **Finally:** GitHub Actions
+
    - Time: 20 minutes
+
    - Impact: Full automation
 
 **Total time to full setup:** ~1-2 hours

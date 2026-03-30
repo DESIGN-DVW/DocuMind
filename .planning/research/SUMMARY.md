@@ -21,57 +21,84 @@ The existing runtime stack (Node 22+, Express 5, better-sqlite3 12.6.2, MCP SDK 
 
 The MCP SDK already ships `StreamableHTTPServerTransport` at `dist/esm/server/streamableHttp.js` — confirmed present in installed node_modules. The SSE transport (`/sse` + `/messages`) is deprecated in MCP spec 2025-03-26; only Streamable HTTP (`POST /mcp`, single endpoint) should be implemented in new code.
 
-**Core technologies:**
+#### Core technologies:
 
 - `node:22-bookworm-slim` base image — glibc compatibility for better-sqlite3 prebuilt binaries; Node 22 is Active LTS through 2027; do not use Alpine (musl libc) or Node 24 (missing N-API 137 prebuilts)
+
 - `simple-git@^3.33.0` — git clone/pull at container runtime; requires git CLI in the runtime image layer; never copy or bake at build time
+
 - `dotenv@^16.4.7` — env-var loading; Docker `environment:` and `env_file:` overrides take precedence naturally without configuration
+
 - `@godaddy/terminus@^4.12.1` — graceful shutdown via `createTerminus(server, { healthChecks, onSignal })`; closes SQLite connection and chokidar watcher before exit
+
 - `StreamableHTTPServerTransport` (in existing MCP SDK 1.27.1) — remote MCP access on `POST /mcp`; no new package required
+
 - `docker/build-push-action@v6` + `docker/metadata-action@v5` — GHCR publishing with semver tags and multi-arch (amd64 + arm64) via buildx
 
 ### Expected Features
 
-**Must have (table stakes) — v3.2 launch:**
+#### Must have (table stakes) — v3.2 launch:
 
 - Non-root user in container (`USER node`, chown `/app/data`) — GHCR and Kubernetes block root-run images; one Dockerfile line
+
 - Graceful shutdown SIGTERM handler — Docker stop sends SIGTERM; unhandled leads to force-kill and SQLite WAL corruption
+
 - `HEALTHCHECK` instruction in Dockerfile pointing to existing `/health` endpoint — compose and CI service containers wait for healthy before routing traffic
+
 - `.dockerignore` excluding `node_modules/`, `.git/`, `data/`, `.env*`, `markdown.bbprojectd/` — excludes 100MB+ from build context and prevents credential leaks
+
 - Named volume for SQLite (`documind-data:/app/data`) — data must not be destroyed on container restart; bind-mounting from macOS host corrupts WAL mode on Docker Desktop
+
 - Environment variable configuration (`REPO_MODE`, `PORT`, `MCP_AUTH_TOKEN`, `SCAN_INTERVAL`, `FULL_SCAN_CRON`, `CHOKIDAR_USEPOLLING`) — portability across environments
+
 - `docker-compose.yml` with volume-mount mode, env var defaults, healthcheck, restart policy — `docker compose up` is the expected local dev UX
+
 - MCP HTTP transport (`StreamableHTTPServerTransport` on `POST /mcp`) — enables remote MCP clients; SDK already installed
+
 - Bearer token middleware on `/mcp` route — write-capable tools (lint, fix, index, scan) must not be callable without auth on a public image
+
 - GHCR GitHub Actions workflow — build + push on master + version tags; multi-arch
 
-**Should have — v3.2.x after validation:**
+#### Should have — v3.2.x after validation:
 
 - `docker-compose.ci.yml` for git-clone mode — enables CI without volume mounts
+
 - Periodic git pull cron in clone mode — repos go stale without it; trigger after CI deployments confirm the stale-index problem
+
 - SSH key auth for private repos in clone mode — HTTPS token covers most cases; SSH needed for specific cases
 
-**Defer to v4+:**
+#### Defer to v4+:
 
 - Kubernetes Helm chart — SQLite single-writer constraint makes horizontal scaling impossible without a database migration to Postgres or Turso
+
 - OAuth 2.1 on MCP endpoint — appropriate for multi-tenant only; bearer token is explicitly acceptable for single-user per MCP authorization docs
+
 - Multi-container compose with separate MCP process — adds network RPC overhead and sync complexity for zero architectural gain
 
 ### Architecture Approach
 
 The containerized architecture replaces PM2 with Docker's own supervisor: `restart: unless-stopped` handles crash restart, Docker log driver captures stdout/stderr, and one process per container is the container idiom. `node daemon/server.mjs` runs as PID 1 (no dumb-init required when SIGTERM handlers are registered), MCP HTTP (`daemon/mcp-http.mjs`) starts conditionally when `DOCUMIND_MCP_HTTP=true`, and the stdio MCP server (`daemon/mcp-server.mjs`) remains unchanged as the transport for local macOS development. All 7 existing processors, the graph layer, and CLI scripts are unchanged — Docker just runs them.
 
-**Major components (new and modified):**
+#### Major components (new and modified):
 
 1. `Dockerfile` (NEW) — multi-stage `node:22-bookworm-slim`; builder stage installs native modules; runtime stage copies compiled `node_modules`; non-root user; `CMD ["node", "daemon/server.mjs"]`
+
 2. `docker-compose.yml` (NEW) — port mapping, named volume, env var defaults, healthcheck, restart policy
+
 3. `.dockerignore` (NEW) — excludes build noise and secrets from image context
+
 4. `daemon/server.mjs` (MODIFIED) — adds graceful shutdown via `@godaddy/terminus`; conditionally starts MCP HTTP server
+
 5. `daemon/scheduler.mjs` (MODIFIED) — cron intervals read from `process.env` with fallback defaults
+
 6. `daemon/mcp-http.mjs` (NEW) — Streamable HTTP transport on port 9001; same tools as stdio via shared `daemon/mcp-tools.mjs`
+
 7. `processors/git-ingestor.mjs` (NEW) — clone/pull repos into `/repos/` using `simple-git`; runs at startup and on periodic cron
+
 8. `docker-entrypoint.sh` (NEW) — runs git-ingestor before daemon start when `DOCUMIND_REPOS` env var is set
+
 9. `config/profiles/docker.json` (NEW) — Docker-specific context profile with `/repos/*` path convention
+
 10. `.github/workflows/docker-publish.yml` (NEW) — build + push to GHCR on version tag; multi-arch via buildx
 
 ### Critical Pitfalls
@@ -195,9 +222,13 @@ The build order is driven by three hard constraints: (1) path audit must precede
 ### Phase Ordering Rationale
 
 - Phase 0 before everything: hardcoded macOS paths are a blocking dependency confirmed by codebase inspection; no container runs correctly without this fix.
+
 - Phase 1 before Phases 3 and 4: both modes need a working container; graceful shutdown protects SQLite across both modes regardless of which mode is active.
+
 - Phase 2 before Phases 3 and 4: both modes are env-var-driven; config infrastructure must exist before mode-specific logic reads from it.
+
 - Phases 3 and 4 are independent of each other after Phase 2 and can be built in parallel.
+
 - Phase 5 only after Phases 1-4: GHCR publish is a publication gate gated on security (auth on MCP HTTP) and data integrity (graceful shutdown).
 
 ### Research Flags
@@ -209,18 +240,27 @@ Phases requiring deeper research during planning:
 Phases with standard patterns (skip `/gsd:research-phase`):
 
 - **Phase 0 (Path Audit):** Straightforward code audit; patterns are well-understood.
+
 - **Phase 1 (Dockerfile Foundation):** Official nodejs/docker-node BestPractices.md covers this exactly.
+
 - **Phase 2 (Env Config):** dotenv + process.env is a well-established 12-factor pattern.
+
 - **Phase 4 (MCP HTTP):** SDK confirmed installed; MCP spec is the authoritative source.
+
 - **Phase 5 (GHCR CI):** Official GitHub docs confirm the workflow pattern.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
+
 | ------ | ---------- | ----- |
+
 | Stack | HIGH | Base image choice verified via open upstream issues in better-sqlite3 repo; GHCR workflow from official GitHub docs; MCP transport from official spec 2025-03-26; all new packages confirmed available |
+
 | Features | HIGH | Table stakes from official nodejs/docker-node BestPractices.md; MCP from official spec; GHCR from official GitHub docs; anti-features well-documented |
+
 | Architecture | HIGH | Based on direct codebase inspection + SDK presence confirmed in node_modules; component boundaries clearly drawn with specific file names and line numbers |
+
 | Pitfalls | HIGH | better-sqlite3 Alpine incompatibility confirmed via maintainer docs and open issues; WAL + Docker via SQLite official docs ("WAL does not work over a network filesystem"); hardcoded paths confirmed by direct file inspection with specific line numbers |
 
 **Overall confidence:** HIGH
@@ -240,32 +280,49 @@ Phases with standard patterns (skip `/gsd:research-phase`):
 ### Primary (HIGH confidence)
 
 - [WiseLibs/better-sqlite3 Issue #1384](https://github.com/WiseLibs/better-sqlite3/issues/1384) — Node 24 N-API 137 prebuilt binaries missing; open upstream issue
+
 - [WiseLibs/better-sqlite3 Discussion #1270](https://github.com/WiseLibs/better-sqlite3/discussions/1270) — Alpine vs Debian: maintainer explicitly recommends Debian slim
+
 - [Docker Hub node:22-bookworm-slim](https://hub.docker.com/layers/library/node/22-bookworm-slim/) — Active LTS tag confirmed
+
 - [MCP Specification 2025-03-26 — Transports](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports) — Streamable HTTP current standard, SSE deprecated; Origin header validation required
+
 - [GitHub Publishing Docker Images docs](https://docs.github.com/en/actions/publishing-packages/publishing-docker-images) — GHCR workflow with GITHUB_TOKEN and packages: write
+
 - [nodejs/docker-node BestPractices.md](https://github.com/nodejs/docker-node/blob/main/docs/BestPractices.md) — non-root user, signal handling, healthcheck patterns
+
 - [Express.js graceful shutdown guide](https://expressjs.com/en/advanced/healthcheck-graceful-shutdown.html) — SIGTERM via npm swallows signal; direct node exec required
+
 - [SQLite WAL official docs](https://www.sqlite.org/wal.html) — "WAL does not work over a network filesystem"
+
 - [chokidar Issue #1051](https://github.com/paulmillr/chokidar/issues/1051) — Docker volume mount inotify issue; `usePolling=true` is the documented fix
+
 - Codebase direct inspection — `daemon/server.mjs` line 56 (WAL confirmed), line 50 (macOS path fallback confirmed); `daemon/mcp-server.mjs` line 31 (WAL in MCP server); `config/constants.mjs` line 42 (`LOCAL_BASE_PATH` hardcoded); `processors/tree-processor.mjs` line 12 (`REPOS_ROOT` hardcoded); `scripts/scan/enhanced-scanner.mjs` lines 22-31 (14 hardcoded absolute paths); zero SIGTERM handlers across all 5 daemon files
+
 - MCP SDK installed in project — `StreamableHTTPServerTransport` confirmed present at `dist/esm/server/streamableHttp.js`
 
 ### Secondary (MEDIUM confidence)
 
 - [Node Best Practices — Graceful Shutdown](https://github.com/goldbergyoni/nodebestpractices/blob/master/sections/docker/graceful-shutdown.md) — terminus recommendation; SIGTERM forwarding behavior
+
 - [godaddy/terminus GitHub](https://github.com/godaddy/terminus) — createTerminus API reference
+
 - [kubernetes/git-sync](https://github.com/kubernetes/git-sync) — periodic git pull sidecar pattern reference for clone mode design
+
 - [How to Run SQLite in Docker](https://oneuptime.com/blog/post/2026-02-08-how-to-run-sqlite-in-docker-when-and-how/view) — named volume strategy for WAL safety
+
 - [MCP bearer token auth discussion #1247](https://github.com/modelcontextprotocol/modelcontextprotocol/discussions/1247) — bearer token acceptable for single-user deployments per MCP authorization docs
+
 - [simple-git npm](https://www.npmjs.com/package/simple-git) — v3.33.0 current; 7.9M weekly downloads vs 628K for isomorphic-git
 
 ### Tertiary (LOW confidence)
 
 - [Vaultwarden SQLite corruption discussion](https://github.com/dani-garcia/vaultwarden/discussions/2965) — WAL corruption reports on Docker bind mounts; corroborates SQLite official docs but is a different project
+
 - [MCP stdio Docker -i flag guide](https://mcpcat.io/guides/configuring-mcp-transport-protocols-docker-containers/) — `-i` required for stdin; `-t` corrupts binary JSON-RPC stream
 
 ---
 
-*Research completed: 2026-03-23*
-*Ready for roadmap: yes*
+#### Research completed: 2026-03-23
+
+#### Ready for roadmap: yes

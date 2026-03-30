@@ -5,29 +5,45 @@
 **Confidence:** HIGH
 
 <user_constraints>
+
 ## User Constraints (from CONTEXT.md)
 
 ### Locked Decisions
 
 - Bearer token sourced from `DOCUMIND_MCP_TOKEN` env var
+
 - Support comma-separated list of tokens (e.g., `DOCUMIND_MCP_TOKEN=token1,token2`)
+
 - If `DOCUMIND_MCP_TOKEN` is not set when HTTP mode starts, refuse to start with clear error message
+
 - Log failed auth attempts with timestamp, IP/origin, and "auth failed" message
+
 - Use standard MCP protocol error format (JSON-RPC errors from MCP spec)
+
 - Enable configurable CORS via env var — future-proof for browser-based MCP clients
+
 - Env var: `DOCUMIND_MCP_MODE` with values `stdio` | `http`
+
 - Default to `stdio` when not set — local Claude Code keeps working without config changes
+
 - In HTTP mode, both Express REST API (port 9000) and MCP HTTP endpoint are active
+
 - Error on startup if `DOCUMIND_MCP_MODE` is set to an invalid value (not `stdio` or `http`)
+
 - TLS termination handled upstream (reverse proxy) — DocuMind serves plain HTTP
+
 - Update `docker-compose.yml` to expose MCP HTTP port and add MCP env vars
+
 - `/health` endpoint includes `mcp_mode: stdio|http` field
 
 ### Claude's Discretion
 
 - Transport implementation choice (StreamableHTTPServerTransport vs custom REST wrapper)
+
 - Whether MCP HTTP runs on same port 9000 or separate port
+
 - CORS env var naming and default origins
+
 - Internal MCP handler architecture
 
 ### Deferred Ideas (OUT OF SCOPE)
@@ -36,14 +52,21 @@ None — discussion stayed within phase scope
 </user_constraints>
 
 <phase_requirements>
+
 ## Phase Requirements
 
 | ID | Description | Research Support |
+
 |----|-------------|-----------------|
+
 | MCPT-01 | MCP HTTP endpoint on POST /mcp using StreamableHTTPServerTransport | SDK class confirmed, Express integration pattern established |
+
 | MCPT-02 | Bearer token auth protects MCP HTTP endpoint | Custom `OAuthTokenVerifier` pattern or manual Express middleware; `requireBearerAuth` from SDK requires `expiresAt` — not suitable for static tokens |
+
 | MCPT-03 | MCP stdio mode continues to work for local Claude Code | Existing `StdioServerTransport` path unchanged; mode switch via env var |
+
 | MCPT-04 | MCP mode (stdio/http) selectable via env var | `DOCUMIND_MCP_MODE` env var read at startup in `mcp-server.mjs` |
+
 </phase_requirements>
 
 ## Summary
@@ -61,23 +84,33 @@ The existing `mcp-server.mjs` already uses `StdioServerTransport`. This phase ex
 ### Core
 
 | Library | Version | Purpose | Why Standard |
+
 |---------|---------|---------|--------------|
+
 | `@modelcontextprotocol/sdk` | `^1.27.1` (already installed) | `StreamableHTTPServerTransport`, `McpServer` | Official MCP SDK — no new dep needed |
+
 | `express` | `^5.2.1` (already installed) | HTTP routing, middleware | Already used for port 9000 REST API |
 
 ### Supporting
 
 | Library | Version | Purpose | When to Use |
+
 |---------|---------|---------|-------------|
+
 | `cors` npm package | — | CORS headers | NOT needed — CORS is 4 lines of Express middleware; adding a dep is overkill here |
+
 | `crypto` (Node built-in) | built-in | `randomUUID()` for stateful session IDs | Only if stateful mode is chosen |
 
 ### Alternatives Considered
 
 | Instead of | Could Use | Tradeoff |
+
 |------------|-----------|----------|
+
 | `StreamableHTTPServerTransport` | Custom JSON-RPC REST wrapper | Would require reimplementing MCP protocol framing — always worse |
+
 | Hand-written bearer middleware | SDK `requireBearerAuth` | SDK requires OAuth-style `expiresAt` on tokens — unusable for static tokens without workarounds |
+
 | Same port 9000 | Separate MCP port | Same port is simpler: one listener, one Docker port mapping, existing Express app extended |
 
 **Installation:** No new packages required — SDK and Express already installed.
@@ -87,12 +120,14 @@ The existing `mcp-server.mjs` already uses `StdioServerTransport`. This phase ex
 ### Recommended Project Structure
 
 ```text
+
 daemon/
 ├── mcp-server.mjs        # MODIFIED: mode-switching logic (stdio vs http)
 ├── server.mjs            # MODIFIED: exports app + httpServer for MCP HTTP to reuse
 config/
 └── env.mjs               # MODIFIED: add MCP_MODE, MCP_TOKEN, MCP_CORS_ORIGINS
 docker-compose.yml        # MODIFIED: add DOCUMIND_MCP_MODE, DOCUMIND_MCP_TOKEN envs
+
 ```
 
 ### Pattern 1: Mode-Switching Entry Point
@@ -102,6 +137,7 @@ docker-compose.yml        # MODIFIED: add DOCUMIND_MCP_MODE, DOCUMIND_MCP_TOKEN 
 **When to use:** Phase decision requires default-stdio behavior with opt-in HTTP.
 
 ```javascript
+
 // Source: CONTEXT.md locked decisions + SDK docs
 import { MCP_MODE, MCP_TOKEN } from '../config/env.mjs';
 
@@ -118,6 +154,7 @@ if (MCP_MODE === 'stdio') {
   console.error(`[MCP] Invalid DOCUMIND_MCP_MODE "${MCP_MODE}". Must be "stdio" or "http". Exiting.`);
   process.exit(1);
 }
+
 ```
 
 ### Pattern 2: Mounting StreamableHTTPServerTransport on Existing Express App
@@ -127,6 +164,7 @@ if (MCP_MODE === 'stdio') {
 **When to use:** HTTP mode; same-port design for Docker simplicity.
 
 ```javascript
+
 // Source: SDK streamableHttp.d.ts + docs/server.md pattern
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 
@@ -145,6 +183,7 @@ app.get('/mcp', bearerAuthMiddleware, async (req, res) => {
 app.delete('/mcp', bearerAuthMiddleware, async (req, res) => {
   await transport.handleRequest(req, res);
 });
+
 ```
 
 Note: `GET /mcp` enables SSE stream for server-to-client notifications. `DELETE /mcp` enables session termination (required by spec even in stateless mode for completeness).
@@ -156,6 +195,7 @@ Note: `GET /mcp` enables SSE stream for server-to-client notifications. `DELETE 
 **Why not SDK `requireBearerAuth`:** The SDK middleware calls `verifier.verifyAccessToken(token)` and rejects tokens without `expiresAt` field, throwing `InvalidTokenError: 'Token has no expiration time'`. Static tokens have no expiry concept.
 
 ```javascript
+
 // Source: Derived from SDK bearerAuth.js implementation pattern, adapted for static tokens
 const VALID_TOKENS = new Set(
   (process.env.DOCUMIND_MCP_TOKEN ?? '').split(',').map(t => t.trim()).filter(Boolean)
@@ -184,6 +224,7 @@ function bearerAuthMiddleware(req, res, next) {
   }
   next();
 }
+
 ```
 
 ### Pattern 4: Exporting Express App from server.mjs
@@ -197,6 +238,7 @@ Check whether `server.mjs` already exports `app` and the `httpServer` instance. 
 **What:** Manual CORS middleware on the `/mcp` route (not global), controlled by `DOCUMIND_MCP_CORS_ORIGINS` env var.
 
 ```javascript
+
 // Source: Standard Express CORS pattern
 const CORS_ORIGINS = process.env.DOCUMIND_MCP_CORS_ORIGINS
   ? process.env.DOCUMIND_MCP_CORS_ORIGINS.split(',').map(o => o.trim())
@@ -213,6 +255,7 @@ app.use('/mcp', (req, res, next) => {
   if (req.method === 'OPTIONS') return res.status(204).end();
   next();
 });
+
 ```
 
 ### Pattern 6: Health Endpoint Update
@@ -220,6 +263,7 @@ app.use('/mcp', (req, res, next) => {
 **What:** Add `mcp_mode` field to the existing `/health` response.
 
 ```javascript
+
 // In server.mjs health route
 import { MCP_MODE } from '../config/env.mjs';
 
@@ -229,21 +273,29 @@ res.json({
   uptime: process.uptime(),
   mcp_mode: MCP_MODE,  // 'stdio' or 'http'
 });
+
 ```
 
 ### Anti-Patterns to Avoid
 
 - **Starting MCP HTTP on a separate port:** Creates two listeners, complicates Docker port mapping, and splits the API surface. Use the existing Express app on port 9000.
+
 - **Using SDK `requireBearerAuth` with static tokens:** The middleware enforces `expiresAt` — tokens without it will always be rejected. Write your own middleware.
+
 - **Using SSE-only transport (deprecated):** REQUIREMENTS.md explicitly notes "SSE MCP transport — Deprecated by MCP spec 2025-03-26; use Streamable HTTP only."
+
 - **Stateful sessions for this use case:** Adds in-memory session state and complexity. The 14 DocuMind tools are all synchronous DB/file operations — stateless mode is correct.
+
 - **Binding auth check at server startup:** `VALID_TOKENS` set should be built once at startup, not per-request. Pre-compute from env var.
 
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
+
 |---------|-------------|-------------|-----|
+
 | MCP protocol framing (JSON-RPC over HTTP, SSE streaming, session headers) | Custom REST-to-MCP adapter | `StreamableHTTPServerTransport.handleRequest()` | Handles POST/GET/DELETE, SSE vs JSON response negotiation, `Mcp-Session-Id`, `MCP-Protocol-Version` header validation |
+
 | HTTP server for MCP | New Express app | Extend existing Express app in `server.mjs` | STATE.md already notes server was exported for this purpose |
 
 **Key insight:** The transport does all protocol work. The only custom code needed is the auth middleware and the mode switch.
@@ -309,6 +361,7 @@ Verified patterns from official sources:
 ### Full HTTP Mode Startup Sequence
 
 ```javascript
+
 // Source: SDK streamableHttp.d.ts, docs/server.md patterns, STATE.md server export note
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -333,27 +386,37 @@ app.get('/mcp', bearerAuthMiddleware, async (req, res) => {
 app.delete('/mcp', bearerAuthMiddleware, async (req, res) => {
   await transport.handleRequest(req, res);
 });
+
 ```
 
 ### Env Vars to Add to env.mjs
 
 ```javascript
+
 // Source: CONTEXT.md locked decisions
 export const MCP_MODE = process.env.DOCUMIND_MCP_MODE ?? 'stdio';
 export const MCP_TOKEN = process.env.DOCUMIND_MCP_TOKEN ?? null;
 export const MCP_CORS_ORIGINS = process.env.DOCUMIND_MCP_CORS_ORIGINS ?? '';
+
 ```
 
 ### Docker-Compose Additions
 
 ```yaml
+
 # Source: CONTEXT.md — "Update docker-compose.yml to expose MCP HTTP port and add MCP env vars"
+
 environment:
   DOCUMIND_MCP_MODE: "${DOCUMIND_MCP_MODE:-stdio}"
+
   # Required when DOCUMIND_MCP_MODE=http:
+
   # DOCUMIND_MCP_TOKEN: "${DOCUMIND_MCP_TOKEN}"
+
   # Optional CORS origins (comma-separated):
+
   # DOCUMIND_MCP_CORS_ORIGINS: "${DOCUMIND_MCP_CORS_ORIGINS:-}"
+
 ```
 
 No additional port exposure is needed — MCP HTTP runs on existing port 9000.
@@ -361,29 +424,41 @@ No additional port exposure is needed — MCP HTTP runs on existing port 9000.
 ## State of the Art
 
 | Old Approach | Current Approach | When Changed | Impact |
+
 |--------------|------------------|--------------|--------|
+
 | HTTP+SSE transport (separate GET /sse + POST /messages endpoints) | Streamable HTTP (single `/mcp` endpoint, POST+GET+DELETE) | MCP spec 2025-03-26 | REQUIREMENTS.md explicitly forbids SSE transport |
+
 | Full OAuth 2.0 with `requireBearerAuth` | Custom static token verifier for API-key use cases | Always — SDK auth was designed for OAuth | Static bearer tokens are the right fit for server-to-server use |
 
-**Deprecated/outdated:**
+### Deprecated/outdated:
 
 - SSE transport (`StdioServerTransport` is fine; `SSEServerTransport` is the deprecated HTTP transport — do not use)
+
 - `requireBearerAuth` from SDK for static tokens — requires `expiresAt`, inappropriate for API keys
 
 ## Open Questions
 
 1. **Does `server.mjs` already export `app`?**
+
    - What we know: STATE.md note says `"server exported from server.mjs for downstream MCP HTTP transport use in later phases"` — implies the export was anticipated
+
    - What's unclear: Whether the export was actually added during earlier phases or just noted as a decision
+
    - Recommendation: Planner should include a task to verify and add `export { app }` if missing
 
 2. **Stateless vs stateful session mode**
+
    - What we know: Stateless (no `sessionIdGenerator`) skips all session validation; stateful generates `Mcp-Session-Id` headers and tracks state in-memory
+
    - What's unclear: Whether remote Claude Code agents expect session IDs (they should tolerate either)
+
    - Recommendation: Use stateless — simpler, no in-memory accumulation across requests, correct for the DocuMind use case where tools are all synchronous operations
 
 3. **Same port vs separate MCP port**
+
    - What we know: User left this to Claude's discretion; existing Express app is on 9000
+
    - Recommendation: Same port 9000. Avoids a second listener, a second Docker port mapping, and a second URL to configure. The `/mcp` path is unambiguous.
 
 ## Sources
@@ -391,23 +466,31 @@ No additional port exposure is needed — MCP HTTP runs on existing port 9000.
 ### Primary (HIGH confidence)
 
 - Installed SDK `/node_modules/@modelcontextprotocol/sdk/dist/cjs/server/streamableHttp.d.ts` — class signature, constructor options, `handleRequest` method
+
 - Installed SDK `/node_modules/@modelcontextprotocol/sdk/dist/cjs/server/auth/middleware/bearerAuth.js` — `requireBearerAuth` source, `expiresAt` enforcement confirmed
+
 - Installed SDK `/node_modules/@modelcontextprotocol/sdk/dist/cjs/server/webStandardStreamableHttp.d.ts` — full `WebStandardStreamableHTTPServerTransportOptions` interface
+
 - Installed SDK `/node_modules/@modelcontextprotocol/sdk/dist/cjs/server/express.js` — `createMcpExpressApp` pattern
+
 - `https://modelcontextprotocol.io/docs/concepts/transports` — Streamable HTTP spec: POST/GET/DELETE, session headers, backwards compat
+
 - `https://github.com/modelcontextprotocol/typescript-sdk/blob/main/docs/server.md` — stateless Express pattern with `handleRequest(req, res, req.body)`
 
 ### Secondary (MEDIUM confidence)
 
 - STATE.md `"server exported from server.mjs for downstream MCP HTTP transport use in later phases"` — project-specific architectural intent
+
 - REQUIREMENTS.md `"SSE MCP transport — Deprecated by MCP spec 2025-03-26; use Streamable HTTP only"` — confirms transport choice
 
 ## Metadata
 
-**Confidence breakdown:**
+### Confidence breakdown:
 
 - Standard stack: HIGH — SDK already installed, APIs verified from local node_modules
+
 - Architecture: HIGH — implementation pattern derived directly from SDK source code
+
 - Pitfalls: HIGH — `requireBearerAuth` limitation verified from source; others derived from SDK internals
 
 **Research date:** 2026-03-28

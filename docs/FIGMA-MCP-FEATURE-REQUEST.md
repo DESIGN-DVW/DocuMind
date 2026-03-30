@@ -21,10 +21,15 @@ Understanding which layer limits what is critical. The Figma ecosystem has three
 ### Figma REST API (most restricted for writes)
 
 | Can Write                                   | Cannot Write                        |
+
 | ------------------------------------------- | ----------------------------------- |
+
 | Comments (create, delete)                   | Files (create, modify, delete)      |
+
 | Variables (Enterprise only, bulk CRUD)      | Design nodes (frames, shapes, text) |
+
 | Dev Resources (bulk create, update, delete) | Components, styles, pages           |
+
 | Webhooks (create, update, delete)           | Auto layout, constraints, images    |
 
 The REST API is fundamentally read-oriented for design content. The `file_content:write` scope exists internally but is not publicly available.
@@ -36,19 +41,33 @@ Can create, modify, and delete any object in an open Figma/FigJam file: frames, 
 ### Figma MCP (bridges the gap via `use_figma`)
 
 | Tool                           | Operation             | Target                 |
+
 | ------------------------------ | --------------------- | ---------------------- |
+
 | `get_design_context`           | Read                  | Design files           |
+
 | `get_screenshot`               | Read                  | Any file               |
+
 | `get_metadata`                 | Read                  | Any file               |
+
 | `get_figjam`                   | Read                  | FigJam files           |
+
 | `get_variable_defs`            | Read                  | Design files           |
+
 | `search_design_system`         | Read                  | Libraries              |
+
 | `get_code_connect_map`         | Read                  | Code Connect           |
+
 | `get_code_connect_suggestions` | Read                  | Code Connect           |
+
 | `create_new_file`              | **Create**            | New file (drafts)      |
+
 | `generate_diagram`             | **Create**            | New FigJam file        |
+
 | `add_code_connect_map`         | **Create**            | Code Connect mapping   |
+
 | `send_code_connect_mappings`   | **Create/Overwrite**  | Code Connect (bulk)    |
+
 | `use_figma`                    | **Read/Write/Delete** | Any object in any file |
 
 The `use_figma` tool executes arbitrary Plugin API JavaScript against any file via `fileKey`. It is the most powerful tool in the set but requires crafting raw JS code for each operation.
@@ -62,7 +81,9 @@ The `use_figma` tool executes arbitrary Plugin API JavaScript against any file v
 `generate_diagram` accepts `name`, `mermaidSyntax`, and `userIntent`. It always creates a **new standalone FigJam file** and returns a URL. There is:
 
 - No `fileKey` parameter to target an existing file
+
 - No way to update a previously generated diagram in-place
+
 - No way to generate into a specific page/section of an existing board
 
 ### What this means in practice
@@ -86,19 +107,29 @@ The `use_figma` tool executes arbitrary Plugin API JavaScript against any file v
 ### What `use_figma` CAN solve
 
 | Gap                             | `use_figma` Approach                                 | Feasibility                                                                |
+
 | ------------------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------- |
+
 | Update diagram in existing file | Clear old nodes, recreate from Mermaid               | Possible but complex — must replicate `generate_diagram`'s rendering logic |
+
 | Add diagram to central board    | Create nodes on a specific page/section of the board | Possible — needs page ID and section coordinates                           |
+
 | Read FigJam content for diff    | Query node tree via Plugin API                       | Possible — `figma.currentPage.children` etc.                               |
+
 | Verify curation placement       | Check if expected nodes exist on target page         | Possible                                                                   |
 
 ### What `use_figma` CANNOT solve
 
 | Gap                                    | Why Not                                                                                                         |
+
 | -------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+
 | Delete standalone FigJam files         | File deletion is not in the Plugin API — it operates within a file, not on files                                |
+
 | Cross-file content move                | Plugin API operates on one file at a time; `use_figma` takes a single `fileKey`                                 |
+
 | Background/batch operations            | Each `use_figma` call targets one file; no batch mode                                                           |
+
 | Reproduce `generate_diagram` rendering | The Mermaid-to-FigJam rendering logic is internal to `generate_diagram`; recreating it in raw JS is non-trivial |
 
 ### The practical barrier
@@ -158,13 +189,21 @@ Return actual node content (text, connector labels, sticky content) from `get_fi
 ## Summary: What's Missing Where
 
 | Operation                  | REST API | Plugin API       | MCP Dedicated Tool     | MCP via `use_figma` |
+
 | -------------------------- | -------- | ---------------- | ---------------------- | ------------------- |
+
 | Create new file            | No       | No               | `create_new_file`      | No                  |
+
 | Create diagram             | No       | Yes (manual)     | `generate_diagram`     | Possible (complex)  |
+
 | Update diagram in-place    | No       | Yes              | **Missing**            | Possible (complex)  |
+
 | Render into existing board | No       | Yes              | **Missing**            | Possible            |
+
 | Delete file                | No       | No               | **Missing**            | **Not possible**    |
+
 | Read FigJam content        | Partial  | Yes              | `get_figjam` (limited) | Yes                 |
+
 | Move content between files | No       | No (single file) | **Missing**            | **Not possible**    |
 
 The core issue is that `generate_diagram` is a convenience tool that handles the hard part (Mermaid rendering) but lacks lifecycle parameters. The general-purpose `use_figma` has the write access but not the rendering logic. The gap between them is where all our workarounds live.
@@ -178,7 +217,9 @@ The core issue is that `generate_diagram` is a convenience tool that handles the
 The URLs returned by `generate_diagram` are not persistent file references:
 
 ```text
+
 https://www.figma.com/online-whiteboard/create-diagram/d3b296e5-...?utm_source=claude
+
 ```
 
 These are one-time redirect URLs that create the FigJam file when first opened. They do not contain a `fileKey` that `use_figma` or `get_figjam` can target. This means even if `use_figma` could update FigJam content, there is no programmatic way to get the actual file key of a diagram created by `generate_diagram` without a human opening the link first.
@@ -194,11 +235,17 @@ During testing, `get_figjam` returned "This figma file could not be accessed" on
 ## Environment Details
 
 - **Figma MCP servers:** `claude.ai Figma` (remote), `figma-desktop` (local, port 3845)
+
 - **Figma REST API:** Used via FigmailAPP (comments, file reads, design tokens) and Figma plugins (stickies, connectors via Plugin API)
+
 - **Figma plan:** Pro (Full seat) + DDB Worldwide (Enterprise, Full seat)
+
 - **Usage pattern:** 10 diagrams across 6 repositories, growing; centralized on one FigJam board
+
 - **Diagram types:** flowchart, folder_tree, relationship_graph, sequence, state, gantt, decision_tree
+
 - **Integration:** Claude Code CLI with MCP, Node.js documentation daemon, SQLite FTS5 database
+
 - **Workaround complexity:** ~1,200 lines of custom code (registry, propagation, MCP tools, processors)
 
 ---
@@ -208,9 +255,11 @@ During testing, `get_figjam` returned "This figma file could not be accessed" on
 The `use_figma` tool theoretically enables write operations on existing FigJam files, but three barriers prevent it from solving the diagram lifecycle problem:
 
 1. **`generate_diagram` returns redirect URLs** — no file key is available to target with `use_figma`
+
 2. **Mermaid rendering logic is internal** — reproducing `generate_diagram`'s layout in raw Plugin API JS is impractical
+
 3. **File access inconsistencies** — `get_figjam` failed on the central board for reasons that need investigation
 
 The simplest path forward remains: **add `fileKey` (and optionally `pageId`) to `generate_diagram`** so it can render into an existing file. Alternatively, have `generate_diagram` return a real file key instead of a redirect URL, enabling `use_figma` follow-up calls.
 
-*This report documents real production experience with the Figma MCP beta. We've invested significant engineering effort into workarounds that a small API surface change would largely eliminate.*
+### This report documents real production experience with the Figma MCP beta. We've invested significant engineering effort into workarounds that a small API surface change would largely eliminate.

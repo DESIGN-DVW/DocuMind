@@ -1,4 +1,5 @@
 ---
+
 phase: 13-git-clone-ingestion-dual-mode
 plan: "01"
 subsystem: daemon
@@ -12,22 +13,35 @@ tech_stack:
   patterns: [execFile-over-exec, promisify, idempotent-clone-check, conditional-cron-registration]
 key_files:
   created:
+
     - daemon/ingestion.mjs
+
   modified:
+
     - config/env.mjs
+
     - daemon/server.mjs
+
     - daemon/scheduler.mjs
+
 decisions:
+
   - GIT_TOKEN read from process.env at runtime (not exported from env.mjs) — secrets must not be module-level exports
+
   - initIngestion() does not mutate DOCUMIND_REPOS_DIR — docker-compose sets it at container start
+
   - execFile (not exec) used for all git commands to prevent shell injection
+
   - Fallback for diverged repos: fetch + reset --hard origin/HEAD after ff-only failure
+
   - Pull cron registered as a second CRON_HOURLY job — node-cron handles multiple jobs per schedule; scan is content-hash idempotent so double-scanning is harmless
+
 metrics:
   duration: 1m 35s
   completed: "2026-03-26"
   tasks: 2
   files: 4
+
 ---
 
 # Phase 13 Plan 01: Git Clone Ingestion Dual Mode Summary
@@ -37,8 +51,11 @@ Dual-mode repository ingestion via `REPO_MODE` env variable — mount mode keeps
 ## Tasks Completed
 
 | Task | Name | Commit | Files |
+
 | ---- | ---- | ------ | ----- |
+
 | 1 | Create ingestion module and add REPO_MODE to env.mjs | df692dc | daemon/ingestion.mjs, config/env.mjs |
+
 | 2 | Wire ingestion into server startup and scheduler pull cron | ab474a8 | daemon/server.mjs, daemon/scheduler.mjs |
 
 ## Decisions Made
@@ -66,16 +83,23 @@ The pull cron registers a second job on `CRON_HOURLY` alongside the existing inc
 ## Artifacts
 
 | Path | Description |
+
 | ---- | ----------- |
+
 | `daemon/ingestion.mjs` | Exports `initIngestion()` and `pullAllRepos()` |
+
 | `config/env.mjs` | Added `REPO_MODE` export (defaults to `'mount'`) |
+
 | `daemon/server.mjs` | Calls `await initIngestion()` before `loadProfile()` |
+
 | `daemon/scheduler.mjs` | Imports `pullAllRepos` and `REPO_MODE`; registers pull cron when `REPO_MODE=clone` |
 
 ## Key Links
 
 - `daemon/server.mjs` → `daemon/ingestion.mjs` via `await initIngestion()` before `loadProfile()`
+
 - `daemon/scheduler.mjs` → `daemon/ingestion.mjs` via `pullAllRepos()` in CRON_HOURLY cron
+
 - `daemon/ingestion.mjs` → `config/env.mjs` via `import { REPO_MODE, REPOS_LIST }`
 
 ## Deviations from Plan
@@ -85,10 +109,17 @@ None — plan executed exactly as written.
 ## Self-Check: PASSED
 
 | Item | Status |
+
 | ---- | ------ |
+
 | daemon/ingestion.mjs exists | FOUND |
+
 | config/env.mjs exists | FOUND |
+
 | daemon/server.mjs exists | FOUND |
+
 | daemon/scheduler.mjs exists | FOUND |
+
 | Commit df692dc exists | FOUND |
+
 | Commit ab474a8 exists | FOUND |

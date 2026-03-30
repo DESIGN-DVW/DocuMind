@@ -19,10 +19,15 @@ Without the registry, diagrams drift: someone updates a `.mmd` file but forgets 
 Every diagram in the ecosystem produces three artifacts plus a registry entry:
 
 | Artifact       | Format            | Location                        | Purpose                                       |
+
 | -------------- | ----------------- | ------------------------------- | --------------------------------------------- |
+
 | Mermaid source | `.mmd`            | `docs/diagrams/` in each repo   | Version-controlled source of truth            |
+
 | PNG preview    | `.png`            | `docs/diagrams/` in each repo   | Inline previews in GitHub, PRs, docs          |
+
 | FigJam view    | FigJam file/board | Figma (see Central Board below) | Interactive collaboration and presentation    |
+
 | Registry entry | SQLite row        | DocuMind `diagrams` table       | Tracking, staleness detection, URL management |
 
 If any one of the three file artifacts is missing, the diagram is incomplete. The registry tracks which pieces exist and flags gaps.
@@ -38,8 +43,11 @@ A diagram moves through three stages:
 The diagram has just been created. It has:
 
 - A `.mmd` source file committed to the repo
+
 - A `.png` preview alongside it
+
 - A standalone FigJam file (its own Figma file, not on the central board yet)
+
 - A registry entry in the DocuMind database
 
 At this stage, the FigJam URL points to a standalone file. Markdown files in the repo link to this standalone URL.
@@ -49,7 +57,9 @@ At this stage, the FigJam URL points to a standalone file. Markdown files in the
 The diagram has been reviewed and moved to the central FigJam board. This means:
 
 - The standalone FigJam content was copied/moved to the appropriate repo page on the central board
+
 - The registry was updated with the new curated URL
+
 - All markdown references across all repos were automatically rewritten to point to the curated URL
 
 The standalone FigJam file can be deleted after curation.
@@ -65,13 +75,21 @@ The `.mmd` source file has been modified since the FigJam view was last generate
 The registry supports seven diagram types. Choose the type that best fits the content — this helps with filtering, dashboard display, and ensures agents pick the right Mermaid syntax.
 
 | Type                 | Mermaid Syntax                             | When to Use                                            | Example Use Cases                                                          |
+
 | -------------------- | ------------------------------------------ | ------------------------------------------------------ | -------------------------------------------------------------------------- |
+
 | `flowchart`          | `flowchart TD` / `flowchart LR`            | Process flows, data pipelines, decision logic          | Scan pipeline, API request handling, build process                         |
+
 | `folder_tree`        | `graph TD` with directory/folder nodes     | Repository structure, file organization                | Repo structure, config hierarchy, monorepo layout                          |
+
 | `relationship_graph` | `classDiagram`                             | Entity relationships, module dependencies, inheritance | Document relationships, agent inheritance, package dependencies            |
+
 | `decision_tree`      | `flowchart TD` with diamond decision nodes | Decision logic, troubleshooting guides, routing        | Error handling flow, permission checks, dispatch routing                   |
+
 | `sequence`           | `sequenceDiagram`                          | Interactions over time between actors/systems          | API call chains, MCP tool flows, webhook handshakes                        |
+
 | `state`              | `stateDiagram-v2`                          | Lifecycle stages, status transitions                   | Document lifecycle, diagram lifecycle (generated/curated/stale), PR states |
+
 | `gantt`              | `gantt`                                    | Timelines, schedules, phased work                      | Milestone phases, release schedule, migration plan                         |
 
 ### Type auto-detection
@@ -79,10 +97,15 @@ The registry supports seven diagram types. Choose the type that best fits the co
 The `register_diagram` MCP tool detects the type automatically from Mermaid syntax:
 
 - `sequenceDiagram` in source → `sequence`
+
 - `stateDiagram` in source → `state`
+
 - `gantt` in source → `gantt`
+
 - `classDiagram` in source → `relationship_graph`
+
 - `graph` with folder/directory keywords → `folder_tree`
+
 - Everything else → `flowchart`
 
 If auto-detection picks the wrong type, the `.mmd` syntax can usually be adjusted to match the intended type more clearly.
@@ -98,8 +121,11 @@ Use the `/figma-diagram` slash command. The process has six steps, all handled b
 Give Claude one of:
 
 - A description of what to diagram ("show the data flow from scanner to database")
+
 - A markdown table, tree, or structure to convert
+
 - An existing `.mmd` file path to regenerate
+
 - A Figma URL to a design that should be diagrammed
 
 ### Step 2 -- Mermaid source is created
@@ -111,7 +137,9 @@ Claude writes a `.mmd` file to `docs/diagrams/{name}.mmd` in the current repo. S
 The command runs:
 
 ```bash
+
 npx -y -p puppeteer -p @mermaid-js/mermaid-cli mmdc -i docs/diagrams/{name}.mmd -o docs/diagrams/{name}.png
+
 ```
 
 ### Step 4 -- FigJam is generated
@@ -123,8 +151,11 @@ Claude calls the `generate_diagram` MCP tool to create a standalone FigJam file.
 Claude calls the `register_diagram` MCP tool, which:
 
 - Auto-detects the diagram type from the `.mmd` content
+
 - Computes a SHA-256 hash for future staleness detection
+
 - Inserts or updates the entry in the DocuMind `diagrams` table
+
 - Regenerates `docs/diagrams/DIAGRAM-REGISTRY.md` automatically
 
 ### Step 6 -- Review and commit
@@ -140,9 +171,13 @@ Curation moves a standalone FigJam diagram onto the central board. This is a man
 ### Manual part
 
 1. Open the standalone FigJam file (URL from the registry or from the markdown link)
+
 2. Open the central board: `https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/`
+
 3. Navigate to the correct repo Page (or create one if it does not exist)
+
 4. Copy or move the diagram content into the appropriate Section on that Page
+
 5. Copy the new URL from the central board
 
 ### Automated part
@@ -150,20 +185,25 @@ Curation moves a standalone FigJam diagram onto the central board. This is a man
 Run the `/figma-curate` slash command with:
 
 - The diagram name (as it appears in the registry)
+
 - The new curated URL from the central board
 
 The `curate_diagram` MCP tool then handles everything in one call:
 
 - Updates the `diagrams` table with the curated URL
+
 - Regenerates `docs/diagrams/DIAGRAM-REGISTRY.md` in every affected repo
+
 - Replaces the old standalone URL with the curated URL in all `.md` files across all repos
 
 You can also curate multiple diagrams at once:
 
 ```text
+
 /figma-curate
 Diagram A -> https://figma.com/board/...
 Diagram B -> https://figma.com/board/...
+
 ```
 
 After curation, you can safely delete the standalone FigJam file.
@@ -177,8 +217,11 @@ Use the `/diagram-registry` slash command to get a full status report. It querie
 The report includes:
 
 - **Status counts** -- total, generated, curated, and stale diagrams
+
 - **Pending actions** -- diagrams needing curation, regeneration, or missing files
+
 - **Full table** -- all diagrams with links and status
+
 - **Orphan check** -- `.mmd` or `.png` files on disk that have no registry entry
 
 ### Filtering
@@ -186,8 +229,10 @@ The report includes:
 You can filter the registry query by repository or status:
 
 ```text
+
 get_diagrams({ repo: "DocuMind" })
 get_diagrams({ stale_only: true })
+
 ```
 
 ### Dashboard
@@ -205,6 +250,7 @@ All curated diagrams live on a single FigJam board:
 The board is organized as follows:
 
 - **Each repository gets its own Page** (e.g., "DocuMind", "RootDispatcher", "LibraryAssetManager")
+
 - **Within each Page, diagrams are grouped into named Sections** organized by purpose (e.g., "Architecture", "Data Flow", "Deployment")
 
 When curating a new diagram, place it in the correct repo Page and an appropriate Section. Create a new Section if none of the existing ones fit.
@@ -216,12 +262,19 @@ When curating a new diagram, place it in the correct repo Page and an appropriat
 Quick reference for locating diagram artifacts:
 
 | What | Where |
+
 | --- | --- |
+
 | Mermaid source (`.mmd`) | `docs/diagrams/` in each repository |
+
 | PNG preview (`.png`) | `docs/diagrams/` in each repository (same directory as `.mmd`) |
+
 | Registry database | DocuMind SQLite at `data/documind.db`, table `diagrams` |
+
 | Registry snapshot | `docs/diagrams/DIAGRAM-REGISTRY.md` in each repo (auto-generated, do not edit) |
+
 | Central FigJam board | `https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/` |
+
 | Web dashboard | `http://localhost:9000` -- Diagrams tab |
 
 ---
@@ -233,22 +286,31 @@ For programmatic or agent-driven access, diagrams are available through three ch
 ### REST API
 
 ```bash
+
 # Get all diagrams
+
 curl http://localhost:9000/diagrams
 
 # Filter by repo
+
 curl http://localhost:9000/diagrams?repo=DocuMind
 
 # Get stale diagrams only
+
 curl http://localhost:9000/diagrams?stale=true
+
 ```
 
 ### MCP Tools
 
 | Tool               | Purpose                                                     |
+
 | ------------------ | ----------------------------------------------------------- |
+
 | `get_diagrams`     | Query the registry (optional filters: `repo`, `stale_only`) |
+
 | `register_diagram` | Register or update a diagram entry                          |
+
 | `curate_diagram`   | Set curated URL and propagate across all repos              |
 
 ### Response Shape
@@ -256,6 +318,7 @@ curl http://localhost:9000/diagrams?stale=true
 The `get_diagrams` response contains these key fields per diagram:
 
 ```json
+
 {
   "id": 1,
   "name": "DocuMind Architecture",
@@ -268,12 +331,15 @@ The `get_diagrams` response contains these key fields per diagram:
   "active_url": "https://www.figma.com/...",
   "repository": "DocuMind"
 }
+
 ```
 
 Notes on the response:
 
 - `active_url` is a computed field: it returns `curated_url` if set, otherwise `figjam_url`
+
 - There is no `status` string field -- derive it: `curated_url` present = curated, `stale = 1` = stale, otherwise = generated
+
 - There is no `png_path` field -- derive it from `mermaid_path` by replacing `.mmd` with `.png`
 
 ---
@@ -285,7 +351,9 @@ Notes on the response:
 This is usually a Puppeteer/Chromium issue. Try adding the no-sandbox flag:
 
 ```bash
+
 npx -y -p puppeteer -p @mermaid-js/mermaid-cli mmdc -i docs/diagrams/{name}.mmd -o docs/diagrams/{name}.png --puppeteerConfig '{"args":["--no-sandbox"]}'
+
 ```
 
 If Chromium is not installed, Puppeteer should download it automatically on first run. On some systems you may need to install system dependencies for headless Chrome.
@@ -299,6 +367,7 @@ The diagram was likely created manually without calling `register_diagram`. Run 
 The `.mmd` source was modified after the last registration. To resolve:
 
 1. Run `/figma-diagram` with the updated `.mmd` file to regenerate the PNG and FigJam view
+
 2. The `register_diagram` call will update the `source_hash` and clear the stale flag
 
 ### FigJam link is broken after curation
@@ -314,4 +383,5 @@ If `/diagram-registry` reports orphaned `.mmd` or `.png` files (files with no re
 If the DocuMind daemon is not running, the MCP tools will not respond. As a fallback:
 
 - Read `docs/diagrams/DIAGRAM-REGISTRY.md` directly (it is a snapshot and may be slightly out of date)
+
 - Start the daemon with `npm run daemon:start` from the DocuMind directory

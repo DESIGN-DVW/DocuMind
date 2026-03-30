@@ -23,11 +23,17 @@ Credential security is the only non-trivial constraint: `GIT_TOKEN` (or equivale
 ## Phase Requirements
 
 | ID | Description | Research Support |
+
 |----|-------------|-----------------|
+
 | INGEST-01 | Volume mount mode scans mounted repo directories | Existing `discoverRepos()` in `context/loader.mjs` already handles this; `DOCUMIND_REPOS_DIR=/repos` + bind mount in docker-compose.yml is all that is needed. The docker-compose.yml bind mount is currently commented out — this requirement is fulfilled by uncommenting + documenting it. |
+
 | INGEST-02 | Git-clone mode clones configured repos on container start | New `daemon/ingestion.mjs` module: reads `REPO_MODE=clone` and `DOCUMIND_REPOS` (comma-separated `org/repo` slugs), clones each to `/app/repos/<name>` via `git clone` with token-embedded URL, sets `DOCUMIND_REPOS_DIR=/app/repos` so `discoverRepos()` picks them up. |
+
 | INGEST-03 | Git-clone mode pulls repos on cron schedule | New cron job in `daemon/scheduler.mjs` (or ingestion module): `git pull --ff-only` per cloned repo on `CRON_HOURLY` schedule, triggers `runScan()` per repo after successful pull. |
+
 | INGEST-04 | `REPO_MODE` env var switches between mount and clone modes | New export in `config/env.mjs`: `export const REPO_MODE = process.env.REPO_MODE ?? 'mount'`. Validated to be either `'mount'` or `'clone'` at startup; invalid value → `process.exit(1)` with clear message. |
+
 | INGEST-05 | Git credentials accepted via env vars, not visible in `docker history --no-trunc` | `GIT_TOKEN` env var injected at runtime via `docker-compose.yml` `environment:` block (never `ARG`/`ENV` in Dockerfile). URL pattern: `https://${GIT_TOKEN}@github.com/${org}/${repo}.git`. Verified safe: env vars set at `docker run` or `docker-compose up` time are not captured in image history layers. |
 
 </phase_requirements>
@@ -39,9 +45,13 @@ Credential security is the only non-trivial constraint: `GIT_TOKEN` (or equivale
 ### Core
 
 | Library/Tool | Version | Purpose | Why Standard |
+
 |---|---|---|---|
+
 | `node:child_process` (built-in) | Node 22 built-in | Spawn git commands | No additional dependency; `execFile()` avoids shell injection; git is already in the node:22-bookworm-slim base image |
+
 | `git` (system) | Pre-installed in node:22-bookworm-slim | Clone and pull repositories | Part of Debian bookworm base; verified present in node:22-bookworm-slim |
+
 | `node-cron` | Already in package.json | Schedule periodic pulls | Already imported in `daemon/scheduler.mjs`; no new dependency |
 
 ### No New npm Dependencies Required
@@ -51,8 +61,11 @@ Phase 13 uses only Node.js built-ins (`child_process`, `fs/promises`, `path`) pl
 ### Verify git is in the base image
 
 ```bash
+
 docker run --rm node:22-bookworm-slim git --version
+
 # Expected: git version 2.39.x
+
 ```
 
 This should succeed. If it fails, add `git` to the runtime stage `apt-get install` list in the Dockerfile.
@@ -60,9 +73,13 @@ This should succeed. If it fails, add `git` to the runtime stage `apt-get instal
 ### Alternatives Considered
 
 | Instead of | Could Use | Tradeoff |
+
 |---|---|---|
+
 | `child_process.execFile('git', ...)` | `simple-git` npm package | simple-git is a well-maintained wrapper but adds a dependency. `execFile` is sufficient for `clone` + `pull --ff-only`; stick with built-in. |
+
 | Token-embedded HTTPS URL | SSH deploy keys | SSH requires key generation, volume-mounting the key file, and known_hosts setup. Token URL is simpler and aligns with GitHub Actions standard pattern. Acceptable for single-user use case. |
+
 | `GIT_ASKPASS` script | Token in URL | `GIT_ASKPASS` is cleaner (token not in URL) but requires writing a temp script file and managing permissions. Token URL is simpler and equally secure for containers where the env var is runtime-injected. |
 
 ---
@@ -72,6 +89,7 @@ This should succeed. If it fails, add `git` to the runtime stage `apt-get instal
 ### Recommended Project Structure (new files)
 
 ```text
+
 DocuMind/
 ├── daemon/
 │   ├── ingestion.mjs         # NEW: clone/pull logic, mode detection
@@ -80,6 +98,7 @@ DocuMind/
 ├── config/
 │   └── env.mjs               # MODIFIED: add REPO_MODE export
 └── docker-compose.yml        # MODIFIED: add REPO_MODE, GIT_TOKEN, bind mount for mount mode
+
 ```
 
 ### Pattern 1: Mode Detection in env.mjs
@@ -87,11 +106,13 @@ DocuMind/
 **What:** A single `REPO_MODE` export that the rest of the codebase reads. Validate at the env.mjs level so any module can safely import it.
 
 ```javascript
+
 // config/env.mjs — add after REPOS_LIST export
 export const REPO_MODE = process.env.REPO_MODE ?? 'mount';
 
 // Validation happens at startup in ingestion.mjs, not here
 // env.mjs stays side-effect free (except .env loading)
+
 ```
 
 ### Pattern 2: Ingestion Module (`daemon/ingestion.mjs`)
@@ -101,6 +122,7 @@ export const REPO_MODE = process.env.REPO_MODE ?? 'mount';
 **When to use:** Called BEFORE `loadProfile()` in `server.mjs` so that `DOCUMIND_REPOS_DIR` is populated with cloned repos when `discoverRepos()` runs.
 
 ```javascript
+
 // daemon/ingestion.mjs
 import { execFile } from 'child_process';
 import { promisify } from 'util';
@@ -156,6 +178,7 @@ export async function initIngestion() {
   process.env.DOCUMIND_REPOS_DIR = CLONE_DIR;
   console.log(`[ingestion] Clone mode ready — repos at ${CLONE_DIR}`);
 }
+
 ```
 
 **Critical:** `DOCUMIND_REPOS_DIR` must be set in `process.env` before `config/env.mjs` re-exports `REPOS_DIR`. Since `env.mjs` is a module (evaluated once at import time), `REPOS_DIR` will already be `null` if `DOCUMIND_REPOS_DIR` was not set at startup. The cleanest solution is to have `initIngestion()` set `process.env.DOCUMIND_REPOS_DIR = CLONE_DIR` AND have `server.mjs` re-derive the repos directory from `process.env` directly after ingestion, rather than relying on the already-frozen `REPOS_DIR` export. See Open Questions #1.
@@ -165,6 +188,7 @@ export async function initIngestion() {
 **What:** Add a new cron job that runs `git pull --ff-only` for each cloned repo and triggers an incremental scan. Only registered when `REPO_MODE=clone`.
 
 ```javascript
+
 // daemon/scheduler.mjs — add inside initScheduler(), after other crons
 import { pullAllRepos } from './ingestion.mjs';
 import { REPO_MODE, CRON_HOURLY } from '../config/env.mjs';
@@ -178,9 +202,11 @@ if (REPO_MODE === 'clone') {
     }
   });
 }
+
 ```
 
 ```javascript
+
 // daemon/ingestion.mjs — add pullAllRepos() export
 export async function pullAllRepos() {
   const updated = [];
@@ -202,15 +228,17 @@ export async function pullAllRepos() {
   }
   return updated;
 }
+
 ```
 
 ### Pattern 4: docker-compose.yml Updates
 
 Two separate compose configurations are needed — or a single file with commented alternatives:
 
-**Mount mode (REPO_MODE=mount):**
+#### Mount mode (REPO_MODE=mount):
 
 ```yaml
+
 services:
   documind:
     environment:
@@ -219,13 +247,17 @@ services:
       CHOKIDAR_USEPOLLING: "true"
       CHOKIDAR_INTERVAL: "2000"
     volumes:
+
       - documind_data:/app/data
+
       - /Users/Shared/htdocs/github/DVWDesign:/repos:ro
+
 ```
 
-**Clone mode (REPO_MODE=clone):**
+#### Clone mode (REPO_MODE=clone):
 
 ```yaml
+
 services:
   documind:
     environment:
@@ -233,47 +265,68 @@ services:
       DOCUMIND_REPOS: "DESIGN-DVW/DocuMind,DESIGN-DVW/RootDispatcher"
       GIT_TOKEN: "${GIT_TOKEN}"   # passed from host .env, never hardcoded
     volumes:
+
       - documind_data:/app/data
+
       - documind_repos:/app/repos  # named volume for cloned repos
+
 ```
 
 ### Pattern 5: Credential Security
 
 **What:** `GIT_TOKEN` injected at runtime, never in image layers.
 
-**Correct approach:**
+#### Correct approach:
 
 ```yaml
+
 # docker-compose.yml
+
 environment:
   GIT_TOKEN: "${GIT_TOKEN}"   # reads from host shell environment or .env file
+
 ```
 
 ```bash
+
 # On the host — never commit this
+
 GIT_TOKEN=ghp_xxx docker compose up
+
 # OR: create .env (gitignored) with GIT_TOKEN=ghp_xxx
+
 ```
 
 **Verification command** (success criterion 4):
 
 ```bash
+
 docker history --no-trunc $(docker compose images -q documind) | grep -i token
+
 # Must produce NO output
+
 ```
 
-**Why token-in-URL is safe at runtime (LOW risk in this context):**
+## Why token-in-URL is safe at runtime (LOW risk in this context):
+
 - The token appears in the git clone command args (`execFileAsync('git', [..., url])`) — visible in `ps aux` output during clone
+
 - For higher security: use `GIT_ASKPASS` or credential helper instead
+
 - For this single-user use case: token-in-URL is the standard GitHub Actions / Docker pattern and acceptable
 
 ### Anti-Patterns to Avoid
 
 - **`ARG GIT_TOKEN` in Dockerfile:** Captured in image layer history. Visible via `docker history --no-trunc`. Never use ARG for secrets.
+
 - **`ENV GIT_TOKEN=...` in Dockerfile:** Same problem — baked into every image layer.
+
 - **`exec(\`git clone ${url}\`)` (shell exec):** Shell injection risk if repo name contains shell metacharacters. Use `execFile()` with explicit argument array.
+
 - **`git clone` with `--depth=0` or full history:** Wastes disk and memory. Use `--depth=1` (shallow clone) for documentation scanning; history is not needed.
+
 - **Setting `DOCUMIND_REPOS_DIR` in Dockerfile `ENV`:** Prevents the value from being overridden at runtime for mount mode. Keep it out of the Dockerfile; only set in docker-compose.yml or at `docker run` time.
+
 - **Storing token in `~/.netrc` inside the image:** Credential file is baked into the layer.
 
 ---
@@ -281,10 +334,15 @@ docker history --no-trunc $(docker compose images -q documind) | grep -i token
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
+
 |---|---|---|---|
+
 | Git operations | Custom HTTP calls to GitHub API to download files | `git clone` + `git pull` via `child_process.execFile` | Git handles delta updates, file permissions, and .git metadata correctly; re-implementing is thousands of lines |
+
 | Credential passing | Custom credential store | Token-embedded HTTPS URL or `GIT_ASKPASS` env var | Git's built-in credential mechanisms are tested and audited |
+
 | Shallow clones | Full history download to find markdown files | `git clone --depth=1` | DocuMind only needs current file contents; full history wastes 10-100x more storage |
+
 | Periodic pull logic | Custom file diff / polling of GitHub API | `git pull --ff-only` | Git handles merge detection, fast-forward safety, and error cases |
 
 **Key insight:** Git already solves the hard parts (credential auth, delta sync, file permissions). The implementation is a thin wrapper: clone on startup, pull on schedule.
@@ -300,7 +358,9 @@ docker history --no-trunc $(docker compose images -q documind) | grep -i token
 **Why it happens:** ES module evaluation is synchronous and happens once at import. The exported `const REPOS_DIR` is a snapshot, not a live reference to `process.env`.
 
 **How to avoid:** Two options:
+
 1. (Preferred) Set `DOCUMIND_REPOS_DIR` as a Docker environment variable pointing to `/app/repos` when using clone mode — then `env.mjs` picks it up correctly at startup. The ingestion module only populates that directory, it doesn't change the env var.
+
 2. (Alternative) Pass `CLONE_DIR` directly to `loadProfile()` after ingestion completes, bypassing the `REPOS_DIR` export.
 
 **Warning signs:** Clone mode starts, repos clone successfully, but daemon reports 0 repos discovered.
@@ -350,6 +410,7 @@ docker history --no-trunc $(docker compose images -q documind) | grep -i token
 ### Verified: `execFile` for git clone (safe argument passing)
 
 ```javascript
+
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 const execFileAsync = promisify(execFile);
@@ -361,11 +422,13 @@ await execFileAsync('git', [
   `https://${token}@github.com/${org}/${repo}.git`,
   targetDir
 ]);
+
 ```
 
 ### Verified: git pull with error handling
 
 ```javascript
+
 try {
   const { stdout } = await execFileAsync('git', ['-C', repoPath, 'pull', '--ff-only']);
   return { changed: !stdout.includes('Already up to date'), output: stdout.trim() };
@@ -376,23 +439,31 @@ try {
   await execFileAsync('git', ['-C', repoPath, 'reset', '--hard', 'origin/HEAD']);
   return { changed: true, output: 'reset to origin/HEAD' };
 }
+
 ```
 
 ### Verified: Token not in image history
 
 ```dockerfile
+
 # In Dockerfile — DO NOT add these
+
 # ARG GIT_TOKEN      ← WRONG: captured in history
+
 # ENV GIT_TOKEN=xxx  ← WRONG: baked into layer
 
 # docker-compose.yml CORRECT pattern:
+
 # environment:
+
 #   GIT_TOKEN: "${GIT_TOKEN}"  ← runtime injection, not in image history
+
 ```
 
 ### Verified: docker-compose.yml for mount mode (uncomment bind mount)
 
 ```yaml
+
 services:
   documind:
     environment:
@@ -401,8 +472,11 @@ services:
       CHOKIDAR_USEPOLLING: "true"
       CHOKIDAR_INTERVAL: "2000"
     volumes:
+
       - documind_data:/app/data
+
       - ${REPOS_HOST_PATH:-/Users/Shared/htdocs/github/DVWDesign}:/repos:ro
+
 ```
 
 Using `${REPOS_HOST_PATH:-fallback}` in the compose volume makes the host path configurable without editing the file.
@@ -410,6 +484,7 @@ Using `${REPOS_HOST_PATH:-fallback}` in the compose volume makes the host path c
 ### Verified: docker-compose.yml for clone mode
 
 ```yaml
+
 services:
   documind:
     environment:
@@ -418,12 +493,15 @@ services:
       DOCUMIND_REPOS: "${DOCUMIND_REPOS}"
       GIT_TOKEN: "${GIT_TOKEN}"
     volumes:
+
       - documind_data:/app/data
+
       - documind_repos:/app/repos
 
 volumes:
   documind_data:
   documind_repos:
+
 ```
 
 ---
@@ -455,10 +533,15 @@ The docker-compose.yml bind mount is currently commented out. Uncomment it and d
 ## State of the Art
 
 | Old Approach | Current Approach | Impact on Phase 13 |
+
 |---|---|---|
+
 | SSH keys for Docker clone | HTTPS token URL | Token URL is the GitHub Actions standard pattern; SSH requires key generation and known_hosts management |
+
 | `git clone` full history | `git clone --depth=1` | Shallow clone is standard for CI/CD and documentation pipelines; saves 10-100x storage |
+
 | Custom entrypoint.sh script | Node.js `ingestion.mjs` module | Keeps the tech stack uniform (Node.js throughout); no bash parsing edge cases |
+
 | PM2 process manager | Direct node execution | Already decided in Phase 12; clone mode has no impact on this decision |
 
 ---
@@ -466,18 +549,27 @@ The docker-compose.yml bind mount is currently commented out. Uncomment it and d
 ## Open Questions
 
 1. **Module evaluation timing for `REPOS_DIR`**
+
    - What we know: `config/env.mjs` exports `REPOS_DIR` as a frozen `const` derived from `process.env.DOCUMIND_REPOS_DIR` at import time.
+
    - What's unclear: If `DOCUMIND_REPOS_DIR=/app/repos` is set as an environment variable in docker-compose.yml (which it should be for clone mode), then `REPOS_DIR` will be `/app/repos` at startup — this is fine. The ingestion module just needs to populate that directory before `loadProfile()` runs.
+
    - Recommendation: For clone mode, docker-compose.yml must set BOTH `REPO_MODE=clone` AND `DOCUMIND_REPOS_DIR=/app/repos`. The ingestion module does NOT mutate env vars — it just clones into `/app/repos`. This is clean and avoids the frozen-const problem entirely.
 
 2. **Token security: URL embedding vs. GIT_ASKPASS**
+
    - What we know: Token-in-URL exposes the token in `ps aux` during the clone operation and potentially in git logs.
+
    - What's unclear: Whether this security tradeoff is acceptable for this use case (single-user, single-container, private repos).
+
    - Recommendation: Document the tradeoff clearly. For v3.2, token-in-URL is acceptable. If higher security is needed in a future phase, implement `GIT_ASKPASS` with a temp script.
 
 3. **`DOCUMIND_REPOS` format: slug vs. URL**
+
    - What we know: `REPOS_LIST` in `env.mjs` is a comma-split of `DOCUMIND_REPOS`. Currently used for filtering repo names, not for constructing URLs.
+
    - What's unclear: Should `DOCUMIND_REPOS` contain `org/repo` slugs (current behavior implies name-only) or full URLs?
+
    - Recommendation: Use `org/repo` slug format (e.g., `DESIGN-DVW/DocuMind`). The repo name is derived as `slug.split('/').pop()`. Full GitHub URLs would work but slugs are more concise and less environment-specific.
 
 ---
@@ -487,16 +579,23 @@ The docker-compose.yml bind mount is currently commented out. Uncomment it and d
 ### Primary (HIGH confidence)
 
 - `context/loader.mjs` (codebase) — `discoverRepos()` implementation confirmed; scans for `.git` dirs under `REPOS_DIR`; no changes needed for clone mode
+
 - `config/env.mjs` (codebase) — `REPOS_DIR`, `REPOS_LIST` exports confirmed; module evaluation timing verified
+
 - `daemon/server.mjs` (codebase) — startup sequence confirmed: `loadProfile()` first, then `initScheduler()` + `initWatcher()`; insertion point for `initIngestion()` identified
+
 - `daemon/scheduler.mjs` (codebase) — `CRON_HOURLY` cron job pattern confirmed; conditional registration pattern verified
+
 - `docker-compose.yml` (codebase) — bind mount currently commented out; confirmed `DOCUMIND_REPOS_DIR=/repos` is already set
+
 - `Dockerfile` (codebase) — runtime stage uses `node:22-bookworm-slim`; `apt-get install dumb-init curl` (need to verify git is included)
+
 - `.planning/phases/12-dockerfile-docker-compose/12-RESEARCH.md` — credential anti-patterns, `ARG GIT_TOKEN` warning
 
 ### Secondary (MEDIUM confidence)
 
 - Node.js `child_process.execFile` docs — `promisify(execFile)` pattern for async git operations; execFile preferred over exec to avoid shell injection
+
 - GitHub Actions standard credential pattern — `https://${GITHUB_TOKEN}@github.com/org/repo.git` is documented GitHub best practice for token-auth cloning
 
 ### Tertiary (LOW confidence)
@@ -507,10 +606,14 @@ The docker-compose.yml bind mount is currently commented out. Uncomment it and d
 
 ## Metadata
 
-**Confidence breakdown:**
+### Confidence breakdown:
+
 - Standard stack: HIGH — no new npm dependencies; git built-in to base image (verify); child_process built into Node
+
 - Architecture: HIGH — ingestion.mjs pattern is clean, integration points clearly identified in codebase
+
 - Credential security: HIGH — `ARG` vs runtime env var is well-established Docker security knowledge
+
 - Module evaluation timing: MEDIUM — ES module frozen-const behavior is standard, but the clean solution (docker-compose.yml sets DOCUMIND_REPOS_DIR) needs to be confirmed in the plan
 
 **Research date:** 2026-03-27

@@ -110,6 +110,7 @@ project). MCP HTTP bearer auth from modelcontextprotocol.io security docs and co
 ## Feature Dependencies
 
 ```text
+
 [Docker image — non-root user + signal handling + healthcheck]
     └── is prerequisite for ──> [GHCR publishing] (image must be production-quality before publishing)
     └── is prerequisite for ──> [CI GitHub Actions workflow] (CI builds the image)
@@ -149,6 +150,7 @@ project). MCP HTTP bearer auth from modelcontextprotocol.io security docs and co
     └── requires ──> [docker/build-push-action] (standard buildx action)
     └── requires ──> [docker/login-action with GITHUB_TOKEN] (authentication to GHCR)
     └── enhances ──> [multi-arch build] (linux/amd64 + linux/arm64 via buildx)
+
 ```
 
 ### Dependency Notes
@@ -171,28 +173,43 @@ on port 9000, MCP HTTP available with bearer auth, and a published GHCR image th
 ### Launch With (v3.2)
 
 - [ ] Dockerfile with non-root user, multi-stage build (deps → runtime), `node:22-bookworm-slim` base — image quality gates
+
 - [ ] .dockerignore excluding node_modules, .git, data/, .env, markdown.bbprojectd — build context hygiene
+
 - [ ] Graceful shutdown: `process.on('SIGTERM', ...)` closes DB + Express + drains crons — data integrity
+
 - [ ] HEALTHCHECK in Dockerfile pointing to existing `/health` endpoint — container orchestration compatibility
+
 - [ ] Named volume for `/app/data` (SQLite DB) in docker-compose.yml — data persistence
+
 - [ ] Environment variable configuration: `REPO_MODE`, `PORT`, `MCP_AUTH_TOKEN`, `CRON_*` flags — portability
+
 - [ ] docker-compose.yml with volume-mount mode, env var defaults, healthcheck — local dev UX
+
 - [ ] MCP HTTP transport: `StreamableHTTPServerTransport` mounted on `POST /mcp` in Express — remote access
+
 - [ ] Bearer token middleware on `/mcp` route, disabled if `MCP_AUTH_TOKEN` unset — security gate
+
 - [ ] GHCR GitHub Actions workflow: build + push on master + version tags, multi-arch — published image
+
 - [ ] docker-compose.ci.yml with git-clone mode, `REPO_MODE=clone`, `GIT_REPOS` list — CI compatibility
 
 ### Add After Validation (v3.2.x)
 
 - [ ] Periodic git pull cron in clone mode — trigger: CI deployments show stale index after first sync
+
 - [ ] `docker-compose.remote.yml` for remote Linux server deployment — trigger: someone wants to run on a VPS
+
 - [ ] SSH key auth for private git repos in clone mode — trigger: need to clone private DVWDesign repos in CI
+
 - [ ] Image scan in CI workflow (Trivy or Docker Scout) — trigger: GHCR scan flags vulnerabilities
 
 ### Future Consideration (v4+)
 
 - [ ] Kubernetes Helm chart — only if SaaS path confirmed; SQLite is the blocker (need Turso or Postgres first)
+
 - [ ] Multi-arch ARM build optimization — current buildx QEMU emulation is slow; native ARM runner if justified
+
 - [ ] Image signing with cosign — if distributing to enterprises who require supply chain verification
 
 ---
@@ -229,10 +246,12 @@ on port 9000, MCP HTTP available with bearer auth, and a published GHCR image th
 
 | Kubernetes Helm chart | LOW (no k8s use case yet) | HIGH | P3 |
 
-**Priority key:**
+### Priority key:
 
 - P1: Must have for v3.2 milestone completion
+
 - P2: Add once core container is proven working
+
 - P3: Future consideration — not before v4.0
 
 ---
@@ -296,5 +315,6 @@ DocuMind is not competing with container registries or CI platforms. The referen
 
 ---
 
-*Feature research for: DocuMind v3.2 — Docker containerization + MCP HTTP + GHCR publishing*
-*Researched: 2026-03-23*
+### Feature research for: DocuMind v3.2 — Docker containerization + MCP HTTP + GHCR publishing
+
+### Researched: 2026-03-23

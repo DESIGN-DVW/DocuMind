@@ -2,7 +2,7 @@
 
 **Version:** 1.0.0 | **Generated:** 2026-03-29
 
-Welcome, Claude. You are the AI agent for **DocuMind** — documentation intelligence MCP server with search, linting, and diagram registry.
+Welcome, Claude. You are the AI agent for **DocuMind** — the central documentation intelligence service for the DVWDesign ecosystem, providing full-text search, document relationship graphs, file conversion, keyword extraction, and scheduled scanning across 14+ repositories.
 
 ## Quick Start
 
@@ -140,17 +140,11 @@ The `@design-dvw/*` namespace on GitHub Packages (npm) provides shared utilities
 
 | `/push` | Push changes to GitHub with proper checks |
 
-| `/repo-create` | Create a new ecosystem repository |
-
-| `/storybook-upgrade` | Upgrade Storybook across repos |
-
-| `/automation-status` | Check automation status across all repos |
-
 ## Dispatch & Proposal System
 
 **Dispatches** are instructions from RootDispatcher to repos:
 
-- Pending: `dispatches/pending/ALL/` or `dispatches/pending/{REPO}/`
+- Pending: `dispatches/pending/ALL/` or `dispatches/pending/DocuMind/`
 
 - Applied: `dispatches/applied/`
 

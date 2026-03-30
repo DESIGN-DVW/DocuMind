@@ -466,6 +466,7 @@ git push origin v3.2.0
 The workflow (`.github/workflows/publish.yml`) builds a multi-arch image and pushes two tags to GHCR:
 
 - `ghcr.io/design-dvw/documind:3.2.0` — the specific version
+
 - `ghcr.io/design-dvw/documind:latest` — updated on every non-pre-release tag
 
 Note: ARM64 builds compile `better-sqlite3` from source under QEMU emulation on GitHub-hosted runners. This can take 15-40 minutes. The workflow has a 60-minute timeout.
