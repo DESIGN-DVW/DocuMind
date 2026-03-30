@@ -2,6 +2,8 @@ module.exports = {
   apps: [{
     name: 'documind',
     script: 'daemon/server.mjs',
+    interpreter: '/opt/homebrew/bin/node',
+    exec_mode: 'fork',
     watch: false,
     instances: 1,
     autorestart: true,
@@ -26,6 +28,7 @@ module.exports = {
   }, {
     name: 'documind-mcp',
     script: 'daemon/mcp-server.mjs',
+    interpreter: '/opt/homebrew/bin/node',
     exec_mode: 'fork',
     instances: 1,
     autorestart: true,
