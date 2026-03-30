@@ -22,6 +22,7 @@ services:
       # --- Clone mode (set these when REPO_MODE=clone) ---
       # DOCUMIND_REPOS: "${DOCUMIND_REPOS}"
       # GIT_TOKEN: "${GIT_TOKEN}"
+      # DOCUMIND_REPOS_DIR: "/app/repos"
       # --- MCP transport ---
       DOCUMIND_MCP_MODE: "${DOCUMIND_MCP_MODE:-stdio}"
       # Required when DOCUMIND_MCP_MODE=http:

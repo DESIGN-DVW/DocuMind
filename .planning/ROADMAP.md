@@ -67,7 +67,7 @@ Full details: `.planning/milestones/v3.1-ROADMAP.md`
 **Requirements**: FNDTN-01, FNDTN-02, FNDTN-03, FNDTN-04
 **Success Criteria** (what must be TRUE):
 
-1. Running `grep -r '/Users/Shared' daemon/ processors/ scripts/` returns no results (one permitted fallback in `config/constants.mjs`)
+1. Running `grep -r '/Users/Shared' daemon/ processors/ scripts/` returns no results except the single intentional fallback in `config/constants.mjs`
 
 2. Starting the daemon with `DOCUMIND_REPOS_DIR=/some/path` causes all repo scans to resolve against that path
 
