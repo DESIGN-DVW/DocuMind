@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>BuildNumber</key>
-	<string>430000114</string>
+	<string>430000124</string>
 	<key>BundleIdentifier</key>
 	<string>com.barebones.bbedit</string>
 	<key>HostIdentifier</key>
@@ -11,20 +11,20 @@
 	<key>HostName</key>
 	<string>Shakti</string>
 	<key>LockDate</key>
-	<date>2025-11-22T16:43:35Z</date>
+	<date>2026-03-09T21:06:56Z</date>
 	<key>LockID</key>
-	<string>1F9072A9-E1D9-4325-903A-F8E112EE3B72</string>
+	<string>DFB6E1C4-3159-4982-B5F3-FBAC2E6647C1</string>
 	<key>MarketingVersion</key>
-	<string>15.5.4</string>
+	<string>15.5.5</string>
 	<key>NetworkVolume</key>
 	<false/>
 	<key>ProcessIdentifier</key>
-	<integer>65564</integer>
+	<integer>640</integer>
 	<key>UserName</key>
 	<string>dave</string>
 	<key>Version</key>
 	<integer>3</integer>
 	<key>VolumeIdentifier</key>
-	<string>09197DA7-FAC7-45EE-8598-94D619406804</string>
+	<string>898C4459-2696-4745-90BB-A111EAD8F97B</string>
 </dict>
 </plist>

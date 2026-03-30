@@ -16,9 +16,38 @@ import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { profileSchema } from './schema.mjs';
+import { REPOS_DIR, REPOS_LIST } from '../config/env.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_PROFILE_PATH = path.resolve(__dirname, '../config/profiles/dvwdesign.json');
+
+/**
+ * Discover repositories by scanning a base directory for .git subdirectories.
+ *
+ * @param {string} base - Parent directory to scan
+ * @returns {Promise<Array<{ name: string; path: string }>>}
+ */
+async function discoverRepos(base) {
+  let entries;
+  try {
+    entries = await fs.readdir(base, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+
+  const repos = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    const repoPath = path.join(base, entry.name);
+    try {
+      await fs.access(path.join(repoPath, '.git'));
+      repos.push({ name: entry.name, path: repoPath });
+    } catch {
+      // No .git dir — not a repo, skip silently
+    }
+  }
+  return repos;
+}
 
 /**
  * Load and validate a DocuMind context profile.
@@ -84,7 +113,15 @@ export async function loadProfile(profilePath) {
 async function buildCtx(validated, profileFilePath) {
   let repoRoots;
 
-  if (validated.repositories) {
+  if (REPOS_DIR) {
+    // REPOS_DIR takes priority — auto-discover repos by scanning for .git dirs
+    const discovered = await discoverRepos(REPOS_DIR);
+    // If REPOS_LIST is also set, filter to only those named repos
+    repoRoots =
+      REPOS_LIST !== null
+        ? discovered.filter(r => /** @type {string[]} */ (REPOS_LIST).includes(r.name))
+        : discovered;
+  } else if (validated.repositories) {
     // Inline repository list — filter inactive entries
     repoRoots = validated.repositories
       .filter(r => r.active !== false)

@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /Users/Shared/htdocs/github/DVWDesign/DocuMind -type f \\\\\\(-name *mcp* -o -name *integration* \\\\\\))",
+      "Bash(sqlite3 /Users/Shared/htdocs/github/DVWDesign/DocuMind/data/documind.db \".tables\")",
+      "Bash(curl -s http://localhost:9000/health)",
+      "Bash(sqlite3 /Users/Shared/htdocs/github/DVWDesign/DocuMind/data/documind.db \"SELECT COUNT\\(*\\) as doc_count FROM documents; SELECT COUNT\\(*\\) as rel_count FROM doc_relationships; SELECT COUNT\\(*\\) as keyword_count FROM keywords; SELECT COUNT\\(*\\) as diagram_count FROM diagrams;\")",
+      "Skill(gsd:map-codebase)",
+      "Skill(gsd:map-codebase:*)",
+      "Bash(npx markdownlint-cli2:*)"
+    ]
+  }
+}

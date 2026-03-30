@@ -137,7 +137,7 @@ export async function parseRegistryMarkdown(filePath) {
     if (!line.startsWith('|') || line.includes('---')) continue;
     const cells = line
       .split('|')
-      .map(c => c.trim())
+      .map(c => c.trim().replace(/^<(.+)>$/, '$1'))
       .filter(Boolean);
 
     // Skip header row

@@ -40,20 +40,31 @@ Write the `.mmd` file to `docs/diagrams/{name}.mmd` in the current repo.
 **Choose the right Mermaid syntax for the content.** The registry supports 7 types — auto-detected from syntax:
 
 | Content                                   | Mermaid Syntax                               | Detected As          |
+
 | ----------------------------------------- | -------------------------------------------- | -------------------- |
+
 | Process flow, pipeline, decision logic    | `flowchart TD` / `flowchart LR`              | `flowchart`          |
+
 | Repo structure, file/folder hierarchy     | `graph TD` with folder/directory node labels | `folder_tree`        |
+
 | Entity relationships, module dependencies | `classDiagram`                               | `relationship_graph` |
+
 | Decision tree, troubleshooting, routing   | `flowchart TD` with diamond decision nodes   | `decision_tree`      |
+
 | Interactions over time between systems    | `sequenceDiagram`                            | `sequence`           |
+
 | Lifecycle stages, status transitions      | `stateDiagram-v2`                            | `state`              |
+
 | Timelines, schedules, phased work         | `gantt`                                      | `gantt`              |
 
 Do NOT default to `flowchart` for everything. Match the syntax to the content:
 
 - Showing how systems talk to each other over time? Use `sequenceDiagram`.
+
 - Showing document/diagram lifecycle stages? Use `stateDiagram-v2`.
+
 - Showing repo folder structure? Use `graph TD` with folder keywords.
+
 - Showing milestone phases on a timeline? Use `gantt`.
 
 Use clear, descriptive node labels. Keep diagrams readable — max ~30 nodes per diagram.

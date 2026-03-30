@@ -8,8 +8,10 @@
 
 import fs from 'fs/promises';
 import path from 'path';
+import { REPOS_DIR } from '../config/env.mjs';
+import { LOCAL_BASE_PATH } from '../config/constants.mjs';
 
-const REPOS_ROOT = '/Users/Shared/htdocs/github/DVWDesign';
+const REPOS_ROOT = REPOS_DIR || LOCAL_BASE_PATH;
 
 const IGNORE_DIRS = new Set([
   'node_modules',
