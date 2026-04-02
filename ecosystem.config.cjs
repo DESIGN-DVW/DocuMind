@@ -49,5 +49,25 @@ module.exports = {
     error_file: './data/logs/mcp-error.log',
     out_file: '/dev/null',
     merge_logs: true,
+  }, {
+    name: 'documind-inspector',
+    script: '/opt/homebrew/bin/npx',
+    args: '@modelcontextprotocol/inspector node daemon/mcp-server.mjs',
+    interpreter: 'none',
+    exec_mode: 'fork',
+    instances: 1,
+    autorestart: true,
+    watch: false,
+    max_restarts: 5,
+    restart_delay: 5000,
+    env: {
+      NODE_ENV: 'production',
+      DOCUMIND_DB: './data/documind.db',
+      DOCUMIND_PROFILE: process.env.DOCUMIND_PROFILE || './config/profiles/dvwdesign.json',
+    },
+    log_date_format: 'YYYY-MM-DD HH:mm:ss',
+    error_file: './data/logs/inspector-error.log',
+    out_file: './data/logs/inspector-out.log',
+    merge_logs: true,
   }]
 };
