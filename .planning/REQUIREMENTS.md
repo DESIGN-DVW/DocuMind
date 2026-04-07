@@ -1,168 +1,102 @@
-# Requirements: DocuMind v3.2 Dockerize
+# Requirements: DocuMind v3.3
 
-**Defined:** 2026-03-23
+**Defined:** 2026-04-08
 **Core Value:** When you look at a document, you instantly see what it's connected to — what links to it, what duplicates it, and whether it's stale.
 
-## v3.2 Requirements
+## v3.3 Requirements
 
-Requirements for Docker containerization milestone. Each maps to roadmap phases.
+### Graph DB Foundation (GRAPH)
 
-### Foundation
+- [ ] **GRAPH-01**: Kuzu DB initializes with document relationship schema on daemon startup
+- [ ] **GRAPH-02**: Kuzu database path is configurable via `DOCUMIND_KUZU_DIR` env var
+- [ ] **GRAPH-03**: Docker image builds successfully with Kuzu native addon (Debian bookworm base)
 
-- [x] **FNDTN-01**: All hardcoded macOS paths replaced with configurable env vars
+### Sync Bridge (SYNC)
 
-- [x] **FNDTN-02**: Repository paths resolved from DOCUMIND_REPOS_DIR env var
+- [ ] **SYNC-01**: After each relationship rebuild, doc_relationships sync automatically from SQLite → Kuzu
+- [ ] **SYNC-02**: Operator can trigger full Kuzu graph rebuild via `npm run graph:rebuild`
+- [ ] **SYNC-03**: `/health` endpoint reports Kuzu edge count and sync status vs SQLite
 
-- [x] **FNDTN-03**: Port, DB path, and cron schedules configurable via env vars
+### Query Layer (QUERY)
 
-- [x] **FNDTN-04**: .env file with documented defaults for local development
+- [ ] **QUERY-01**: `GET /graph` supports `direction=forward|reverse|both` parameter (Kuzu backend)
+- [ ] **QUERY-02**: `get_related` MCP tool uses Kuzu Cypher traversal (same response contract, reverse traversal enabled)
 
-### Docker Image
+### Graph Algorithms (ALGO)
 
-- [x] **DOCK-01**: Multi-stage Dockerfile using node:22-bookworm-slim base
+- [ ] **ALGO-01**: `graph_rank` MCP tool returns documents ranked by PageRank
+- [ ] **ALGO-02**: `graph_cycles` MCP tool returns circular dependency chains (SCC)
+- [ ] **ALGO-03**: `graph_orphans` MCP tool returns isolated documents (WCC)
 
-- [x] **DOCK-02**: .dockerignore excludes node_modules, .git, data/, .planning/
+### Text-to-Cypher (CYPHER)
 
-- [x] **DOCK-03**: Container runs as non-root user
+- [ ] **CYPHER-01**: `graph_query` MCP tool accepts natural language, returns graph query results
+- [ ] **CYPHER-02**: `DOCUMIND_LLM_PROVIDER` env var selects LLM (default: `anthropic`)
+- [ ] **CYPHER-03**: Generated Cypher sanitized to block write operations (DELETE/MERGE/DROP)
+- [ ] **CYPHER-04**: `graph_query` degrades gracefully when no API key is configured
 
-- [x] **DOCK-04**: SIGTERM/SIGINT triggers graceful shutdown (close DB, drain requests)
+### Visualization (VIZ)
 
-- [x] **DOCK-05**: /health endpoint returns container status for Docker HEALTHCHECK
+- [ ] **VIZ-01**: `dashboard/` is a minimal Vite React app consuming `@design-dvw/ui`, builds to static files served by Express
+- [ ] **VIZ-02**: `graph.html` displays interactive Cytoscape.js document graph with `@design-dvw/ui` shell (Card, Badge, Button)
+- [ ] **VIZ-03**: Graph page supports filtering by repo, relationship type, and traversal depth
+- [ ] **VIZ-04**: Kuzu Explorer runs as optional PM2 service (`documind-kuzu-explorer`) for developer access
+- [ ] **VIZ-05**: `GET /graph/export` provides graph data in JSON format for external visualization tools
 
-- [x] **DOCK-06**: Named volume for SQLite DB persists across container restarts
+## Future Requirements (v3.4+)
 
-- [x] **DOCK-07**: docker-compose.yml starts daemon with volume-mount mode
+### Graph Intelligence
 
-### Ingestion
+- Louvain community detection (document cluster discovery)
+- GraphRAG / vector search integration
+- Migrate diagrams.html to React + @design-dvw/ui
 
-- [x] **INGEST-01**: Volume mount mode scans mounted repo directories
+### Graph DB
 
-- [x] **INGEST-02**: Git-clone mode clones configured repos on container start
-
-- [x] **INGEST-03**: Git-clone mode pulls repos on cron schedule
-
-- [x] **INGEST-04**: REPO_MODE env var switches between mount and clone modes
-
-- [x] **INGEST-05**: Git credentials accepted via env vars (not baked into image)
-
-### MCP Transport
-
-- [x] **MCPT-01**: MCP HTTP endpoint on POST /mcp using StreamableHTTPServerTransport
-
-- [x] **MCPT-02**: Bearer token auth protects MCP HTTP endpoint
-
-- [x] **MCPT-03**: MCP stdio mode continues to work for local Claude Code
-
-- [x] **MCPT-04**: MCP mode (stdio/http) selectable via env var
-
-### CI & Distribution
-
-- [x] **CICD-01**: Documentation for manual docker build and push to GHCR
-
-- [x] **CICD-02**: GitHub Actions workflow builds and pushes image on release
-
-- [x] **CICD-03**: Multi-arch image supports amd64 and arm64
-
-- [x] **CICD-04**: Image tagged with version and latest
-
-## Future Requirements
-
-### SaaS Layer
-
-- **SAAS-01**: Multi-tenant auth (OAuth / API keys)
-
-- **SAAS-02**: Per-tenant SQLite databases (Turso)
-
-- **SAAS-03**: Usage metering and billing integration
-
-### Rule Packs
-
-- **RULE-01**: Pluggable rule pack system for domain-specific linting
-
-- **RULE-02**: Rule pack marketplace / registry
+- Fork evaluation: Bighorn or Ladybug as Kuzu replacement once npm packages are stable
+- LangChain JS official Kuzu adapter (when/if published)
 
 ## Out of Scope
 
 | Feature | Reason |
-
-| ------- | ------ |
-
-| Kubernetes deployment | Docker Compose sufficient for v3.2; K8s is SaaS-tier complexity |
-
-| OAuth / multi-tenant auth | Single-user; bearer token sufficient for v3.2 |
-
-| Semantic/embedding search | FTS5 + TF-IDF sufficient for current scale |
-
-| Docker Swarm / orchestration | Not needed until multi-instance scaling |
-
-| SSE MCP transport | Deprecated by MCP spec 2025-03-26; use Streamable HTTP only |
+| --- | --- |
+| Replace SQLite FTS5 with Kuzu | FTS5 has no Kuzu equivalent; Kuzu handles graph, SQLite handles search |
+| Kuzu as server process | Must stay in-process (embedded); server mode breaks single-writer constraint |
+| Multi-tenant Kuzu | Single-user embedded architecture; SaaS layer is a separate milestone |
+| Real-time graph updates | Batch sync after scan is sufficient; streaming adds complexity with no clear benefit |
+| Migrate diagrams.html to React | Separate dashboard refactor milestone; diagrams.html stays plain HTML in v3.3 |
 
 ## Traceability
 
-Which phases cover which requirements. Updated during roadmap creation.
-
 | Requirement | Phase | Status |
+| --- | --- | --- |
+| GRAPH-01 | Phase 16 | Pending |
+| GRAPH-02 | Phase 16 | Pending |
+| GRAPH-03 | Phase 16 | Pending |
+| SYNC-01 | Phase 17 | Pending |
+| SYNC-02 | Phase 17 | Pending |
+| SYNC-03 | Phase 17 | Pending |
+| QUERY-01 | Phase 18 | Pending |
+| QUERY-02 | Phase 18 | Pending |
+| ALGO-01 | Phase 19 | Pending |
+| ALGO-02 | Phase 19 | Pending |
+| ALGO-03 | Phase 19 | Pending |
+| CYPHER-01 | Phase 20 | Pending |
+| CYPHER-02 | Phase 20 | Pending |
+| CYPHER-03 | Phase 20 | Pending |
+| CYPHER-04 | Phase 20 | Pending |
+| VIZ-01 | Phase 21 | Pending |
+| VIZ-02 | Phase 21 | Pending |
+| VIZ-03 | Phase 21 | Pending |
+| VIZ-04 | Phase 21 | Pending |
+| VIZ-05 | Phase 21 | Pending |
 
-| ----------- | ----- | ------ |
-
-| FNDTN-01 | Phase 11 | Complete |
-
-| FNDTN-02 | Phase 11 | Complete |
-
-| FNDTN-03 | Phase 11 | Complete |
-
-| FNDTN-04 | Phase 11 | Complete |
-
-| DOCK-01 | Phase 12 | Complete |
-
-| DOCK-02 | Phase 12 | Complete |
-
-| DOCK-03 | Phase 12 | Complete |
-
-| DOCK-04 | Phase 12 | Complete |
-
-| DOCK-05 | Phase 12 | Complete |
-
-| DOCK-06 | Phase 12 | Complete |
-
-| DOCK-07 | Phase 12 | Complete |
-
-| INGEST-01 | Phase 13 | Complete |
-
-| INGEST-02 | Phase 13 | Complete |
-
-| INGEST-03 | Phase 13 | Complete |
-
-| INGEST-04 | Phase 13 | Complete |
-
-| INGEST-05 | Phase 13 | Complete |
-
-| MCPT-01 | Phase 14 | Complete |
-
-| MCPT-02 | Phase 14 | Complete |
-
-| MCPT-03 | Phase 14 | Complete |
-
-| MCPT-04 | Phase 14 | Complete |
-
-| CICD-01 | Phase 15 | Complete |
-
-| CICD-02 | Phase 15 | Complete |
-
-| CICD-03 | Phase 15 | Complete |
-
-| CICD-04 | Phase 15 | Complete |
-
-### Coverage:
-
-- v3.2 requirements: 24 total
-
-- Mapped to phases: 24
-
+**Coverage:**
+- v3.3 requirements: 20 total
+- Mapped to phases: 20
 - Unmapped: 0 ✓
 
 ---
 
-### Requirements defined: 2026-03-23
-
-### Last updated: 2026-03-23 after initial definition
+*Requirements defined: 2026-04-08*
+*Last updated: 2026-04-08 after initial definition*
