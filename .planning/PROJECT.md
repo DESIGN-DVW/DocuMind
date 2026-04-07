@@ -12,6 +12,24 @@ When you look at a document, you instantly see what it's connected to — what l
 
 ### Validated
 
+- ✓ Dockerfile + docker-compose.yml for single-command startup — v3.2
+
+- ✓ Volume mount mode for local dev repo access — v3.2
+
+- ✓ Git clone/pull mode for remote/CI repo access — v3.2
+
+- ✓ Environment-based configuration (repo paths, mode, cron schedules) — v3.2
+
+- ✓ MCP server dual-mode: stdio local, HTTP containerized — v3.2
+
+- ✓ Health checks + graceful shutdown — v3.2
+
+- ✓ Published image on GHCR — v3.2
+
+- ✓ CI-ready multi-arch build via GitHub Actions — v3.2
+
+- ✓ PM2 launchd autostart + MCP Inspector as persistent service — v3.2
+
 - ✓ Full-text search across 620+ markdown files via FTS5 — existing
 
 - ✓ Markdown linting with standard + custom rules (DVW001 + MD060A) — v3.0
@@ -68,23 +86,19 @@ When you look at a document, you instantly see what it's connected to — what l
 
 ### Active
 
-<!-- v3.2 scope — Dockerize -->
+<!-- v3.3 scope — Kuzu Graph Intelligence -->
 
-- [ ] Dockerfile + docker-compose.yml for single-command startup
+- [ ] Kuzu embedded graph DB installed alongside SQLite
 
-- [ ] Volume mount mode for local dev repo access
+- [ ] doc_relationships migrated from SQLite to Kuzu (typed edges, Cypher queries)
 
-- [ ] Git clone/pull mode for remote/CI repo access
+- [ ] Graph algorithms: reverse traversal, PageRank, centrality, cycle detection
 
-- [ ] Environment-based configuration (repo paths, mode, cron schedules)
+- [ ] LangChain KuzuGraph integration: text-to-Cypher natural language graph queries
 
-- [ ] MCP server dual-mode: stdio local, HTTP containerized
+- [ ] New MCP tools for graph intelligence (query by name, ranked results, cycle detection)
 
-- [ ] Health checks + graceful shutdown
-
-- [ ] Published image on GHCR
-
-- [ ] CI-ready: runs as GitHub Action service or on remote Linux server
+- [ ] Existing /graph REST API updated to query Kuzu
 
 ### Future
 
@@ -170,28 +184,24 @@ The strategic path forward:
 
 ---
 
-## Current Milestone: v3.2 Dockerize
+## Current Milestone: v3.3 Kuzu Graph Intelligence
 
-**Goal:** Containerize DocuMind as a CI-ready, published image that runs anywhere — with both volume-mount and git-clone repo access, and MCP available via stdio or HTTP.
+**Goal:** Replace DocuMind's SQLite-backed graph layer with Kuzu (embedded in-process graph DB), add graph algorithms (PageRank, centrality, cycle detection), and integrate LangChain KuzuGraph for natural language text-to-Cypher queries via MCP.
 
 ### Target features:
 
-- Dockerfile + docker-compose.yml — `docker compose up` starts daemon + SQLite + API on :9000
+- Kuzu embedded graph DB installed alongside SQLite (FTS5 stays in SQLite)
 
-- Volume mount mode for local dev (mount repo dirs into container)
+- doc_relationships migrated from SQLite → Kuzu (Cypher queries, typed edges)
 
-- Git clone/pull mode for remote/CI (container fetches repos itself)
+- Graph algorithms: reverse traversal, PageRank, centrality, cycle detection
 
-- Environment-based config (repo paths, mode, cron schedules)
+- LangChain KuzuGraph integration: text-to-Cypher bridge — natural language → Cypher → results
 
-- MCP server dual-mode: stdio for local Claude Code, HTTP for containerized/remote consumers
+- New MCP tools for graph intelligence (graph_query, graph_rank, graph_cycles)
 
-- Health checks + graceful shutdown
-
-- Published image on GHCR (GitHub Container Registry)
-
-- CI integration: runs as GitHub Action service or on remote Linux server
+- Existing /graph REST API upgraded to query Kuzu
 
 ---
 
-### Last updated: 2026-03-23 after v3.2 milestone started
+### Last updated: 2026-04-04 after v3.3 milestone started
