@@ -185,7 +185,13 @@ Plans:
 3. `DOCUMIND_KUZU_DIR` env var redirects the Kuzu database directory; daemon startup log confirms the active path
 4. Daemon startup log reports "Kuzu graph initialized" with the 8 typed edge tables confirmed present
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+
+- [ ] 16-01-PLAN.md — Install kuzu@0.11.3, write smoke test, verify Docker build + runtime
+- [ ] 16-02-PLAN.md — Add KUZU_DIR to config/env.mjs; create graph/kuzu-init.mjs with frozen 8-table schema
+- [ ] 16-03-PLAN.md — Wire kuzu.Database into server.mjs startup, /health, and shutdown
 
 ### Phase 17: Sync Bridge
 
@@ -277,7 +283,7 @@ Plans:
 | 13. Git-Clone Ingestion + Dual Mode  | v3.2      | 2/2            | Complete    | 2026-03-26 |
 | 14. MCP HTTP Transport               | v3.2      | 2/2            | Complete    | 2026-03-28 |
 | 15. CI & Distribution                | v3.2      | 2/2            | Complete    | 2026-03-28 |
-| 16. Kuzu Foundation                  | v3.3      | 0/TBD          | Not started | -          |
+| 16. Kuzu Foundation                  | v3.3      | 0/3            | In progress | -          |
 | 17. Sync Bridge                      | v3.3      | 0/TBD          | Not started | -          |
 | 18. Query Layer                      | v3.3      | 0/TBD          | Not started | -          |
 | 19. Graph Algorithms                 | v3.3      | 0/TBD          | Not started | -          |
