@@ -1,608 +1,354 @@
 # Pitfalls Research
 
-**Domain:** Dockerizing DocuMind — Node.js daemon with native SQLite, filesystem watchers, MCP stdio, git-clone ingestion, GHCR publishing
-**Researched:** 2026-03-23
-**Confidence:** HIGH (codebase analysis + official docs) / HIGH (better-sqlite3 Alpine issues) / HIGH (WAL + Docker) / HIGH (MCP stdio constraint)
+**Domain:** Adding Kuzu embedded graph DB + LangChain KuzuGraph to an existing Node.js production service (DocuMind v3.3)
+**Researched:** 2026-04-07
+**Confidence:** HIGH (project abandonment, native module behavior, LangChain gap) / MEDIUM (sync patterns, schema migration, performance) / LOW (specific Docker multi-arch Kuzu build details — require empirical verification)
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: better-sqlite3 Fails to Install on Alpine Linux
+### Pitfall 1: KuzuDB Was Archived in October 2025 — The Project Is Abandoned
 
-#### What goes wrong:
+**What goes wrong:**
 
-`better-sqlite3` is a native C++ addon. Alpine Linux uses musl libc instead of glibc. The prebuilt binaries that ship with the npm package are compiled against glibc. On Alpine, npm falls back to compiling from source via `node-gyp`, which requires Python 3, gcc, g++, and make — none of which are present in `node:alpine` by default. Without these build tools, `npm install` fails with errors like "No prebuilt binaries found" or `node-gyp` compilation errors. On Node.js 24+, there are additional V8 API deprecation errors during compilation even on Debian.
+KuzuDB was archived by its corporate sponsor Kùzu Inc. on October 10, 2025. The GitHub repository is now read-only. The team announced they are "working on something new" but did not specify what. Active development, bug fixes, security patches, and new releases have stopped from the original team. Choosing the upstream `kuzu` npm package ties DocuMind to an abandoned dependency with no guaranteed path forward.
 
-#### Why it happens:
+**Why it happens:**
 
-Alpine is popular for Docker images because it produces smaller images (~5MB base vs. ~70MB for Debian slim). Developers reach for Alpine first without checking whether their native modules support musl. The better-sqlite3 maintainers explicitly recommend Debian slim for Docker use. The musl vs. glibc incompatibility is a known, documented issue — not a bug that will be fixed.
+The abandonment was announced with minimal warning. Most integrations being written now (Q1-Q2 2026) treat Kuzu as if it is still actively maintained, because blog posts and tutorials from 2024-early 2025 show it as active. Developers do not check project health before starting integration.
 
-#### How to avoid:
+**How to avoid:**
 
-Use `node:22-bookworm-slim` (Debian) as the base image. Do not use `node:alpine` or `node:22-alpine`. The Debian slim image is ~80MB (vs. ~5MB for Alpine), but "just works" with better-sqlite3's prebuilt binaries. No build tools required. If image size is critical, use a multi-stage build: builder stage installs with Debian (compiles native module), production stage copies only `node_modules` and app code. Verify the exact Node.js version used in the image matches the version better-sqlite3 was built against — mismatches cause "invalid ELF header" or "NODE_MODULE_VERSION" errors.
+Evaluate community forks before committing. As of October 2025 there are two active forks:
 
-```dockerfile
+- **Bighorn** (Kineviz) — community-maintained fork of Kuzu, API-compatible, available at `bighorndb` on GitHub
+- **Ladybug** — separately announced by Arun Sharma (ex-Facebook, ex-Google), independently funded, aims to be a full Kuzu replacement
 
-# Correct — use Debian slim
+For v3.3: pin to the last stable upstream release (`kuzu` 0.11.x) and document this decision explicitly. Set a milestone review to evaluate whether to migrate to Bighorn or Ladybug before v3.4. Do not use `latest` in package.json. The file format changed to single-file in 0.11.0 (July 2025) — verify your version supports the format you create.
 
-FROM node:22-bookworm-slim
+**Warning signs:**
 
-# Wrong — will fail for better-sqlite3
+- `npm install kuzu` resolves to a version released after October 2025 — this is from a fork, not the original team
+- Release notes for `kuzu` on npm reference a new organization name or team
+- GitHub issues/PRs are still open with no responses after November 2025
 
-FROM node:22-alpine
+**Phase to address:**
 
-```
-
-## Warning signs:
-
-- `npm install` in Docker build shows "No prebuilt binaries found for..." with `libc=musl`
-
-- Build stage succeeds but container crashes with `Error: Cannot find module './build/Release/better_sqlite3.node'`
-
-- `npm install` succeeds but the `.node` binary is for a different architecture (happens when host-built `node_modules` is copied into the container)
-
-- Error: `Error relocating better_sqlite3.node: fcntl64: symbol not found` on Alpine
-
-## Phase to address:
-
-Dockerfile foundation phase — this is the first decision made when writing the Dockerfile. Wrong base image choice poisons everything downstream and requires a full rebuild.
+Phase 0 (Dependency Evaluation) — before writing any integration code. Pin the version, document the fork landscape, and choose a path.
 
 ---
 
-### Pitfall 2: SQLite WAL Mode Corrupts the Database on Docker Volume Mounts
+### Pitfall 2: LangChain KuzuGraph Is Python-Only — No Node.js Equivalent Exists
 
-#### What goes wrong:
+**What goes wrong:**
 
-DocuMind already has `db.pragma('journal_mode = WAL')` in `daemon/server.mjs` (line 56), `daemon/mcp-server.mjs` (line 31), and `scripts/db/init-database.mjs` (line 47). WAL mode requires all processes accessing the database to share a small block of memory (the wal-index / `-shm` file). The SQLite documentation states explicitly: "WAL does not work over a network filesystem. This is because WAL requires all processes to share a small amount of memory and processes on separate host machines obviously cannot share memory with each other."
+The feature goal "LangChain KuzuGraph integration: text-to-Cypher natural language graph queries" assumes a LangChain.js equivalent of Python's `KuzuGraph` + `KuzuQAChain` exists. It does not. The `langchain-kuzu` package is published only to PyPI (`pip install langchain-kuzu`). LangChain.js (`langchain` npm package) has `GraphCypherQAChain` for Neo4j but no Kuzu graph wrapper. As of research date there is no `@langchain/kuzu` npm package and no open PR/issue in langchainjs to add one.
 
-Docker volume mounts — especially Docker Desktop on macOS (which runs Linux inside a VM), NFS-backed volumes, and any volume shared across containers — violate this requirement. Symptoms range from `SQLITE_BUSY: database is locked` errors that never clear, to silent write loss, to full database corruption of the `-shm` and `-wal` files.
+**Why it happens:**
 
-#### Why it happens:
+The feature was specified based on the Python LangChain ecosystem. LangChain Python and LangChain.js have a significant capability gap — many Python integrations exist only in Python. Developers assume the ecosystems are symmetric.
 
-On the macOS dev machine, WAL mode works perfectly because the DB lives on a local filesystem (`/Users/Shared/htdocs/github/DVWDesign/DocuMind/data/documind.db`). The developer tests locally with WAL mode on, then Dockerizes. In Docker, the DB is on a bind mount or named volume. On Docker Desktop for Mac, the bind mount goes through a VirtioFS translation layer — not a true local filesystem from Linux's perspective. The WAL shared memory locking semantics break silently or intermittently.
+**How to avoid:**
 
-#### How to avoid:
+Implement the text-to-Cypher bridge in Node.js directly without the `KuzuGraph` abstraction. The pattern `KuzuGraph` implements is:
 
-Two options, ordered by preference:
+1. Load the graph schema from the DB (node tables + relationship tables)
+2. Format the schema as a string for the LLM prompt context
+3. Ask the LLM (via `GraphCypherQAChain`-style prompt) to generate a Cypher query
+4. Execute the Cypher query against Kuzu using the native Node.js API
+5. Pass results back to the LLM for answer synthesis
 
-1. **Named Docker volume (preferred for persistence):** Use a named Docker volume (`type: volume`) rather than a bind mount (`type: bind`) for the `data/` directory. Named Docker volumes are managed by Docker's storage driver (overlay2) on the Linux host — these do behave as local filesystems and WAL mode works correctly. Bind mounts from macOS hosts via Docker Desktop do not.
+Steps 1, 2, 4 use the Kuzu Node.js API directly. Steps 3 and 5 use LangChain.js's `ChatOpenAI` / `ChatAnthropic` with a custom prompt. `GraphCypherQAChain` from LangChain.js can be used for the LLM pipeline, but you must supply it a custom graph object that adapts Kuzu's schema and query API to the expected interface.
 
-2. **Switch to DELETE journal mode for bind-mount scenarios:** If bind mounts are required (e.g., the user wants to inspect the DB on the host with a SQLite browser), disable WAL: `PRAGMA journal_mode=DELETE`. DELETE mode is slightly slower for write-heavy workloads but is safe on any filesystem. For DocuMind's read-heavy access pattern, the performance difference is negligible.
+This is 100–150 lines of Node.js adapter code — not a blocker, but it must be scoped explicitly. Do not plan this feature as "just install langchain-kuzu."
 
-Add an environment variable `DOCUMIND_WAL_MODE=true/false` that controls whether WAL is enabled at startup. Default to `true` on direct Node.js runs, `false` or auto-detect when running in Docker with a bind mount.
+**Warning signs:**
 
-```yaml
+- `npm install langchain-kuzu` succeeds — this is a scam package or incorrect install (PyPI only)
+- Planning docs reference `KuzuGraph` from npm without a source URL
+- The LangChain.js changelog does not list a Kuzu integration
 
-# docker-compose.yml — named volume (WAL-safe)
+**Phase to address:**
 
-volumes:
-
-  - documind_data:/app/data   # named volume — WAL works
-
-# Wrong — bind mount from macOS host (WAL corrupts)
-
-volumes:
-
-  - ./data:/app/data
-
-```
-
-## Warning signs:
-
-- `SQLITE_BUSY: database is locked` errors that persist even with no other DB connections open
-
-- The `-wal` file grows unboundedly (never checkpointed)
-
-- Database works fine on macOS dev but fails intermittently in Docker
-
-- `PRAGMA integrity_check` reports errors after a container restart
-
-## Phase to address:
-
-Dockerfile + docker-compose foundation phase. The volume strategy must be established before writing any DB initialization code for the container. Changing volume type after the fact is a data migration.
+Phase 1 (Kuzu integration scaffold) — define the custom adapter interface before building the LLM pipeline.
 
 ---
 
-### Pitfall 3: Hardcoded macOS Paths Survive Into the Container
+### Pitfall 3: Kuzu Is an Embedded Single-Writer DB — PM2 + Daemon + External Tool = Write Conflict
 
-#### What goes wrong:
+**What goes wrong:**
 
-DocuMind has macOS-specific absolute paths hardcoded in at least 10 files: `config/constants.mjs` exports `LOCAL_BASE_PATH = '/Users/Shared/htdocs/github/DVWDesign'`, `processors/tree-processor.mjs` sets `REPOS_ROOT = '/Users/Shared/htdocs/github/DVWDesign'` (line 12), `scripts/scan/enhanced-scanner.mjs` has 14 hardcoded repo paths, `scripts/watch-and-index.mjs` has `BASE_PATH`, and `daemon/server.mjs` falls back to the macOS path (line 50). These paths do not exist inside a Linux container. Every scan, watcher, and processor that reads from these paths will silently find no files or crash with ENOENT.
+Kuzu enforces single-writer semantics at the file level. Only one `READ_WRITE` Database object can open the Kuzu DB at a time. If two processes try to open the same Kuzu database in write mode simultaneously — e.g., the PM2 daemon and a separate CLI script run manually — the second process either throws an error or silently fails to acquire the write lock. On Docker, there is a known issue where file-level locking flags set by one process are not visible to another process in a different container or filesystem namespace.
 
-#### Why it happens:
+For DocuMind specifically: the Express daemon already holds the Kuzu database open. Running `npm run scan` in a separate terminal while the daemon is running will conflict if both attempt write access.
 
-The system was built for a single macOS developer. "It works on Dave's machine" was acceptable until Dockerization. The context profile system partially solves this (profile JSON defines `repoRoots`), but the hardcoded fallbacks and constants file are independent codepaths that bypass the profile. The enhanced-scanner in particular reads from a static array, not the profile.
+**Why it happens:**
 
-#### How to avoid:
+Developers carry the mental model from SQLite's WAL mode (which allows concurrent writers in the same process, and multiple readers across processes) onto Kuzu. Kuzu is fundamentally different: one Database object owns the file exclusively.
 
-Audit every hardcoded path before writing a single line of Dockerfile. The fix has three layers:
+**How to avoid:**
 
-1. **Eliminate `LOCAL_BASE_PATH` fallbacks in daemon code.** `daemon/server.mjs` line 50 should fail loudly if no profile is loaded, not fall back to the macOS path.
+Establish one clear rule: the daemon owns the Kuzu database. All writes go through the daemon's API (REST endpoint or internal function). No CLI script or external tool opens Kuzu's database in write mode while the daemon is running.
 
-2. **Replace `REPOS_ROOT` in `tree-processor.mjs` with `ctx.repoRoots` (the profile-driven list)** — already available via context loader.
+For maintenance tasks that need exclusive Kuzu access (migration, schema creation, initial import), require the daemon to be stopped first. Document this in `CLAUDE.md` and in the database init scripts.
 
-3. **Rewrite `scripts/scan/enhanced-scanner.mjs`** to read repo list from the active context profile, not the hardcoded array.
+In code: open Kuzu with `bufferPoolSize` configured at startup in the daemon and never re-open it. Share the single `Database` instance across all Express route handlers and the MCP server.
 
-4. **Container-side path convention:** Inside the container, repos live at `/repos/<name>/` when volume-mounted or `/repos/<name>/` when git-cloned. Define this as the one true internal path — never `/Users/Shared/`.
+**Warning signs:**
 
-```bash
+- "Failed to open the database file" error when a second process tries to open Kuzu
+- Kuzu lock file (`.lock`) present in the DB directory that does not clear after the daemon restarts
+- Docker Kuzu Explorer running alongside the daemon — Explorer opens a second database connection from a different container
 
-# Host-side env var drives the container path mapping
+**Phase to address:**
 
-DOCUMIND_REPOS_ROOT=/repos
-
-```
-
-## Warning signs:
-
-- `npm run scan` in container completes in <1 second with 0 documents found
-
-- Watcher starts but monitors `/Users/Shared/...` (no such path in container)
-
-- Context profile loads correctly but enhanced-scanner still reports zero repos
-
-- Any log line containing `/Users/Shared/` when running in a container
-
-## Phase to address:
-
-Pre-Docker refactor phase — must happen before writing Dockerfile. Hardcoded paths are blocking, not cosmetic. The context profile system provides the right abstraction; the task is to route all path lookups through it.
+Phase 1 (Kuzu scaffold) — the database opening strategy must be established on day one. Centralize access in the daemon.
 
 ---
 
-### Pitfall 4: MCP stdio Cannot Coexist With Container Stdout Logging
+### Pitfall 4: Kuzu's Strict Schema Cannot Be Altered After Creation — No ALTER TABLE for Property Types
 
-#### What goes wrong:
+**What goes wrong:**
 
-The existing pitfall (documented in v3.0 PITFALLS.md) of `console.log` polluting MCP stdio is amplified in Docker. In a container, `docker logs` captures everything written to stdout. When MCP stdio transport is active, stdout carries JSON-RPC 2.0 messages. Any `console.log` in any imported module writes non-JSON to stdout before DocuMind can redirect it. The daemon code has 55 `console.log` calls across 5 files (`daemon/watcher.mjs` alone has 15). The scheduler has 21.
+Kuzu uses a typed, declared schema. Node tables and relationship tables are defined with `CREATE NODE TABLE` / `CREATE REL TABLE` DDL statements. Once a property is added to a table with a specific type (e.g., `strength FLOAT`), you cannot change that type with an `ALTER TABLE` statement. Adding new properties is possible via `ALTER TABLE ADD`, but dropping properties or changing types requires EXPORT DATABASE → recreate schema → IMPORT DATABASE.
 
-Additionally, in Docker, PM2 is not present — the process runs as PID 1 directly. The current `daemon/server.mjs` does not register SIGTERM handlers. When Docker sends SIGTERM to stop the container, the process does not drain in-flight requests, does not checkpoint the WAL, and does not close the SQLite connection cleanly. Docker will then send SIGKILL after 10 seconds.
+The DocuMind SQLite `doc_relationships` table has 8 relationship types stored as a single `type` string column. Migrating this to Kuzu requires a design decision: one relationship table with a `type` property (flat model), or eight separate typed relationship tables (semantic model). Choosing the flat model first and realizing the semantic model is needed later requires the full EXPORT/IMPORT migration cycle, which is destructive if IMPORT fails.
 
-#### Why it happens:
+The IMPORT DATABASE command has a known issue: if it fails mid-way, automatic rollback is not supported. You must delete the partially-imported database and start over.
 
-The daemon was designed as a PM2-managed process. PM2 handles signal forwarding. When running as a raw Node.js process in a container (PID 1), signal handling must be explicit. The startup command `npm start` in a Dockerfile also breaks signal propagation — npm does not forward SIGTERM to its child Node.js process.
+**Why it happens:**
 
-#### How to avoid:
+Developers prototype with a flat schema that mirrors the existing SQLite structure (easiest initial migration), then discover they need typed edges for graph algorithms that can be filtered by relationship type. Changing this after data is loaded requires the export/import cycle.
 
-Two independent problems need separate solutions:
+**How to avoid:**
 
-#### Stdout contamination (for stdio mode):
+Design the final Kuzu schema before loading any data. For DocuMind's 8 relationship types (`imports`, `parent_of`, `variant_of`, `supersedes`, `depends_on`, `related_to`, `generated_from`, `dispatched_to`): use separate relationship tables from the start.
 
-The MCP server entry point (`daemon/mcp-server.mjs`) must shadow `console.log` before any import: redirect to stderr. This is already flagged in v3.0 PITFALLS.md and must be verified as actually implemented before Dockerizing.
+```cypher
+CREATE REL TABLE imports(FROM Document TO Document, strength FLOAT)
+CREATE REL TABLE parent_of(FROM Document TO Document)
+CREATE REL TABLE variant_of(FROM Document TO Document, similarity_score FLOAT)
+-- etc.
+```
 
-#### Graceful shutdown (for all container modes):
+This enables Kuzu's graph algorithms to be applied per-relationship-type and avoids schema migration later.
 
-Add SIGTERM and SIGINT handlers to `daemon/server.mjs`:
+Before initial data load, create the schema in a test database and verify all 8 relationship types survive a round-trip EXPORT/IMPORT.
+
+**Warning signs:**
+
+- Schema design starts with `CREATE REL TABLE doc_relationship(FROM Document TO Document, type STRING)` — this is the flat model that forecloses typed-edge optimizations
+- No schema design phase before initial data load
+- First Cypher query returns wrong results because edges are filtered by a string property match rather than type
+
+**Phase to address:**
+
+Phase 1 (Kuzu scaffold) — schema is the first artifact. Freeze it before writing any import code.
+
+---
+
+### Pitfall 5: Kuzu's Prebuilt Binaries Do Not Support Alpine Linux (musl libc)
+
+**What goes wrong:**
+
+The `kuzu` npm package ships prebuilt binaries compiled against glibc (`manylinux_2_28` standard for Linux). Alpine Linux uses musl libc, not glibc. On an Alpine-based Docker image, npm will attempt to build Kuzu from source, which requires CMake >= 3.15, Python 3, and a C++20-compatible compiler — none of which are in `node:alpine` by default. The source build takes 5–15 minutes (Kuzu is a large C++ codebase) and may fail with C++20 standard errors on older Alpine gcc versions.
+
+DocuMind's existing Docker image already uses `node:22-bookworm-slim` (Debian) because of `better-sqlite3`. This constraint is compounded, not new, but must be explicitly verified for Kuzu as well.
+
+**Why it happens:**
+
+Docker image maintainers sometimes experiment with Alpine to reduce image size after initial Dockerization is complete. Adding Kuzu to an Alpine image triggers the source-build failure.
+
+**How to avoid:**
+
+Keep `node:22-bookworm-slim` as the base image. With two native addons (`better-sqlite3` + `kuzu`), the cost of switching to Alpine doubles. The Debian slim image is the correct choice and must not be changed without testing both addons.
+
+If image size optimization is needed later, use a multi-stage build where the builder stage (Debian) compiles native modules and the final stage copies `node_modules/` into a minimal runtime.
+
+**Warning signs:**
+
+- Docker build shows "No prebuilt binaries found for kuzu — building from source"
+- Build stage fails with `cmake: command not found` or C++20 compiler errors
+- Image size suddenly increases by 500MB+ (build tools installed in Alpine to compile Kuzu)
+
+**Phase to address:**
+
+Phase 1 (Kuzu scaffold) — verify npm install succeeds in the existing Docker image before writing any Kuzu application code.
+
+---
+
+### Pitfall 6: Dual-DB Sync Between SQLite and Kuzu Has No Guaranteed Consistency Boundary
+
+**What goes wrong:**
+
+The plan keeps SQLite as the FTS5 index and source of truth for document metadata, while Kuzu becomes the graph store. Every time a relationship is written to SQLite's `doc_relationships` table, it must also be written to Kuzu's relationship tables. These are two separate database writes with no cross-DB transaction. If the Kuzu write fails (connection error, write conflict, schema mismatch), the SQLite record exists but Kuzu does not have the corresponding edge. The two databases drift out of sync silently.
+
+The reverse is also true: if a Kuzu write succeeds but the SQLite write fails, Kuzu has an edge for documents that SQLite does not recognize.
+
+**Why it happens:**
+
+Developers treat dual-DB writes as "fire and forget" — write to primary (SQLite), then write to secondary (Kuzu) and log any error. This approach creates a growing divergence that is expensive to detect and repair.
+
+**How to avoid:**
+
+Establish a canonical source and a sync strategy from day one:
+
+- **SQLite is the system of record for relationships.** The `doc_relationships` table in SQLite is authoritative. Kuzu is a derived, read-optimized index of that data.
+- **Kuzu is always rebuildable from SQLite.** Provide a `npm run graph:rebuild` command that clears Kuzu and re-imports all relationships from SQLite in a single batch.
+- **Writes go to SQLite first.** On success, enqueue or directly execute the Kuzu write. On Kuzu write failure, log the failure with the SQLite record ID, do not roll back SQLite, and rely on the rebuild command to repair the divergence.
+- **Health check endpoint reports sync status.** `GET /health` includes a `graph_sync: ok/diverged` field comparing `doc_relationships` count in SQLite vs. edge count in Kuzu.
+
+This is not ACID-distributed-transaction consistency — it is "eventually consistent with a fast repair path," which is correct for this use case.
+
+**Warning signs:**
+
+- Graph query returns fewer results than expected from a search query
+- `SELECT COUNT(*) FROM doc_relationships` differs from `MATCH ()-[r]->() RETURN count(r)`
+- No `graph:rebuild` command exists
+- Kuzu write errors are silently swallowed in processor code
+
+**Phase to address:**
+
+Phase 2 (SQLite → Kuzu migration and sync) — the sync strategy must be the first decision, before writing any relationship processor code.
+
+---
+
+### Pitfall 7: Kuzu's Graph Algorithm Extension Requires INSTALL/LOAD — Cannot Assume It Is Pre-Loaded
+
+**What goes wrong:**
+
+PageRank, weakly connected components, and centrality algorithms are in Kuzu's `algo` extension, not built into the core engine. In Kuzu 0.11.3, the extension is pre-installed and pre-loaded, but in earlier versions it must be explicitly installed with `INSTALL algo` and loaded with `LOAD EXTENSION algo` before any graph algorithm can be called. If you are not on 0.11.3, calling `CALL algo.pagerank(...)` without loading the extension throws a "function not found" error that looks like a syntax error.
+
+The extension installation downloads binaries from Kuzu's extension server. In a Docker environment with no external network access, this download fails silently or errors out.
+
+**Why it happens:**
+
+Tutorials and blog posts assume version 0.11.x behavior (pre-loaded extensions). Developers who pin to an earlier version for stability hit missing extension errors they did not expect. The error message ("function not found") does not mention the extension system.
+
+**How to avoid:**
+
+Pin to Kuzu 0.11.3 or later (which bundles the algo extension). At daemon startup, verify the extension is available by running a no-op algorithm query and catching any error:
 
 ```javascript
-
-// In daemon/server.mjs
-process.on('SIGTERM', async () => {
-  console.error('[DocuMind] Received SIGTERM — shutting down...');
-  server.close(() => {
-    db.pragma('wal_checkpoint(TRUNCATE)');
-    db.close();
-    process.exit(0);
-  });
-});
-
+try {
+  await conn.query('CALL algo.pagerank("Document", "related_to") RETURN *');
+} catch (e) {
+  // attempt LOAD EXTENSION algo
+  await conn.query('LOAD EXTENSION algo');
+}
 ```
 
-In the Dockerfile, run Node directly — never via npm:
+For Docker: verify at image build time that the extension is present by running a test query as a Dockerfile `RUN` step. Do not rely on runtime extension downloading in production containers.
 
-```dockerfile
+**Warning signs:**
 
-# Wrong — npm does not forward SIGTERM to Node
+- "Function not found: algo.pagerank" error — extension not loaded
+- Extension loads in dev but not in Docker (network-restricted environment)
+- Algorithm query works in Kuzu CLI (which auto-loads extensions) but not in Node.js API
 
-CMD ["npm", "start"]
+**Phase to address:**
 
-# Correct — Node receives SIGTERM directly
-
-CMD ["node", "daemon/server.mjs"]
-
-```
-
-## Warning signs:
-
-- `docker stop` hangs for 10 seconds then kills the container (SIGTERM not handled)
-
-- DB `-wal` file present after container stops (incomplete checkpoint)
-
-- MCP tool calls return parse errors intermittently when other startup log output hits stdout
-
-- `docker logs` shows JSON-RPC frames mixed with human-readable log output
-
-## Phase to address:
-
-Dockerfile foundation phase (CMD instruction) and MCP dual-mode phase (stdio stdout redirect). The shutdown handler should be added in the foundation phase since it protects data integrity regardless of MCP.
-
----
-
-### Pitfall 5: PM2 Inside Docker Creates a Zombie Process Manager
-
-#### What goes wrong:
-
-The current production setup uses PM2 (`ecosystem.config.cjs`, `npm run daemon:start`). PM2 daemonizes the process — it forks a background daemon and then the calling process exits. In Docker, when PID 1 exits, the container stops. If `pm2 start ecosystem.config.cjs` is the container's CMD, PM2 starts DocuMind in the background, then PM2's foreground process completes (exits 0), and the container immediately stops.
-
-The workaround — `pm2-runtime` — does keep the process in the foreground, but it adds a process management layer that Docker's restart policies and health checks already provide. PM2's cluster mode and auto-restart are redundant when Docker Swarm or docker-compose handles service restarts. PM2's log rotation conflicts with Docker's log driver (json-file, fluentd). PM2's metric collection adds memory overhead.
-
-#### Why it happens:
-
-PM2 is the right tool for a raw VPS or macOS daemon. It is the wrong tool inside a Docker container. The transition from "daemon on macOS" to "container on Linux" requires accepting that Docker is the process supervisor.
-
-#### How to avoid:
-
-Do not use PM2 or pm2-runtime inside the container. Run Node.js directly as PID 1 via the `CMD` instruction. Use Docker's built-in restart policy (`restart: unless-stopped` in docker-compose) for auto-restart. Use Docker health checks for liveness. The existing `ecosystem.config.cjs` remains valid for the **macOS dev workflow** (direct PM2 usage outside Docker) — do not delete it.
-
-```yaml
-
-# docker-compose.yml
-
-services:
-  documind:
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-```
-
-## Warning signs:
-
-- `docker compose up` shows container starting then immediately stopping with exit 0
-
-- Container shows as "Exited (0)" in `docker ps -a` immediately after start
-
-- Container log shows "PM2 daemon started" then nothing
-
-- Health check never runs because container exits before check interval
-
-## Phase to address:
-
-Dockerfile foundation phase — the CMD instruction is the first thing to get right.
-
----
-
-### Pitfall 6: Chokidar File Watcher Is Silent on Docker Volume Mounts
-
-#### What goes wrong:
-
-`daemon/watcher.mjs` uses chokidar to watch `${REPOS_ROOT_RESOLVED}/**/*.md` and similar patterns. In Docker on macOS (Docker Desktop), the container runs inside a Linux VM. The macOS FSEvents API is not available inside the VM. The Linux inotify API is not triggered by file changes that originate on the macOS host side of a bind mount, because the changes pass through Docker Desktop's VirtioFS layer without surfacing as inotify events inside the container.
-
-Result: the watcher starts successfully (no errors), but never fires any `add`, `change`, or `unlink` events when files are modified on the host. The watcher appears to work (logs "Ready. Monitoring X patterns") but is silent.
-
-#### Why it happens:
-
-This is a known Docker Desktop behavior on macOS and Windows. The virtualization layer translates filesystem access but does not reliably translate inotify signals from host to container. It affects all filesystem watchers — chokidar, nodemon, webpack dev server, Vite HMR.
-
-#### How to avoid:
-
-Enable polling mode for chokidar when running in Docker:
-
-```javascript
-
-const watcher = watch(WATCH_PATTERNS, {
-  usePolling: process.env.CHOKIDAR_USEPOLLING === 'true',
-  interval: parseInt(process.env.CHOKIDAR_INTERVAL || '2000'),
-  persistent: true,
-  ignoreInitial: true,
-});
-
-```
-
-Set `CHOKIDAR_USEPOLLING=true` and `CHOKIDAR_INTERVAL=2000` in the docker-compose environment. This uses polling instead of inotify — CPU-heavier but reliable on all filesystems. A 2-second interval is acceptable because DocuMind's incremental hourly scan is the authoritative source; the watcher is an acceleration layer.
-
-For git-clone mode (container clones repos itself, no bind mount), this problem does not exist — git writes occur inside the container's own filesystem, and inotify works correctly.
-
-#### Warning signs:
-
-- Watcher logs "Ready. Monitoring X patterns" but no `[watcher] Changed:` entries ever appear
-
-- Editing a file on the host does not trigger re-indexing even after 10 seconds
-
-- `CHOKIDAR_USEPOLLING` is not set in docker-compose environment
-
-- Bind mount is from a macOS host path (not a Linux-native named volume)
-
-#### Phase to address:
-
-Watcher + environment config phase. Add `CHOKIDAR_USEPOLLING` as a first-class env var with a default of `false` (preserves current macOS PM2 behavior) and document that Docker users must set it to `true`.
-
----
-
-### Pitfall 7: Git Clone Mode Leaks Credentials Into Image Layers
-
-#### What goes wrong:
-
-Git-clone ingestion mode requires cloning private GitHub repos inside the container. The naive implementation copies SSH keys or GitHub tokens into the Dockerfile with `COPY .ssh/ /root/.ssh/` or `ENV GITHUB_TOKEN=...`. Both approaches embed credentials into Docker image layers. Any intermediate layer containing the secret is permanently accessible to anyone who pulls the image — including after publishing to GHCR. `docker history` or `docker save | tar xf` exposes all layers.
-
-Additionally, if `GITHUB_TOKEN` is passed as a build argument (`ARG GITHUB_TOKEN`), it appears in `docker history --no-trunc` output and is stored in the build cache.
-
-#### Why it happens:
-
-The simplest way to authenticate git clone is to put the credential in an env var or file. Developers test this locally, it works, and they push without checking whether the credential is in the image.
-
-#### How to avoid:
-
-For **runtime** credential passing (HTTPS token), use environment variables injected at container start, not at build time. The token is never baked into the image:
-
-```yaml
-
-# docker-compose.yml
-
-environment:
-  GITHUB_TOKEN: ${GITHUB_TOKEN}  # from .env on host, never in image
-
-```
-
-Inside the container's git-clone script, configure git to use the token at runtime:
-
-```bash
-
-git clone https://x-access-token:${GITHUB_TOKEN}@github.com/DESIGN-DVW/RepoName.git
-
-```
-
-For **build-time** SSH key access (if needed during image build), use Docker BuildKit's `--ssh` flag — SSH agent is forwarded, keys never appear in image layers:
-
-```dockerfile
-
-# syntax=docker/dockerfile:1
-
-RUN --mount=type=ssh git clone git@github.com:DESIGN-DVW/RepoName.git
-
-```
-
-For **GHCR publishing**, ensure the published image never contains credentials. The git-clone script runs at container startup (entrypoint), not at image build time.
-
-## Warning signs:
-
-- `docker history --no-trunc <image>` shows any string containing a token or key
-
-- `ENV GITHUB_TOKEN=...` or `ARG GITHUB_TOKEN` in the Dockerfile
-
-- `COPY .ssh /root/.ssh` in the Dockerfile (copies real SSH keys into image)
-
-- Published GHCR image allows unauthenticated pull but contains private tokens
-
-## Phase to address:
-
-Git-clone ingestion phase — the credential strategy must be designed before writing any git-clone code. Wrong choices here produce a security incident when the image is published.
-
----
-
-### Pitfall 8: MCP stdio Transport Requires `-i` Flag in Docker but HTTP Mode Does Not
-
-#### What goes wrong:
-
-When Claude Code runs DocuMind's MCP server in stdio mode inside a Docker container (not the primary pattern, but possible for remote Docker-hosted MCP), the container must be started with `docker run -i` (interactive stdin). Without `-i`, the container cannot read from stdin, the MCP transport gets EOF immediately, and the server shuts down. The difference between `-i` and `-it` also matters: `-t` allocates a pseudo-TTY which can corrupt the binary JSON-RPC stream.
-
-For HTTP mode (the primary containerized MCP mode), neither `-i` nor `-t` are needed — the container just needs the port exposed.
-
-#### Why it happens:
-
-stdio MCP = process communication over stdin/stdout. Docker containers, by default, redirect stdin to `/dev/null`. The `-i` flag keeps stdin open. Developers testing HTTP mode forget this distinction when switching to stdio mode or when configuring Claude Code to call a containerized MCP server.
-
-#### How to avoid:
-
-Design the Docker image for HTTP MCP mode as the primary containerized transport. stdio MCP remains the transport for the local macOS PM2 workflow. Document the two modes clearly:
-
-- Local (macOS + PM2): `node daemon/mcp-server.mjs` — stdio transport, no Docker
-
-- Containerized: Express on port 9000 with `POST /mcp` (StreamableHTTP) — HTTP transport
-
-If stdio-in-Docker is ever needed:
-
-```bash
-
-docker run -i --rm ghcr.io/design-dvw/documind:latest node daemon/mcp-server.mjs
-
-```
-
-Note: `-i` only, never `-t` for stdio MCP.
-
-#### Warning signs:
-
-- MCP client reports EOF or immediate disconnect when connecting to containerized server
-
-- Container exits immediately after `docker run` without `-i`
-
-- Claude Code successfully connects to HTTP `/mcp` endpoint but stdio mode is non-functional in Docker
-
-- Logs show MCP server started then "stdin closed" immediately
-
-#### Phase to address:
-
-MCP dual-mode phase — document the transport/deployment mapping clearly and test both modes before publishing to GHCR.
+Phase 3 (Graph algorithms) — verify extension availability as the first step of this phase.
 
 ---
 
 ## Technical Debt Patterns
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-
 | -------- | ----------------- | -------------- | --------------- |
-
-| Using `node:latest` as base image | Always current Node version | `latest` tracks Node.js majors; Node 24+ breaks better-sqlite3 until it catches up; unpredictable build failures | Never in production Dockerfile — pin to `node:22-bookworm-slim` |
-
-| Copying host `node_modules` into image with `COPY . .` | Fast build (no re-install) | Copies macOS-compiled `.node` binaries that crash on Linux; copies `node_modules` with dev deps | Never — always `npm ci` inside the container |
-
-| Bind mount `./data:/app/data` on macOS for DB persistence | Easy DB inspection from host | WAL mode corruption on Docker Desktop for Mac | Only acceptable if WAL mode is explicitly disabled for that mount |
-
-| Using `CMD ["npm", "start"]` | Familiar pattern | npm does not forward SIGTERM to Node; Docker stop always force-kills after 10s timeout | Never — use `CMD ["node", "daemon/server.mjs"]` |
-
-| Skipping `.dockerignore` | No setup effort | Build context includes `data/documind.db` (large), `node_modules/`, `.git/` — slows every build | Never — `.dockerignore` is mandatory |
-
-| Hardcoding `REPO_URL=https://github.com/DESIGN-DVW/...` in Dockerfile | Simple | Image is tied to one org; cannot be used for other repos | Only acceptable if image is explicitly org-specific and labeled as such |
-
-| Using `pm2-runtime` in Docker | Reuses existing PM2 config | Redundant process manager layer; PM2 logs conflict with Docker log driver; complicates health checks | Acceptable as a temporary bridge while migrating — remove before GHCR publish |
+| Flat `doc_relationship` node with `type` property instead of typed edge tables | Quick initial migration from SQLite schema | Cannot use per-type graph algorithms; full EXPORT/IMPORT required to change; performance worse | Never — design typed edge tables from day one |
+| Writing to SQLite and Kuzu in the same `try/catch` block without divergence tracking | Simple code | Silent divergence; no repair path when Kuzu write fails | Only for prototyping; never in production merge |
+| Using `kuzu@latest` | Gets newest features | Tracks the abandoned upstream OR an unverified fork; version may change file format | Never — pin to a specific version, document fork status |
+| Calling LangChain Python via `child_process.exec()` sidecar | Gets `KuzuGraph` without reimplementing | Adds Python runtime dependency to a Node.js service; fragile IPC; breaks Docker image | Unacceptable for production — implement the Node.js adapter directly |
+| Skipping the schema freeze step and iterating the Kuzu schema during development | Fast iteration | Each schema change requires EXPORT/IMPORT with no rollback; corrupts data in partial failure | Only acceptable in the first day of development before any real data is loaded |
+| Rebuilding Kuzu from SQLite on every daemon startup | Ensures sync on restart | Rebuild of 8K+ relationships takes measurable seconds; blocks daemon startup | Only acceptable if rebuild time < 1 second; measure before shipping |
 
 ## Integration Gotchas
 
 | Integration | Common Mistake | Correct Approach |
-
 | ----------- | -------------- | ---------------- |
-
-| better-sqlite3 + Docker | Using Alpine base image | Use `node:22-bookworm-slim` (Debian); prebuilt binaries work without build tools |
-
-| better-sqlite3 + Docker | Copying host-built `node_modules` | Run `npm ci` inside the container; never copy native `.node` binaries across OS/arch |
-
-| SQLite WAL + Docker volumes | Bind mounting `./data` from macOS host | Use named Docker volume for DB data; or switch to `journal_mode=DELETE` for bind mounts |
-
-| chokidar + Docker | Not setting `CHOKIDAR_USEPOLLING=true` | Set via docker-compose env var; use polling for volume-mounted directories |
-
-| MCP stdio + Docker | Running with `-it` (TTY allocated) | Use `-i` only — TTY corrupts binary JSON-RPC stream |
-
-| GHCR + credentials | `ARG GITHUB_TOKEN` in Dockerfile | Pass token at runtime via environment variable; never bake into image |
-
-| git-clone + SSH | `COPY .ssh /root/.ssh` in Dockerfile | Use `--mount=type=ssh` with BuildKit, or pass HTTPS token at runtime |
-
-| SIGTERM + Docker | `CMD ["npm", "start"]` | Use `CMD ["node", "daemon/server.mjs"]` — Node receives SIGTERM directly |
-
-| PM2 + Docker | `CMD ["pm2", "start", "ecosystem.config.cjs"]` | PM2 daemon exits immediately, killing the container — use `node` directly |
-
-| Docker health check + Express | No `/health` endpoint | Verify `GET /health` returns 200 before registering health check in docker-compose |
+| kuzu npm + ESM (.mjs) | `import kuzu from 'kuzu'` fails with "package subpath not exported" | Check Kuzu's package.json exports field; use `createRequire` from `module` as fallback if ESM import fails; report to the fork maintainers |
+| kuzu + Docker | Using Alpine base image | Keep `node:22-bookworm-slim`; Kuzu prebuilts are glibc-only, same as better-sqlite3 |
+| kuzu + better-sqlite3 | Assuming both native addons build for the same Node.js ABI | Both must be compiled against the same Node.js version; verify with `node -e "require('kuzu'); require('better-sqlite3')"` |
+| LangChain KuzuGraph | `npm install langchain-kuzu` | Does not exist; implement custom Node.js adapter using Kuzu's Node.js API + LangChain.js's ChatModel |
+| Kuzu concurrency | Opening a second `Database(path, {readOnly: false})` instance | Kuzu throws or silently fails; share one `Database` instance across all connections in the daemon |
+| Kuzu + Kuzu Explorer (Docker) | Running Explorer container alongside daemon container pointing at same DB file | File lock flags not propagated across Docker containers; Explorer will fail to open or corrupt the lock state; run Explorer only with daemon stopped |
+| Kuzu graph algorithms | Calling `algo.pagerank()` on Kuzu < 0.11.3 without LOAD EXTENSION | "Function not found" error; verify extension is loaded at startup |
+| SQLite → Kuzu initial import | Migrating `doc_relationships` rows one-by-one via the Node.js API | Extremely slow for 8K+ rows; use Kuzu's `COPY FROM` with a CSV or Parquet file generated from SQLite for bulk import |
 
 ## Performance Traps
 
 | Trap | Symptoms | Prevention | When It Breaks |
-
 | ---- | -------- | ---------- | -------------- |
-
-| chokidar polling at 500ms interval on 8K-file corpus | Container CPU spikes to 100% continuously | Use 2000ms interval (`CHOKIDAR_INTERVAL=2000`); rely on hourly scan as authoritative source | Any polling interval < 1000ms with >1K watched files |
-
-| git-clone fetching all repo history on every container start | Container startup takes minutes; CI jobs time out | Clone with `--depth=1` (shallow clone); pull with `--ff-only` on subsequent starts | Repos with years of history — DocuMind's DVWDesign repos may have deep history |
-
-| Running full scan on container startup before serving requests | `/health` check fails during scan; load balancer marks container unhealthy | Run startup scan async; serve requests immediately; background scan completes separately | Full scan takes 30+ seconds on 8K+ documents |
-
-| No `.dockerignore` file | Every build copies `data/documind.db` (potentially hundreds of MB) into build context | Add `.dockerignore` with `data/`, `node_modules/`, `.git/` | DB grows above 100MB — builds stall on context transfer |
-
-| Multi-arch image not specified | Image only runs on amd64 (CI server) but not arm64 (M1/M2 Mac dev) or vice versa | Use `docker buildx build --platform linux/amd64,linux/arm64` | Deploying to arm64 Raspberry Pi or apple silicon Mac hosts |
+| One Kuzu write per document during scan (8K+ sequential writes) | Scan takes 10x longer than before Kuzu was added | Batch all relationship writes per scan run; use a single transaction wrapping all `CREATE` statements | Any corpus > 1K documents |
+| Kuzu PageRank on the full graph every time `/graph` is called | API response latency > 1 second | Cache PageRank scores; recompute on daily cron, not on request | Corpus > 5K edges |
+| Running SQLite → Kuzu sync inline in the request path | MCP tool calls become slow when Kuzu write is slow | Kuzu writes are async and non-blocking; if they fail, log for batch repair; never block the SQLite commit on the Kuzu write |  Any load > 10 requests/min |
+| Kuzu buffer pool default size in a memory-constrained Docker container | OOM kill or container restart | Set `bufferPoolSize` explicitly in the `Database` constructor; start with 256MB for DocuMind's corpus size | Container memory limit < 512MB |
+| Returning entire Cypher query result set from `/graph` endpoint | Response payload grows unboundedly with corpus | Add `LIMIT` clauses to all graph traversal queries; paginate or stream results | Corpus > 10K edges |
 
 ## Security Mistakes
 
 | Mistake | Risk | Prevention |
-
 | ------- | ---- | ---------- |
-
-| Publishing image to GHCR as public without auditing layers | Any hardcoded credential (token, path with usernames) becomes public | Run `docker history --no-trunc` and `docker scout` or `trivy` before making image public |
-
-| Running container as root (Docker default) | If app is compromised, attacker has root on container; bind mounts are root-owned on host | Add `USER node` to Dockerfile after installing dependencies; use `--chown=node:node` in COPY |
-
-| Exposing SQLite DB as a bind mount without access controls | Anyone with Docker host access can read all indexed document content | Use named Docker volume (not bind mount) for DB; set container-side file permissions to 600 |
-
-| `GITHUB_TOKEN` in `.env` file committed to git | Token is in repo history even if file is later deleted | Add `.env` to `.gitignore`; use GitHub Actions secrets for CI; use `.env.example` without real values |
-
-| Git-clone script trusting `REPO_URL` from environment without validation | Path traversal or clone from untrusted remote | Validate `REPO_URL` against allowlist of known GitHub org URLs before cloning |
+| Passing raw user input directly into Cypher query string (text-to-Cypher MCP tool) | Cypher injection — malicious queries delete nodes, enumerate all data, or run expensive algorithms (DoS) | Always use parameterized queries for properties; validate LLM-generated Cypher against an allowlist of operations (MATCH/RETURN allowed; DELETE/MERGE/CREATE from LLM output blocked) |
+| Logging raw Cypher queries that include document path strings | Log exposure of internal file paths to any log aggregator | Sanitize Cypher queries in log output; hash or truncate node IDs in logs |
+| No rate limiting on graph_query MCP tool | LLM agent loops calling graph_query in a tight loop; exhausts Kuzu connection and memory | Rate-limit MCP tool calls per session in the MCP server layer |
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Base image:** Dockerfile uses `node:22-bookworm-slim` — verify with `docker inspect <image> | grep Os` showing `linux` and no `alpine` in image name
-
-- [ ] **Native module:** `docker run --rm <image> node -e "require('better-sqlite3')"` exits 0 with no error
-
-- [ ] **WAL safety:** DB is on a named Docker volume (`docker volume ls` shows `documind_data`) OR `journal_mode` switches to DELETE for bind mounts — verify with `PRAGMA journal_mode` inside container
-
-- [ ] **Hardcoded paths eliminated:** `docker run --rm <image> grep -r '/Users/Shared' /app/` returns no matches in production code paths
-
-- [ ] **SIGTERM handler:** `docker stop <container>` completes in < 5 seconds (not 10s timeout kill) — verify container exit code is 0 not 137
-
-- [ ] **Chokidar polling:** Editing a file on the host triggers watcher event within `CHOKIDAR_INTERVAL` seconds — verify in docker logs
-
-- [ ] **No PM2 in container:** `docker exec <container> ps aux` shows `node daemon/server.mjs` as PID 1, no PM2 process
-
-- [ ] **MCP HTTP mode:** `curl -X POST http://localhost:9000/mcp -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"initialize",...}'` returns valid MCP response from container
-
-- [ ] **No credentials in image:** `docker history --no-trunc <image>` contains no tokens, SSH keys, or `/Users/` paths
-
-- [ ] **Health check active:** `docker inspect <container> | jq '.[0].State.Health'` shows `healthy` status after startup
-
-- [ ] **`.dockerignore` in place:** Build context does not include `data/`, `node_modules/`, `.git/` — verify with `docker build --progress=plain 2>&1 | grep "Sending build context"` shows small size
+- [ ] **Kuzu version pinned:** `package.json` shows a specific version, not `"latest"` or `"*"` — verify with `cat package.json | jq '.dependencies.kuzu'`
+- [ ] **ESM import works:** `node --input-type=module <<< 'import kuzu from "kuzu"; console.log("ok")'` exits 0 in the project's Node.js version
+- [ ] **Schema frozen before data load:** Kuzu DDL statements exist in a versioned file (`scripts/db/kuzu-schema.cypher`); no schema changes after first relationship row loaded
+- [ ] **algo extension available:** `CALL algo.pagerank("Document", "related_to") RETURN node, rank LIMIT 1` returns a result (not "function not found")
+- [ ] **Sync divergence detectable:** `GET /health` reports count comparison between SQLite `doc_relationships` and Kuzu edge count
+- [ ] **graph:rebuild command exists:** `npm run graph:rebuild` drops and re-imports all Kuzu relationships from SQLite in a single run; completes without error
+- [ ] **LLM-generated Cypher sanitized:** The text-to-Cypher pipeline rejects any Cypher containing `DELETE`, `DETACH DELETE`, `MERGE`, or `DROP TABLE` before execution
+- [ ] **Kuzu DB not opened twice:** `grep -r "new kuzu.Database" daemon/ processors/` returns exactly one occurrence
+- [ ] **Docker build succeeds:** `docker build` completes without "build from source" messages for kuzu; both `require('kuzu')` and `require('better-sqlite3')` exit 0 in the container
 
 ## Recovery Strategies
 
 | Pitfall | Recovery Cost | Recovery Steps |
-
 | ------- | ------------- | -------------- |
-
-| Alpine image used; better-sqlite3 fails | LOW | Change base image to `node:22-bookworm-slim` in Dockerfile; rebuild; no data loss |
-
-| WAL corruption on bind-mounted DB | HIGH | Stop container; run `sqlite3 documind.db 'PRAGMA integrity_check'`; if corrupt, restore from backup (migrate.mjs creates backups); switch to named volume; re-run full scan |
-
-| Hardcoded macOS paths cause empty scan | MEDIUM | Fix `config/constants.mjs` and affected scripts to read from context profile; rebuild image; re-run `POST /scan` |
-
-| Credentials leaked into GHCR image | HIGH | Rotate all leaked tokens immediately; delete the affected image tags from GHCR; rebuild without credentials in layers; audit all image history |
-
-| PM2 daemon exits container immediately | LOW | Change CMD from `pm2 start` to `node daemon/server.mjs`; rebuild; no data loss |
-
-| chokidar silent on volume mounts | LOW | Add `CHOKIDAR_USEPOLLING=true` to docker-compose environment; restart container; no data loss |
-
-| git-clone fails with auth error | LOW | Verify `GITHUB_TOKEN` env var is set and not expired; check token has `repo` scope for private repos |
+| Kuzu DB corrupted or out of sync | LOW | Stop daemon; delete Kuzu DB directory; run `npm run graph:rebuild` to re-import all relationships from SQLite; restart daemon |
+| Wrong Kuzu schema (flat type instead of typed edges) | HIGH | EXPORT DATABASE to CSV; drop Kuzu DB; define new schema with typed edge tables; IMPORT DATABASE from CSVs; verify edge counts |
+| LangChain Python adapter approach chosen, then abandoned | MEDIUM | Remove Python sidecar; implement Node.js adapter (~100-150 lines); update MCP tool to call adapter directly |
+| Kuzu upstream abandoned, need to migrate to fork | MEDIUM | Update `package.json` to fork package name (Bighorn or Ladybug); run full test suite; verify Kuzu file format is compatible or EXPORT/IMPORT to new format |
+| algo extension not loading in Docker | LOW | Pin to kuzu 0.11.3+ (pre-bundled extensions); rebuild Docker image; verify with test query in container |
+| SQLite → Kuzu divergence detected | LOW | Run `npm run graph:rebuild`; compare counts again; if still diverged, check for failed writes in daemon logs |
 
 ## Pitfall-to-Phase Mapping
 
 | Pitfall | Prevention Phase | Verification |
-
 | ------- | ---------------- | ------------ |
-
-| Alpine / better-sqlite3 failure | Phase 1: Dockerfile foundation | `docker run --rm <image> node -e "require('better-sqlite3')"` exits 0 |
-
-| WAL mode corruption on volume mounts | Phase 1: Dockerfile foundation | Named volume strategy confirmed; `PRAGMA integrity_check` returns `ok` after restart |
-
-| Hardcoded macOS paths | Phase 0: Pre-Docker refactor (before Dockerfile) | `grep -r '/Users/Shared' daemon/ processors/ config/constants.mjs` returns no results in production code |
-
-| SIGTERM not handled | Phase 1: Dockerfile foundation | `docker stop` completes in < 5 seconds, exit code 0 |
-
-| PM2 as CMD | Phase 1: Dockerfile foundation | `docker ps` shows container running; PID 1 is `node` |
-
-| Chokidar silent in Docker | Phase 2: Environment config + watcher | Bind-mount file edit triggers watcher log within polling interval |
-
-| Git credentials in image layers | Phase 3: Git-clone ingestion | `docker history --no-trunc` shows no token strings; runtime-only credential injection |
-
-| MCP stdio `-i` vs HTTP mode | Phase 4: MCP dual-mode | HTTP mode: `POST /mcp` returns valid response. stdio mode: `docker run -i` test completes successfully |
-
-| No `.dockerignore` | Phase 1: Dockerfile foundation | Build context size < 10MB (`.dockerignore` excludes DB and node_modules) |
+| KuzuDB abandoned — fork decision | Phase 0: Dependency evaluation | `package.json` pins specific version; DECISIONS.md documents fork landscape |
+| LangChain KuzuGraph Python-only | Phase 1: Kuzu scaffold | Node.js adapter file exists; no Python runtime in package.json dependencies |
+| Single-writer conflict (daemon + CLI) | Phase 1: Kuzu scaffold | One `new kuzu.Database` call in codebase; docs state daemon must be stopped for maintenance |
+| Schema cannot be altered after creation | Phase 1: Kuzu scaffold (schema freeze) | `kuzu-schema.cypher` committed before any data load; typed edge tables used |
+| Alpine / Kuzu prebuilt failure | Phase 1: Kuzu scaffold | `docker build` succeeds; `require('kuzu')` exits 0 in container |
+| Dual-DB sync divergence | Phase 2: SQLite → Kuzu sync | `graph:rebuild` command exists; `/health` reports sync status |
+| algo extension not loaded | Phase 3: Graph algorithms | Test query succeeds at daemon startup; fails loudly if extension missing |
+| Cypher injection via LLM output | Phase 4: LangChain text-to-Cypher | Cypher sanitizer blocks DELETE/MERGE/DROP; unit test with adversarial inputs |
 
 ## Sources
 
-- Codebase analysis: `daemon/server.mjs` line 56 (`journal_mode = WAL` confirmed), line 50 (macOS path fallback confirmed)
-
-- Codebase analysis: `daemon/mcp-server.mjs` line 31 (`journal_mode = WAL` in MCP server)
-
-- Codebase analysis: `config/constants.mjs` line 42 (`LOCAL_BASE_PATH` hardcoded)
-
-- Codebase analysis: `processors/tree-processor.mjs` line 12 (`REPOS_ROOT` hardcoded)
-
-- Codebase analysis: `scripts/scan/enhanced-scanner.mjs` lines 22–31 (14 hardcoded absolute paths)
-
-- Codebase analysis: `daemon/` folder — zero `SIGTERM` handlers across all 5 daemon files
-
-- Codebase analysis: `daemon/watcher.mjs` — no `usePolling` option in `watch()` call
-
-- better-sqlite3 Alpine recommendation: [WiseLibs/better-sqlite3 Discussion #1270](https://github.com/WiseLibs/better-sqlite3/discussions/1270) — HIGH confidence; maintainer explicitly recommends Debian slim over Alpine
-
-- SQLite WAL + network filesystem: [SQLite WAL official docs](https://www.sqlite.org/wal.html) — HIGH confidence; official documentation: "WAL does not work over a network filesystem"
-
-- Docker volume WAL corruption reports: [Vaultwarden SQLite corruption discussion](https://github.com/dani-garcia/vaultwarden/discussions/2965) — MEDIUM confidence; multiple user reports of WAL corruption on Docker bind mounts
-
-- chokidar Docker polling: [chokidar Issue #1051](https://github.com/paulmillr/chokidar/issues/1051) — HIGH confidence; official chokidar repo acknowledges Docker volume mount issue; `usePolling=true` is the documented fix
-
-- PM2 in Docker anti-pattern: [Leapcell PM2 and Docker](https://leapcell.io/blog/pm2-and-docker-choosing-the-right-process-manager-for-node-js-in-production) — MEDIUM confidence; community consensus
-
-- PM2 official Docker guidance: [PM2 Docker Integration](https://pm2.keymetrics.io/docs/usage/docker-pm2-nodejs/) — HIGH confidence; PM2 docs themselves recommend `pm2-runtime` for Docker but acknowledge redundancy
-
-- SIGTERM via npm: [Node.js best practices graceful shutdown](https://github.com/goldbergyoni/nodebestpractices/blob/master/sections/docker/graceful-shutdown.md) — HIGH confidence; npm does not forward SIGTERM to Node child process
-
-- MCP stdio Docker -i flag: [Configure MCP Transport Protocols for Docker](https://mcpcat.io/guides/configuring-mcp-transport-protocols-docker-containers/) — MEDIUM confidence; `-i` required for stdin; `-t` corrupts stream
-
-- Git credentials Docker BuildKit: [Docker BuildKit SSH mount](https://sanderknape.com/2019/06/installing-private-git-repositories-npm-install-docker/) — MEDIUM confidence; `--mount=type=ssh` prevents key leakage
-
-- Multi-stage build for native modules: [node:22-bookworm-slim for native builds](https://prepare.sh/articles/from-dev-to-production-mastering-multi-stage-builds-and-image-optimization-with-ghcr) — MEDIUM confidence; Debian bookworm-slim confirmed for native addon compatibility
+- KuzuDB abandonment: [The Register — KuzuDB abandoned, community mulls options](https://www.theregister.com/2025/10/14/kuzudb_abandoned/) — HIGH confidence; news report October 2025
+- KuzuDB abandonment: [Hacker News — We will no longer be actively supporting KuzuDB](https://news.ycombinator.com/item?id=45560036) — HIGH confidence; primary source discussion
+- KuzuDB forks (Bighorn, Ladybug): [The Weekly Edge — Kuzu Forks, DuckDB Goes Graph, Cypher 25](https://gdotv.com/blog/weekly-edge-kuzu-forks-duckdb-graph-cypher-24-october-2025/) — MEDIUM confidence; community report
+- LangChain KuzuGraph Python-only: [langchain-kuzu PyPI](https://pypi.org/project/langchain-kuzu/) — HIGH confidence; PyPI listing confirms Python only
+- LangChain.js graph QA: [GraphCypherQAChain LangChain.js](https://v03.api.js.langchain.com/classes/langchain.chains_graph_qa_cypher.GraphCypherQAChain.html) — HIGH confidence; official LangChain.js docs; no Kuzu equivalent listed
+- Kuzu concurrency (single writer): [Kuzu Connections & Concurrency docs](https://docs.kuzudb.com/concurrency/) — HIGH confidence; official documentation
+- Kuzu schema strict typing: [Transforming your data to graphs — Kuzu blog](https://blog.kuzudb.com/post/transforming-your-data-to-graphs-1/) — HIGH confidence; official blog
+- Kuzu ALTER TABLE gap: [GitHub Discussion #1715 — ALTER TABLE equivalent](https://github.com/kuzudb/kuzu/discussions/1715) — HIGH confidence; official GitHub
+- Kuzu migration (EXPORT/IMPORT): [Kuzu migrate docs](https://docs.kuzudb.com/migrate/) — HIGH confidence; official docs; no rollback on failed IMPORT confirmed
+- Kuzu IMPORT failure no rollback: [GitHub Issue #5727 — Import does not support parallel=false](https://github.com/kuzudb/kuzu/issues/5727) — MEDIUM confidence; GitHub issue confirms fragility
+- Kuzu prebuilt binaries (manylinux_2_28): WebSearch result from docs.kuzudb.com/system-requirements/ — MEDIUM confidence (page returned 403 on direct fetch; confirmed via search snippet)
+- Kuzu algo extension pre-bundled in 0.11.3: [Kuzu 0.10.0 release blog](https://blog.kuzudb.com/post/kuzu-0.10.0-release/) + search result snippet — MEDIUM confidence
+- Kuzu ESM issue (kuzu-wasm): [GitHub Issue #5517 — ECMAScript Module Syntax not supported](https://github.com/kuzudb/kuzu/issues/5517) — HIGH confidence; active bug report on the Kuzu repo
+- Kuzu Node.js API (prebuilt binaries bundled): [GitHub kuzudb/kuzu nodejs_api/README.md](https://github.com/kuzudb/kuzu/blob/master/tools/nodejs_api/README.md) — HIGH confidence; official source states "All prebuilt binaries are shipped inside the package"
 
 ---
 
-### Pitfalls research for: DocuMind v3.2 — Dockerization of Node.js daemon with native SQLite, filesystem watchers, MCP stdio, and git-clone ingestion
-
-### Researched: 2026-03-23
+*Pitfalls research for: DocuMind v3.3 — Kuzu embedded graph DB + LangChain text-to-Cypher integration into existing Node.js production service*
+*Researched: 2026-04-07*

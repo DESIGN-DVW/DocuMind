@@ -1,857 +1,534 @@
 # Architecture Research
 
-**Domain:** Documentation Intelligence Platform — Docker Containerization + MCP HTTP Transport + Git-Clone Ingestion
-**Researched:** 2026-03-23
-**Confidence:** HIGH (codebase inspected directly; MCP SDK verified in installed node_modules; Docker/GHCR patterns verified via official docs)
+**Domain:** Documentation Intelligence Platform — Kuzu Graph DB + LangChain Text-to-Cypher Integration
+**Researched:** 2026-04-07
+**Confidence:** HIGH (codebase inspected directly; Kuzu Node.js API confirmed via official docs and npm; LangChain.js GraphCypherQAChain confirmed; algo extension limitations confirmed from official docs)
 
 ---
 
 ## Context: What This Milestone Adds
 
-The existing system (DocuMind v3.1) is a fully operational PM2-managed daemon. What v3.2 adds is a deployment layer that wraps everything in Docker, plus two mode changes:
+DocuMind v3.3 adds a second embedded database alongside the existing SQLite. SQLite keeps FTS5 full-text search, metadata, linting, keywords, and all non-graph tables. Kuzu takes over graph operations: typed edge storage, Cypher queries, graph algorithms (PageRank, centrality, cycle detection), and natural-language graph queries via LangChain.
 
-### New infrastructure components (net-new files):
+### Critical design constraint
 
-- `Dockerfile` — multi-stage Node.js image; builds on `node:22-alpine`; bakes `npm ci --omit=dev`; does NOT include PM2 (Docker replaces it)
-
-- `docker-compose.yml` — orchestrates the container with volumes, env vars, port mappings
-
-- `.dockerignore` — excludes `node_modules`, `data/*.db`, `.git`, `.planning`
-
-- `daemon/mcp-http.mjs` — new entry point: MCP over Streamable HTTP transport (separate from stdio)
-
-- `processors/git-ingestor.mjs` — new processor: clone/pull repos, feed paths to existing scanner
-
-- `config/profiles/docker.json` — Docker-specific context profile (inline `repositories` list, no external registry path)
-
-- `.github/workflows/docker-publish.yml` — CI workflow: build + push to GHCR on tag push
-
-### Modified existing components:
-
-- `daemon/server.mjs` — add graceful shutdown handlers (`SIGTERM`/`SIGINT`); add Docker health endpoint (`GET /health` already exists, add `db.prepare('SELECT 1').get()` liveness check)
-
-- `daemon/scheduler.mjs` — replace hardcoded cron intervals with `process.env.SCAN_INTERVAL` / `FULL_SCAN_CRON` etc.
-
-- `context/loader.mjs` — support `DOCUMIND_REPOS` env var as override for repository list when in git-clone mode
-
-- `ecosystem.config.cjs` — unchanged for local PM2 use; Docker bypasses this file entirely
-
-### Unchanged components (Docker just runs them):
-
-- All processors (`markdown-processor.mjs`, `pdf-processor.mjs`, `word-processor.mjs`, `keyword-processor.mjs`, `tree-processor.mjs`, `mermaid-processor.mjs`, `relink-processor.mjs`)
-
-- `graph/` — relations and queries untouched
-
-- `scripts/` — CLI tools unchanged; not in Docker image runtime path (but available if `docker exec` needed)
-
-- `data/documind.db` — mounted as a named volume; never baked into the image
+Kuzu enforces a single-writer ownership rule: only one `Database` object pointing to a given path may be open at a time across the entire process (and across all processes). A READ_WRITE instance blocks all other READ_WRITE or READ_ONLY instances on the same path. This means the single `server.mjs` process owns the Kuzu `Database` object for its lifetime, and all other callers (MCP tools, REST endpoints) share connections from that same object — they do not create their own `Database` instances.
 
 ---
 
 ## Standard Architecture
 
-### System Overview: PM2 Mode (Current, Unchanged)
+### System Overview: Dual-DB Architecture (v3.3 Target)
 
 ```text
-
-┌──────────────────────────────────────────────────────────┐
-│                  macOS Host Machine                       │
-│                                                           │
-│  PM2 Process Manager                                      │
-│  ┌───────────────────────────┐  ┌──────────────────────┐ │
-│  │  documind (server.mjs)    │  │  documind-mcp        │ │
-│  │  Express :9000            │  │  (mcp-server.mjs)    │ │
-│  │  + scheduler + watcher    │  │  stdio transport     │ │
-│  └───────────┬───────────────┘  └──────────────────────┘ │
-│              │                                            │
-│  ┌───────────▼───────────────────────────────────────┐   │
-│  │  data/documind.db  (WAL, on-disk)                  │   │
-│  └───────────────────────────────────────────────────┘   │
-│                                                           │
-│  Repo roots: /Users/Shared/htdocs/github/DVWDesign/...   │
-│  (chokidar watches these paths directly)                  │
-└──────────────────────────────────────────────────────────┘
-
-```
-
-### System Overview: Docker Mode (v3.2 Target)
-
-```text
-
-┌──────────────────────────────────────────────────────────┐
-│                  Host Machine                             │
-│                                                           │
-│  docker compose up                                        │
-│                                                           │
-│  ┌────────────────────────────────────────────────────┐  │
-│  │  DocuMind Container (node:22-alpine)                │  │
-│  │                                                     │  │
-│  │  ┌──────────────────────────────────────────────┐  │  │
-│  │  │  node daemon/server.mjs (PID 1 via dumb-init)│  │  │
-│  │  │  Express :9000 + scheduler                   │  │  │
-│  │  │  (no PM2, no chokidar in git-clone mode)     │  │  │
-│  │  └──────────────────┬───────────────────────────┘  │  │
-│  │                     │                               │  │
-│  │  ┌──────────────────▼───────────────────────────┐  │  │
-│  │  │  SQLite volume: /data/documind.db             │  │  │
-│  │  └───────────────────────────────────────────────┘  │  │
-│  │                                                     │  │
-│  │  Repo access (choose one per deployment):           │  │
-│  │  A) Volume mount: host repos → /repos in container  │  │
-│  │  B) Git clone: git-ingestor.mjs pulls into /repos   │  │
-│  │                                                     │  │
-│  │  MCP access (choose one per client):                │  │
-│  │  A) stdio: docker exec + pipe (local Claude Code)   │  │
-│  │  B) HTTP: GET/POST :9001/mcp (remote consumers)     │  │
-│  └────────────────────────────────────────────────────┘  │
-│                                                           │
-│  Named volumes:                                           │
-│  - documind_data → /data (SQLite + logs)                  │
-│  - documind_repos → /repos (git-clone target)             │
-└──────────────────────────────────────────────────────────┘
-
+┌─────────────────────────────────────────────────────────────────────┐
+│                   DocuMind Process (PM2 / Docker)                    │
+│                                                                      │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │  daemon/server.mjs  — Express :9000                          │   │
+│  │                                                              │   │
+│  │  db (better-sqlite3)    kuzuDb (kuzu.Database)               │   │
+│  │       ↓                        ↓                            │   │
+│  │  FTS5 search            Graph operations                     │   │
+│  │  Metadata               Cypher queries                       │   │
+│  │  Keywords               PageRank / centrality                │   │
+│  │  Linting issues         Cycle detection                      │   │
+│  │  Diagrams               Natural language queries             │   │
+│  └───────────┬─────────────────────┬────────────────────────────┘   │
+│              │                     │                                 │
+│  ┌───────────▼──────┐  ┌───────────▼───────────────────────────┐   │
+│  │ data/documind.db │  │ data/documind.kuzu/  (directory)       │   │
+│  │ (SQLite WAL)     │  │ (Kuzu on-disk store)                   │   │
+│  └──────────────────┘  └───────────────────────────────────────┘   │
+│                                                                      │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │  Sync Bridge  graph/kuzu-sync.mjs                            │   │
+│  │  Reads doc_relationships from SQLite                         │   │
+│  │  Upserts Document nodes + typed edges into Kuzu              │   │
+│  │  Called at: startup, after buildRelationships(), on demand   │   │
+│  └──────────────────────────────────────────────────────────────┘   │
+│                                                                      │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │  graph/kuzu-queries.mjs  — all Cypher operations             │   │
+│  │  Wraps kuzu.Connection, returns plain JS objects             │   │
+│  │  Used by: REST /graph, MCP tools, LangChain bridge           │   │
+│  └──────────────────────────────────────────────────────────────┘   │
+│                                                                      │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │  graph/langchain-bridge.mjs  — text-to-Cypher                │   │
+│  │  GraphCypherQAChain (LangChain.js) + KuzuGraphAdapter        │   │
+│  │  Runs in-process (no subprocess)                             │   │
+│  │  Requires OPENAI_API_KEY (or other LLM provider)             │   │
+│  └──────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Component Responsibilities
 
 | Component | Status | Responsibility | Communicates With |
-
 | --- | --- | --- | --- |
-
-| `daemon/server.mjs` | Modified | Express :9000 + graceful shutdown + health check liveness | DB, processors, scheduler, watcher |
-
-| `daemon/scheduler.mjs` | Modified | node-cron periodic scans; reads cron intervals from env vars | orchestrator, processors |
-
-| `daemon/watcher.mjs` | Unchanged | chokidar file watcher (active in volume-mount mode only) | processors, notifier |
-
-| `daemon/mcp-server.mjs` | Unchanged | MCP stdio server; 14 tools for Claude Code agents | DB, processors |
-
-| `daemon/mcp-http.mjs` | NEW | MCP Streamable HTTP server on :9001; same tools as stdio | DB, processors (same) |
-
-| `processors/git-ingestor.mjs` | NEW | Clone/pull git repos into /repos; trigger scan after pull | git, scanner, scheduler |
-
-| `config/profiles/docker.json` | NEW | Context profile for Docker mode: inline repo list, /repos paths | context/loader.mjs |
-
-| `Dockerfile` | NEW | Multi-stage build; node:22-alpine; bakes npm install | docker build |
-
-| `docker-compose.yml` | NEW | Volumes, env vars, port map, health check, restart policy | Docker |
-
-| `.github/workflows/docker-publish.yml` | NEW | Build + push GHCR on git tag; multi-arch (amd64 + arm64) | GitHub Actions, GHCR |
+| `daemon/server.mjs` | MODIFIED | Initializes both `db` (SQLite) and `kuzuDb` (Kuzu); passes both to routes/scheduler; updated `/graph` endpoint | SQLite, Kuzu, scheduler, processors |
+| `daemon/mcp-server.mjs` | MODIFIED | Receives `kuzuDb` alongside `db`; new tools: `graph_query`, `graph_rank`, `graph_cycles` | kuzu-queries.mjs, langchain-bridge.mjs |
+| `daemon/scheduler.mjs` | MODIFIED | After `buildRelationships()` in daily/weekly crons, calls `syncRelationshipsToKuzu()` | kuzu-sync.mjs |
+| `graph/relations.mjs` | UNCHANGED | Still writes to SQLite `doc_relationships`. Remains the source of truth for edge writes. | SQLite only |
+| `graph/kuzu-sync.mjs` | NEW | Reads `doc_relationships` from SQLite; upserts into Kuzu. Idempotent. Handles schema creation on first run. | SQLite (read), Kuzu (write) |
+| `graph/kuzu-queries.mjs` | NEW | All Cypher read queries: traversal, reverse traversal, PageRank, centrality, cycle detection | Kuzu (read), kuzu-sync.mjs |
+| `graph/langchain-bridge.mjs` | NEW | `GraphCypherQAChain` wired to KuzuGraphAdapter. Accepts natural language, returns structured result | kuzu-queries.mjs, LLM API |
+| `config/env.mjs` | MODIFIED | Add `KUZU_DB_PATH`, `KUZU_SYNC_ON_STARTUP`, `OPENAI_API_KEY` (or `LANGCHAIN_LLM_PROVIDER`) | All consumers |
+| `data/documind.kuzu/` | NEW (data dir) | Kuzu on-disk store directory (not a single file like SQLite) | Kuzu Database object only |
 
 ---
 
-## Docker Integration: How PM2 Is Replaced
-
-### PM2 in the current system
-
-PM2 manages two processes: `documind` (server.mjs) and `documind-mcp` (mcp-server.mjs). It provides process restart on crash, log rotation, and cluster management. In a container, all of this is unnecessary:
-
-- Docker's `restart: unless-stopped` handles crash restart
-
-- Docker logging captures stdout/stderr
-
-- One process per container is the container idiom
-
-### What replaces PM2
-
-The container runs `node daemon/server.mjs` as PID 1, wrapped with `dumb-init` to handle signal forwarding correctly. The MCP HTTP server runs as a second process started by `server.mjs` itself (not a separate PM2 app):
+## Recommended Project Structure Changes
 
 ```text
-
-Dockerfile CMD:
-  ["dumb-init", "node", "daemon/server.mjs"]
-
-server.mjs startup (additions):
-
-  1. Start Express :9000 (existing)
-
-  2. If DOCUMIND_MCP_HTTP=true: import mcp-http.mjs, start :9001
-
-  3. Register SIGTERM handler for graceful shutdown
-
+DocuMind/
+├── daemon/
+│   ├── server.mjs          MODIFIED — init kuzuDb alongside db; pass to all routes
+│   ├── mcp-server.mjs      MODIFIED — add 3 new graph intelligence tools
+│   └── scheduler.mjs       MODIFIED — call syncRelationshipsToKuzu after buildRelationships
+│
+├── graph/
+│   ├── relations.mjs       UNCHANGED — SQLite edge writer (source of truth)
+│   ├── kuzu-sync.mjs       NEW — SQLite → Kuzu bridge (sync/upsert)
+│   ├── kuzu-queries.mjs    NEW — all Cypher queries (traversal, algorithms, cycle)
+│   └── langchain-bridge.mjs NEW — text-to-Cypher via GraphCypherQAChain
+│
+├── config/
+│   └── env.mjs             MODIFIED — KUZU_DB_PATH, KUZU_SYNC_ON_STARTUP, LLM config
+│
+└── data/
+    ├── documind.db          UNCHANGED — SQLite (FTS5, metadata, keywords, etc.)
+    └── documind.kuzu/       NEW — Kuzu on-disk store (directory, not a file)
 ```
 
-The stdio MCP server (`mcp-server.mjs`) is NOT started in Docker by default. It is only reachable via `docker exec -i documind node daemon/mcp-server.mjs`. In Docker mode, MCP consumers use HTTP instead.
+### Why Kuzu gets its own directory (not a .db file)
 
-### Graceful shutdown additions to server.mjs
-
-```javascript
-
-// daemon/server.mjs — additions only
-process.on('SIGTERM', async () => {
-  console.error('[server] SIGTERM received, shutting down gracefully');
-  db.close();              // flush SQLite WAL
-  server.close(() => {     // drain existing HTTP connections
-    process.exit(0);
-  });
-  setTimeout(() => process.exit(1), 10_000); // force exit after 10s
-});
-
-```
+Kuzu stores its data as a directory containing multiple column files, WAL, and catalog files — not as a single `.db` file like SQLite. The path passed to `new kuzu.Database(path)` must point to a directory. This directory must be listed in `.dockerignore` and `.gitignore` alongside `data/documind.db`.
 
 ---
 
-## MCP HTTP Transport: Where It Sits
+## Kuzu Node.js API — Confirmed Patterns
 
-### Current MCP architecture
+Confidence: HIGH (official docs, npm package confirmed, ES module support confirmed)
 
-`daemon/mcp-server.mjs` uses `StdioServerTransport` from `@modelcontextprotocol/sdk/server/stdio.js`. It reads JSON-RPC from stdin, writes to stdout. Claude Code spawns it as a subprocess via `.claude/mcp.json` in each repo.
-
-### New: Streamable HTTP transport
-
-The installed SDK (`@modelcontextprotocol/sdk` v1.27.1) already ships `StreamableHTTPServerTransport` at:
-
-```text
-
-@modelcontextprotocol/sdk/server/streamableHttp.js
-
-```
-
-This is confirmed present in the installed node_modules. The class is `StreamableHTTPServerTransport`.
-
-### New file: daemon/mcp-http.mjs
-
-This is a new entry point, NOT a modification of `mcp-server.mjs`. It duplicates the tool registrations from `mcp-server.mjs` or better, imports them from a shared `daemon/mcp-tools.mjs` module (refactor opportunity, not required for v3.2 — see Anti-Patterns).
-
-Minimal structure for `mcp-http.mjs`:
-
-```javascript
-
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { randomUUID } from 'crypto';
-import express from 'express';
-
-const app = express();
-app.use(express.json());
-
-const transports = new Map(); // sessionId → transport
-
-app.all('/mcp', async (req, res) => {
-  const sessionId = req.headers['mcp-session-id'];
-  let transport;
-
-  if (req.method === 'POST' && !sessionId) {
-    // New session initialization
-    transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: () => randomUUID(),
-    });
-    const server = new McpServer({ name: 'DocuMind', version: '3.1.0' });
-    // register tools (same as mcp-server.mjs)
-    await server.connect(transport);
-    transports.set(transport.sessionId, transport);
-  } else {
-    transport = transports.get(sessionId);
-    if (!transport) { res.status(404).end(); return; }
-  }
-
-  await transport.handleRequest(req, res, req.body);
-});
-
-const MCP_HTTP_PORT = process.env.DOCUMIND_MCP_HTTP_PORT || 9001;
-app.listen(MCP_HTTP_PORT, () => {
-  console.error(`[mcp-http] Streamable HTTP transport on :${MCP_HTTP_PORT}/mcp`);
-});
-
-```
-
-**Why stateful mode (not stateless):** DocuMind MCP tools involve multi-step operations (lint + fix). Stateful sessions allow session context to be maintained. Stateless mode would require every call to re-initialize the DB connection — wasteful.
-
-### How Docker exposes MCP HTTP
-
-```yaml
-
-# docker-compose.yml
-
-ports:
-
-  - "9000:9000"   # REST API
-
-  - "9001:9001"   # MCP HTTP (only expose if remote access needed)
-
-```
-
-For local-only use, omit the 9001 port binding — it stays internal to the container network.
-
-### Updated .claude/mcp.json for HTTP mode
-
-Remote consumers configure their MCP client to use:
-
-```json
-
-{
-  "mcpServers": {
-    "documind": {
-      "url": "http://localhost:9001/mcp"
-    }
-  }
-}
-
-```
-
-Local Claude Code (non-Docker) continues using stdio with `command: "node daemon/mcp-server.mjs"`.
-
----
-
-## Git-Clone Ingestion: How It Plugs In
-
-### The problem it solves
-
-In volume-mount mode, repo paths are hardcoded to `/Users/Shared/htdocs/github/DVWDesign/...` (the host machine's paths). In a CI environment or on a remote Linux server, those paths don't exist. Git-clone mode lets the container fetch repos itself.
-
-### Where it hooks in
-
-The ingestion point is the `context/loader.mjs` profile system. The profile already resolves `repoRoots` as an array of `{ name, path }` objects. Git-clone mode adds a step before the daemon starts:
-
-```text
-
-Container startup sequence (git-clone mode):
-
-1. docker-entrypoint.sh runs git-ingestor.mjs
-
-   → reads DOCUMIND_REPOS env var (JSON array of { name, url, branch })
-   → clones each repo into /repos/{name}/ if not present
-   → pulls if already present (git pull --ff-only)
-   → exits 0 if all succeed, 1 if any fail
-   ↓
-
-2. node daemon/server.mjs starts
-
-   → loads docker.json profile
-   → docker.json has inline repositories: [{ name, path: "/repos/{name}" }]
-   → ctx.repoRoots resolved from /repos/*
-   ↓
-
-3. scheduler.mjs runs initial scan on startup (not just on cron trigger)
-
-   → scans /repos/* via existing scan-all-repos logic
-   ↓
-
-4. Periodic re-pull (optional): scheduler adds a git-pull cron job
-
-   → every GIT_PULL_CRON (default: "0 * * * *") runs git pull in each /repos/{name}
-   → after pull, triggers incremental scan for changed files
-
-```
-
-### New file: processors/git-ingestor.mjs
-
-```javascript
-
-// processors/git-ingestor.mjs
-import { execFile } from 'child_process';
-import { promisify } from 'util';
-import fs from 'fs/promises';
-import path from 'path';
-
-const exec = promisify(execFile);
-const REPOS_DIR = process.env.DOCUMIND_REPOS_DIR || '/repos';
-
-export async function cloneOrPull(repos) {
-  // repos: Array<{ name: string, url: string, branch?: string }>
-  const results = [];
-  for (const repo of repos) {
-    const dest = path.join(REPOS_DIR, repo.name);
-    const exists = await fs.access(dest).then(() => true).catch(() => false);
-    if (exists) {
-      const { stdout } = await exec('git', ['-C', dest, 'pull', '--ff-only']);
-      results.push({ name: repo.name, action: 'pull', output: stdout.trim() });
-    } else {
-      const args = ['clone', '--depth=1'];
-      if (repo.branch) args.push('--branch', repo.branch);
-      args.push(repo.url, dest);
-      await exec('git', args);
-      results.push({ name: repo.name, action: 'clone', dest });
-    }
-  }
-  return results;
-}
-
-```
-
-### docker-entrypoint.sh
+### Installation
 
 ```bash
-
-#!/bin/sh
-set -e
-
-# If git-clone mode is enabled, ingest repos before starting daemon
-
-if [ -n "$DOCUMIND_REPOS" ]; then
-  echo "[entrypoint] Git-clone mode: ingesting repos..."
-  node /app/scripts/ingest-repos.mjs
-fi
-
-exec "$@"
-
+npm install kuzu
 ```
 
-### Interaction with chokidar
+The `kuzu` npm package ships pre-built native binaries. No node-gyp rebuild required (unlike better-sqlite3). Supports ES module imports in Node.js.
 
-In git-clone mode, chokidar watches `/repos/*` (not the host filesystem). This is correct — changes arrive via `git pull`, not via user edits. The watcher still provides value: if git pull modifies files, the 5s debounce batch picks them up. However, the watcher is optional in git-clone mode; the scheduler's periodic scan is the primary ingestion trigger.
-
-**Decision:** Keep the watcher running in git-clone mode. It adds negligible overhead and catches any mid-cycle file changes. No code change required.
-
----
-
-## Environment Variable Configuration
-
-### Current env vars (in ecosystem.config.cjs)
-
-| Var | Current Default | Notes |
-
-| --- | --- | --- |
-
-| `PORT` | `9000` | Express listen port |
-
-| `NODE_ENV` | `production` | |
-
-| `DOCUMIND_DB` | `./data/documind.db` | SQLite path |
-
-| `DOCUMIND_PROFILE` | `./config/profiles/dvwdesign.json` | Context profile path |
-
-### New env vars (v3.2)
-
-| Var | Default | Purpose |
-
-| --- | --- | --- |
-
-| `DOCUMIND_MCP_HTTP` | `false` | If `true`, starts mcp-http.mjs alongside Express |
-
-| `DOCUMIND_MCP_HTTP_PORT` | `9001` | Port for MCP HTTP server |
-
-| `DOCUMIND_REPOS` | (unset) | JSON array of `{ name, url, branch }` for git-clone mode |
-
-| `DOCUMIND_REPOS_DIR` | `/repos` | Target dir for cloned repos |
-
-| `SCAN_INTERVAL` | `0 * * * *` | Cron expression for incremental scan |
-
-| `FULL_SCAN_CRON` | `0 2 * * *` | Cron expression for daily full scan |
-
-| `GIT_PULL_CRON` | `0 * * * *` | Cron expression for git pull refresh |
-
-### What changes in scheduler.mjs
-
-Replace hardcoded cron strings:
+### Initialization (ES module, async API)
 
 ```javascript
+import { Database, Connection } from 'kuzu';
 
-// Before (hardcoded):
-cron.schedule('0 * * * *', () => runIncrementalScan(db));
-
-// After (env-configurable):
-const SCAN_INTERVAL = process.env.SCAN_INTERVAL || '0 * * * *';
-cron.schedule(SCAN_INTERVAL, () => runIncrementalScan(db));
-
+// In server.mjs startup
+const kuzuDb = new Database(KUZU_DB_PATH);          // opens/creates directory
+const kuzuConn = new Connection(kuzuDb);             // single shared connection for standard queries
+await kuzuConn.query(`...`);                         // async, returns QueryResult
+const rows = await result.getAll();                  // Array of plain objects
 ```
 
-This enables CI deployments to use `SCAN_INTERVAL=*/5 * * * *` for faster ingestion during tests.
+### Sync API (for graph algorithm projected graphs)
+
+Kuzu provides both async and sync APIs. The async API uses a connection pool internally. The **critical limitation**: projected graphs (required for PageRank and other algo extension algorithms) are bound to a specific connection instance. The async API's connection pool may route queries to different connections, making the projected graph unavailable.
+
+**Workaround:** For algorithm queries, use the sync `Connection` API or a dedicated single `Connection` object held for the duration of the algorithm run. The algo extension (PageRank, Connected Components, Louvain) is pre-installed in Kuzu >= 0.11.3.
+
+```javascript
+// Projected graph + PageRank (use dedicated connection, not pool)
+const algoConn = new Connection(kuzuDb);  // dedicated connection for algorithm runs
+await algoConn.query(`CALL PROJECT_GRAPH('DocGraph', ['Document'], ['RELATES_TO', 'IMPORTS', 'SUPERSEDES'])`);
+const result = await algoConn.query(`CALL page_rank('DocGraph') RETURN node.path, rank ORDER BY rank DESC LIMIT 20`);
+```
+
+### Kuzu schema for DocuMind documents
+
+```text
+Node table:  Document { id: INT64, path: STRING, repository: STRING, filename: STRING, category: STRING }
+Edge tables: IMPORTS    (Document → Document) { weight: DOUBLE, link_text: STRING }
+             DISPATCHED_TO (Document → Document) { target_repo: STRING }
+             SUPERSEDES (Document → Document) { confidence: DOUBLE }
+             RELATED_TO (Document → Document) { reason: STRING, weight: DOUBLE }
+             PARENT_OF  (Document → Document)
+             VARIANT_OF (Document → Document)
+             DEPENDS_ON (Document → Document)
+             GENERATED_FROM (Document → Document)
+```
+
+This mirrors the 8 relationship types in SQLite's `doc_relationships` table.
 
 ---
 
-## Dockerfile Architecture
+## Data Flow: SQLite → Kuzu Sync
 
-### Multi-stage build
+The sync is unidirectional. SQLite remains the write source. Kuzu is a read-optimized graph projection of the same data.
 
-```dockerfile
+### Sync trigger points
 
-# Stage 1: deps
+```text
+1. Startup sync (conditional):
+   server.mjs starts
+       ↓
+   if (KUZU_SYNC_ON_STARTUP) syncRelationshipsToKuzu(db, kuzuDb)
+       ↓ (reads all doc_relationships from SQLite, upserts to Kuzu)
+   Express server starts accepting requests
 
-FROM node:22-alpine AS deps
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --omit=dev
+2. Post-relationship-build sync (daily + weekly crons):
+   scheduler.mjs: CRON_DAILY fires
+       ↓
+   runScan(db, ctx, { mode: 'full' })
+       ↓  (existing path — builds all relationships in SQLite)
+   buildRelationships(db)   [graph/relations.mjs — UNCHANGED]
+       ↓
+   syncRelationshipsToKuzu(db, kuzuDb)   [NEW — graph/kuzu-sync.mjs]
+       ↓
+   Kuzu graph reflects current SQLite edge state
 
-# Stage 2: runtime
-
-FROM node:22-alpine AS runtime
-RUN apk add --no-cache dumb-init git
-WORKDIR /app
-
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-
-# Don't bake DB or profile — they come from volumes/env
-
-RUN rm -f data/documind.db
-
-# Health check: Express /health endpoint
-
-HEALTHCHECK --interval=30s --timeout=5s --start-period=15s \
-  CMD wget -qO- http://localhost:9000/health || exit 1
-
-EXPOSE 9000 9001
-
-ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "daemon/server.mjs"]
-
+3. On-demand sync (via REST or MCP):
+   POST /graph/sync
+       ↓
+   syncRelationshipsToKuzu(db, kuzuDb)
+   → useful during development or after manual edge manipulation
 ```
 
-### Why dumb-init
+### What kuzu-sync.mjs does
 
-Node.js as PID 1 does not handle SIGTERM properly — it ignores signals that it hasn't explicitly registered handlers for. `dumb-init` runs as PID 1, forwards signals to the Node.js process (PID 2), and reaps zombie processes. This is critical for `docker stop` to cleanly shut down the daemon.
-
-### Why better-sqlite3 works in Alpine
-
-`better-sqlite3` uses native bindings (compiled C++). `npm ci` in the Dockerfile rebuilds the bindings for the Alpine musl libc environment. The host machine's pre-compiled `node_modules/better-sqlite3/build/` is NOT copied — only the `node_modules` from the `deps` stage (which built on Alpine) transfers to the runtime stage. This is why the multi-stage build is required.
-
-### SQLite data volume
-
-The DB must NOT be baked into the image. It lives in a Docker named volume:
-
-```yaml
-
-# docker-compose.yml
-
-services:
-  documind:
-    volumes:
-
-      - documind_data:/app/data
-
-      - documind_repos:/repos  # only in git-clone mode
-
-volumes:
-  documind_data:
-  documind_repos:
-
+```text
+1. Ensure Kuzu schema exists (CREATE NODE TABLE IF NOT EXISTS, etc.)
+2. DELETE all existing Document nodes (CASCADE deletes edges)
+   - Simpler than incremental upsert; graph is rebuilt from SQLite
+   - Full rebuild takes < 1 second for 8K documents / ~50K edges (benchmark estimate)
+3. Batch-insert all documents as Kuzu nodes
+4. Batch-insert all doc_relationships rows as typed Kuzu edges
+   - Maps relationship_type string → correct Kuzu edge table
+5. Return { nodes: N, edges: M, durationMs: X }
 ```
 
-In volume-mount mode (local dev), bind mount the host repos instead:
+Full rebuild is preferred over incremental upsert because:
 
-```yaml
+- Kuzu does not support MERGE/upsert with the same ergonomics as SQLite's INSERT OR IGNORE
+- The graph is rebuilt from SQLite after every full scan anyway (idempotent by design)
+- At 8K nodes / 50K edges, a full Kuzu rebuild completes in well under one second
 
-volumes:
+---
 
-  - documind_data:/app/data
+## LangChain Text-to-Cypher: Architecture Decision
 
-  - /Users/Shared/htdocs/github/DVWDesign:/repos:ro
+### The gap: LangChain.js has no Kuzu adapter
 
+The Python `langchain-kuzu` package provides `KuzuQAChain` but no equivalent exists in LangChain.js. LangChain.js has `GraphCypherQAChain` which works with Neo4j via the `Neo4jGraph` class. `GraphCypherQAChain` accepts any graph object that implements `getSchema()` and `query()`.
+
+**Decision:** Implement a minimal `KuzuGraphAdapter` class that satisfies the `GraphCypherQAChain` interface. This is ~50 lines of code and avoids a Python subprocess dependency.
+
+Confidence: MEDIUM (GraphCypherQAChain interface confirmed in LangChain.js docs; custom adapter pattern inferred from interface contract — not an officially documented pattern but structurally sound)
+
+### KuzuGraphAdapter interface
+
+```javascript
+// graph/langchain-bridge.mjs
+
+class KuzuGraphAdapter {
+  constructor(conn, schemaString) {
+    this.conn = conn;
+    this.schema = schemaString;  // static — generated at startup from Kuzu schema
+  }
+
+  getSchema() {
+    return this.schema;
+  }
+
+  async query(cypherQuery) {
+    const result = await this.conn.query(cypherQuery);
+    return result.getAll();  // returns Array<plain object>
+  }
+}
+```
+
+### GraphCypherQAChain wiring
+
+```javascript
+import { GraphCypherQAChain } from 'langchain/chains/graph_qa/cypher';
+import { ChatOpenAI } from '@langchain/openai';  // or anthropic, etc.
+
+const llm = new ChatOpenAI({ modelName: 'gpt-4o-mini' });
+const adapter = new KuzuGraphAdapter(kuzuConn, buildSchemaString());
+const chain = GraphCypherQAChain.fromLLM({ llm, graph: adapter });
+
+// Usage:
+const result = await chain.invoke({ query: 'Which documents are most referenced?' });
+```
+
+### In-process vs subprocess
+
+LangChain.js runs in-process in the same Node.js process as the daemon. No Python subprocess is spawned. The LLM calls are outbound HTTP to the LLM API (OpenAI, Anthropic, etc.).
+
+**Why in-process:** The LLM call is already the bottleneck (network latency). Running LangChain.js in-process avoids IPC serialization overhead and keeps the architecture simple.
+
+**Dependency:** LangChain text-to-Cypher requires an LLM API key. The `graph_query` MCP tool must return a graceful error (not crash) when no LLM key is configured. Standard queries that don't require LLM (direct Cypher via `graph_rank`, `graph_cycles`) must work without any LLM key.
+
+---
+
+## New Components: File-by-File
+
+### graph/kuzu-sync.mjs (NEW)
+
+```text
+Exports:
+  syncRelationshipsToKuzu(db, kuzuDb) → Promise<{ nodes, edges, durationMs }>
+  initKuzuSchema(kuzuDb) → Promise<void>  (called once at startup)
+
+Reads from:  SQLite — documents + doc_relationships
+Writes to:   Kuzu — Document nodes, all 8 edge tables
+Pattern:     Full rebuild (DELETE all → batch insert)
+```
+
+### graph/kuzu-queries.mjs (NEW)
+
+```text
+Exports:
+  traverseFrom(conn, docId, hops)     → replaces findRelated() for graph ops
+  reverseTraversal(conn, docId, hops) → who links TO this doc (not possible with SQLite CTE easily)
+  pageRankTop(conn, limit)            → top N docs by PageRank score
+  centralityTop(conn, limit)          → top N by betweenness centrality
+  detectCycles(conn)                  → returns cycle paths in the graph
+  runCypherQuery(conn, cypher)        → raw Cypher passthrough (for LangChain bridge)
+
+Each function:
+  - accepts a kuzu.Connection (caller manages lifecycle)
+  - returns plain JS arrays/objects (no Kuzu-specific types leaked)
+  - handles async properly (Kuzu Node.js async API)
+```
+
+### graph/langchain-bridge.mjs (NEW)
+
+```text
+Exports:
+  createGraphQAChain(kuzuDb) → GraphCypherQAChain (or null if no LLM key)
+  queryGraph(chain, naturalLanguageQuery) → Promise<string>
+
+Internals:
+  KuzuGraphAdapter class (implements getSchema + query)
+  buildSchemaString(kuzuDb) → generates schema description from Kuzu catalog
 ```
 
 ---
 
-## GHCR Publishing
+## Modified Components: What Changes
 
-### GitHub Actions workflow
-
-```yaml
-
-# .github/workflows/docker-publish.yml
-
-name: Publish Docker Image
-on:
-  push:
-    tags: ['v*']
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-
-      - uses: actions/checkout@v4
-
-      - uses: docker/setup-buildx-action@v3
-
-      - uses: docker/login-action@v3
-
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: docker/build-push-action@v6
-
-        with:
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ghcr.io/dvwdesign/documind:${{ github.ref_name }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-```
-
-The `GITHUB_TOKEN` secret is automatically available — no extra secrets needed. Multi-arch (amd64 + arm64) means the image runs on both Intel/AMD cloud VMs and Apple Silicon Macs.
-
----
-
-## Data Flow Changes
-
-### Volume-Mount Mode (local dev)
+### daemon/server.mjs
 
 ```text
-
-Host .md files change
-    ↓
-chokidar (running inside container, watching /repos/* = host bind-mount)
-    ↓ 5s debounce
-processPendingChanges() → markdown-processor.indexFile()
-    ↓
-SQLite /app/data/documind.db (in named volume)
-    ↓
-Express :9000 serves queries
-MCP HTTP :9001 serves agent queries
-
+Changes:
+1. Import Database from 'kuzu'
+2. const kuzuDb = new kuzu.Database(KUZU_DB_PATH) after SQLite init
+3. Pass kuzuDb to: initScheduler(), route handlers for /graph
+4. On startup: await initKuzuSchema(kuzuDb), optionally syncRelationshipsToKuzu()
+5. Update GET /graph endpoint to query Kuzu instead of SQLite document_graph view
+6. Add POST /graph/sync endpoint (on-demand sync trigger)
+7. On SIGTERM: close kuzuDb connection before process.exit (Kuzu flushes WAL on close)
 ```
 
-### Git-Clone Mode (CI / remote)
+### daemon/mcp-server.mjs
 
 ```text
-
-docker-entrypoint.sh: git clone/pull → /repos/*
-    ↓
-node daemon/server.mjs starts
-    ↓
-scheduler: initial scan on startup
-    ↓
-markdown-processor.indexFile() × N files
-    ↓
-SQLite /app/data/documind.db
-    ↓
-Periodic: GIT_PULL_CRON fires
-    ↓
-git-ingestor.mjs: git pull each /repos/{name}
-    ↓
-chokidar detects changed files
-    ↓
-processPendingChanges() → re-index changed files
-
+Changes:
+1. Accept kuzuDb parameter (or import shared kuzuDb singleton)
+2. New tool: graph_query — text-to-Cypher via langchain-bridge.mjs
+3. New tool: graph_rank  — PageRank top-N, returns ranked document list
+4. New tool: graph_cycles — returns detected cycles (for editorial review)
+5. Existing tool: get_related — keep as-is (still works from SQLite via findRelated)
+   OR: migrate get_related to kuzu-queries.traverseFrom() for consistency
 ```
 
-### MCP HTTP Request Flow
+The decision on `get_related` migration: keep it on SQLite for v3.3. The new Kuzu tools are additive. Migrating `get_related` is a follow-on cleanup.
+
+### daemon/scheduler.mjs
 
 ```text
+Changes:
+1. Accept kuzuDb parameter
+2. In CRON_DAILY handler: after runScan() completes, call syncRelationshipsToKuzu(db, kuzuDb)
+3. In CRON_WEEKLY handler: same — sync after deep scan
+4. Hourly cron does NOT sync (too frequent; relationships only rebuild on full/deep scans)
+```
 
-Remote MCP client POST http://container:9001/mcp
-    (InitializeRequest, no session ID)
-    ↓
-StreamableHTTPServerTransport creates new session
-    → generates UUID session ID
-    → includes Mcp-Session-Id in response header
-    ↓
-McpServer processes tool call
-    → same DB queries as stdio version
-    ↓
-Response: SSE stream OR JSON (client's Accept header determines)
-    ↓
-Subsequent requests include Mcp-Session-Id header
+### config/env.mjs
 
+```text
+New exports:
+  KUZU_DB_PATH       — path.resolve(ROOT, process.env.DOCUMIND_KUZU_DB ?? 'data/documind.kuzu')
+  KUZU_SYNC_ON_STARTUP — process.env.KUZU_SYNC_ON_STARTUP !== 'false'  (default: true)
+  LLM_API_KEY        — process.env.OPENAI_API_KEY ?? process.env.ANTHROPIC_API_KEY ?? null
+  LLM_MODEL          — process.env.DOCUMIND_LLM_MODEL ?? 'gpt-4o-mini'
 ```
 
 ---
 
 ## Suggested Build Order
 
-The build order is driven by dependencies between components. Each step is independently testable.
+Dependencies drive this order. Each phase is independently testable before the next begins.
 
 ```text
+Phase 1: Install + schema bootstrap
+  - npm install kuzu
+  - Write graph/kuzu-sync.mjs (initKuzuSchema only — no sync yet)
+  - Add KUZU_DB_PATH to config/env.mjs
+  - Modify server.mjs: open kuzuDb, call initKuzuSchema on startup
+  - Verify: server starts, data/documind.kuzu/ directory created, /health still returns 200
+  - Why first: Every other phase requires a live Kuzu database with schema
 
-Step 1: Dockerfile + docker-compose.yml + .dockerignore
-  → Can be validated with: docker compose up
-  → Tests: container starts, /health returns 200, DB initializes
-  → No code changes needed — just new files
-  → Confidence check: better-sqlite3 builds on Alpine
+Phase 2: SQLite → Kuzu sync bridge
+  - Complete graph/kuzu-sync.mjs (syncRelationshipsToKuzu full rebuild logic)
+  - Add POST /graph/sync endpoint to server.mjs
+  - Wire KUZU_SYNC_ON_STARTUP in server.mjs startup sequence
+  - Verify: curl -X POST localhost:9000/graph/sync returns { nodes: N, edges: M }
+  - Check: data/documind.kuzu/ grows in size; Kuzu explorer confirms nodes/edges
+  - Why second: All graph queries depend on data being in Kuzu
 
-Step 2: Graceful shutdown + health check liveness (daemon/server.mjs)
-  → Add SIGTERM/SIGINT handlers
-  → Enhance /health to include db.prepare('SELECT 1').get() liveness
-  → Tests: docker stop cleanly shuts down, /health returns 200 with db_ok: true
-  → Dependency: Step 1 must work so Docker can send SIGTERM
+Phase 3: Cypher query layer + updated /graph endpoint
+  - Write graph/kuzu-queries.mjs (traverseFrom, reverseTraversal, pageRankTop, centralityTop, detectCycles)
+  - Note: pageRankTop and centralityTop require dedicated Connection (projected graph limitation)
+  - Update GET /graph in server.mjs to use kuzu-queries instead of document_graph SQLite view
+  - Verify: GET /graph returns same shape as before (backwards compatible response)
+  - Verify: GET /graph?algo=pagerank returns ranked docs
+  - Why third: Validates the sync data is queryable before wiring into MCP
 
-Step 3: Environment variable config (daemon/scheduler.mjs + context/loader.mjs)
-  → Replace hardcoded cron strings with process.env fallbacks
-  → Add DOCUMIND_REPOS support to loader.mjs (or docker.json profile with inline repos)
-  → Tests: SCAN_INTERVAL env override changes cron behavior
-  → Dependency: Step 2 (container must be running to verify env vars work)
+Phase 4: Scheduler integration
+  - Modify scheduler.mjs: pass kuzuDb, call syncRelationshipsToKuzu after daily/weekly scans
+  - Verify: trigger a manual scan, confirm Kuzu edge count increases to match new relationships
+  - Why fourth: Sync is already proven (Phase 2); scheduler just adds the automated trigger
 
-Step 4: Git-clone mode (processors/git-ingestor.mjs + docker-entrypoint.sh)
-  → Write git-ingestor.mjs (clone/pull)
-  → Write docker-entrypoint.sh (calls ingestor if DOCUMIND_REPOS set)
-  → Write config/profiles/docker.json (inline repo list, /repos paths)
-  → Tests: set DOCUMIND_REPOS, verify repos appear in /repos and get scanned
-  → Dependency: Step 3 (env var support must exist for DOCUMIND_REPOS)
+Phase 5: New MCP tools (graph_rank + graph_cycles)
+  - Modify mcp-server.mjs: add graph_rank and graph_cycles tools
+  - Tools call kuzu-queries.pageRankTop() and kuzu-queries.detectCycles()
+  - Verify: call tools from Claude Code, confirm structured output
+  - Why fifth: Tools depend on kuzu-queries being stable (Phase 3)
 
-Step 5: MCP HTTP transport (daemon/mcp-http.mjs)
-  → Write mcp-http.mjs using StreamableHTTPServerTransport
-  → Wire into server.mjs startup: if DOCUMIND_MCP_HTTP=true, start mcp-http
-  → Tests: connect MCP inspector to http://localhost:9001/mcp, verify tools respond
-  → Dependency: Step 2 (server.mjs must handle multiple processes cleanly)
-
-Step 6: GHCR publish workflow (.github/workflows/docker-publish.yml)
-  → Write GitHub Actions workflow
-  → Push a test tag to trigger it
-  → Tests: image appears on ghcr.io/dvwdesign/documind
-  → Dependency: Steps 1-5 complete (image must actually work)
-
+Phase 6: LangChain text-to-Cypher (graph_query MCP tool)
+  - npm install langchain @langchain/openai (or @langchain/anthropic)
+  - Write graph/langchain-bridge.mjs (KuzuGraphAdapter + GraphCypherQAChain wiring)
+  - Add graph_query MCP tool to mcp-server.mjs
+  - Requires: LLM_API_KEY in environment
+  - Graceful degradation: if no LLM key, graph_query returns instructive error
+  - Verify: natural language query returns plausible Cypher + results
+  - Why last: Highest complexity, external dependency (LLM API). All graph infrastructure
+    must be stable before adding the LLM layer.
 ```
-
-**Why this order:** Steps 1-2 get a working container. Step 3 adds config flexibility before any mode-specific code. Step 4 (git-clone) and Step 5 (MCP HTTP) are independent of each other after Step 3 — they can be built in parallel. Step 6 only makes sense once the image is production-ready.
-
----
-
-## Component Boundaries: New vs Modified vs Unchanged
-
-| Component | Action | Why |
-
-| --- | --- | --- |
-
-| `Dockerfile` | NEW | Container build instructions |
-
-| `docker-compose.yml` | NEW | Local dev container orchestration |
-
-| `.dockerignore` | NEW | Exclude dev artifacts from image |
-
-| `daemon/mcp-http.mjs` | NEW | HTTP transport entry point |
-
-| `processors/git-ingestor.mjs` | NEW | Clone/pull processor |
-
-| `scripts/ingest-repos.mjs` | NEW | CLI wrapper for git-ingestor (called by entrypoint) |
-
-| `docker-entrypoint.sh` | NEW | Pre-start hook for git-clone mode |
-
-| `config/profiles/docker.json` | NEW | Docker-specific context profile |
-
-| `.github/workflows/docker-publish.yml` | NEW | GHCR CI/CD |
-
-| `daemon/server.mjs` | MODIFIED | Add SIGTERM handler, MCP HTTP startup, health liveness |
-
-| `daemon/scheduler.mjs` | MODIFIED | Replace hardcoded cron strings with env vars |
-
-| `context/loader.mjs` | MODIFIED (minor) | Support DOCUMIND_REPOS_DIR path prefix for git-clone repos |
-
-| `daemon/mcp-server.mjs` | UNCHANGED | Stdio MCP untouched; Docker mode uses mcp-http.mjs |
-
-| `daemon/watcher.mjs` | UNCHANGED | Works in both modes; watches /repos/* |
-
-| `daemon/hooks.mjs` | UNCHANGED | Hook routing unchanged |
-
-| `processors/*` | UNCHANGED | All 7 processors need no Docker-specific changes |
-
-| `graph/*` | UNCHANGED | Graph queries need no changes |
-
-| `scripts/*` | UNCHANGED | CLI tools available via docker exec |
-
-| `ecosystem.config.cjs` | UNCHANGED | Still used for PM2 local dev; Docker ignores it |
-
-| `data/documind.db` | VOLUME | Never in image; always a mounted volume |
 
 ---
 
 ## Integration Points
 
-### Docker Container ↔ Host Filesystem
+### Kuzu + SQLite coexistence in the same Node.js process
 
-| Mode | Integration | Notes |
+No conflict. SQLite (via better-sqlite3) is synchronous and operates on `.db` files. Kuzu (via the `kuzu` npm package) is async and operates on a directory. They use separate file handles, separate memory buffers, and separate locking mechanisms. Both can be open simultaneously without interference.
 
-| --- | --- | --- |
+The only coordination needed: the sync bridge reads from SQLite and writes to Kuzu in sequence. No transaction spanning both databases is attempted (not possible, not needed — Kuzu is a read projection of SQLite data).
 
-| Volume-mount (local dev) | Host `/Users/Shared/htdocs/github/DVWDesign` → `/repos` (bind mount, `:ro`) | Read-only is correct; DocuMind only reads repos, never writes back |
+### Kuzu Database object lifecycle
 
-| Git-clone (CI/remote) | Container writes to `/repos` named volume via `git clone` | No host filesystem dependency |
+```text
+server.mjs owns the single kuzu.Database instance.
+All modules that need Kuzu receive kuzuDb (the Database object) as a parameter.
+They create their own Connection objects locally as needed.
+Connection objects are lightweight and can be created/destroyed per query.
+Exception: algo queries (PageRank) require a Connection held for the projected graph's lifetime
+  → kuzu-queries.mjs manages a dedicated algoConn for the duration of each algo call.
+```
 
-| Data | Named volume `documind_data` → `/app/data` | DB persists across container restarts |
+### Docker / data volume
 
-### MCP HTTP ↔ Claude Code
+Kuzu's data directory (`data/documind.kuzu/`) must be in the same named volume as the SQLite file. Both live under `data/`:
 
-| Transport | Config Location | Use When |
+```text
+Named volume documind_data → /app/data/
+  /app/data/documind.db          (SQLite)
+  /app/data/documind.kuzu/       (Kuzu directory)
+```
 
-| --- | --- | --- |
+No Dockerfile change needed — the existing `documind_data` volume already mounts `/app/data`. Add `data/documind.kuzu/` to `.gitignore`.
 
-| stdio | `.claude/mcp.json` in each repo: `command: "node daemon/mcp-server.mjs"` | Local machine, PM2 or Docker with exec |
+### better-sqlite3 native binaries + Kuzu native binaries in Alpine Docker
 
-| HTTP | `.claude/mcp.json`: `url: "http://localhost:9001/mcp"` | Containerized, CI, or remote consumers |
-
-### Scheduler ↔ Git Ingestor
-
-The scheduler gains one new cron job in git-clone mode: periodic `git pull`. This is separate from the existing scan crons — a pull runs first, then the incremental scan fires (or the watcher picks up the changed files). The scheduler calls `git-ingestor.mjs`'s `cloneOrPull()` function directly.
-
-### better-sqlite3 ↔ Docker Alpine
-
-`better-sqlite3` uses native Node.js addons compiled with node-gyp. The Dockerfile must run `npm ci --omit=dev` inside the Alpine build stage — not copy pre-compiled binaries from the host. Key Alpine dependencies: `python3`, `make`, `g++` (all available as `npm ci` build deps in the node:22-alpine base image by default). If Alpine base lacks them, add `RUN apk add --no-cache python3 make g++` before `npm ci`.
+Kuzu ships pre-built binaries via npm (no node-gyp). In Alpine Docker, the Dockerfile's existing `npm ci --omit=dev` in the deps stage will download the correct pre-built Kuzu binary for Linux musl. This is simpler than better-sqlite3 (which does require rebuild). No Dockerfile changes required for Kuzu.
 
 ---
 
 ## Anti-Patterns
 
-### Anti-Pattern 1: Baking the SQLite DB into the image
+### Anti-Pattern 1: Creating multiple kuzu.Database instances
 
-**What people do:** Run `COPY data/documind.db /app/data/documind.db` in the Dockerfile.
+**What people do:** Each module that needs Kuzu creates `new kuzu.Database(path)` independently (mirroring the SQLite pattern in express routes).
 
-**Why it's wrong:** Every `docker build` creates a new image with the baked-in DB state. The DB is not updated by container restarts — it resets to the build-time snapshot on each pull. DB state must be externalized to a volume.
+**Why it's wrong:** Kuzu enforces a single READ_WRITE Database object per path. A second `new Database(path)` while the first is open will either throw or corrupt. The error happens silently in some configurations.
 
-**Do this instead:** `RUN rm -f data/documind.db` in the Dockerfile to ensure no accidental baking. Mount as a named volume.
+**Do this instead:** Create one `kuzuDb` instance in `server.mjs` at startup. Pass it as a parameter to all consumers. Never instantiate `Database` in any module other than `server.mjs`.
 
-### Anti-Pattern 2: Running PM2 inside Docker
+### Anti-Pattern 2: Running projected graph queries through the async connection pool
 
-**What people do:** `npm install -g pm2 && pm2 start ecosystem.config.cjs` as the Docker CMD.
+**What people do:** Use the standard async `Connection` for PageRank/centrality queries (same as traversal queries).
 
-**Why it's wrong:** PM2 inside Docker adds a supervisor-of-supervisors pattern. Docker is already the supervisor. PM2 interferes with signal forwarding (SIGTERM goes to PM2, which may not pass it to Node.js). PM2 log rotation duplicates Docker log management.
+**Why it's wrong:** Projected graphs are bound to a specific connection. The async API uses a connection pool. The pool may route subsequent queries to a different connection, making the projected graph "not found."
 
-**Do this instead:** `dumb-init node daemon/server.mjs` as the CMD. One process per container.
+**Do this instead:** In `kuzu-queries.mjs`, create a dedicated `Connection` object for algorithm queries. Run `PROJECT_GRAPH` and the algorithm query on the same connection object. Destroy the connection after the algorithm completes.
 
-### Anti-Pattern 3: Copying mcp-server.mjs tool logic into mcp-http.mjs verbatim
+### Anti-Pattern 3: Writing graph edges directly to Kuzu (bypassing SQLite)
 
-**What people do:** Duplicate all 14 tool registrations from `mcp-server.mjs` into `mcp-http.mjs` as a copy-paste.
+**What people do:** Modify `relations.mjs` to write edges to Kuzu instead of (or in addition to) SQLite.
 
-**Why it's wrong:** Two places to update when tools change. Tool behavior diverges between stdio and HTTP modes. v3.1 already happened — there are 14 tools; divergence is a real risk.
+**Why it's wrong:** SQLite `doc_relationships` is the source of truth for all downstream processors (deviation analysis, linting, etc.). Splitting the write path creates two sources of truth. The sync model is unidirectional for a reason.
 
-**Do this instead:** Extract tool registrations into `daemon/mcp-tools.mjs` (a shared module). Both `mcp-server.mjs` and `mcp-http.mjs` import and call `registerTools(server, db, ctx)`. This is a refactor opportunity in v3.2 — not strictly required but highly recommended.
+**Do this instead:** Keep all writes in `relations.mjs` → SQLite. Sync to Kuzu is always a read projection via `kuzu-sync.mjs`. If real-time Kuzu writes become necessary later, implement a change-event queue between the two.
 
-### Anti-Pattern 4: Exposing MCP HTTP on 0.0.0.0 without validation
+### Anti-Pattern 4: Calling `syncRelationshipsToKuzu` on every incremental scan
 
-**What people do:** Start `app.listen(9001)` with no Origin header validation.
+**What people do:** Wire the sync into the hourly incremental scan cron.
 
-**Why it's wrong:** The MCP specification (2025-03-26) explicitly requires Origin header validation to prevent DNS rebinding attacks. Any web page could call the MCP endpoint from a browser if it's exposed without validation.
+**Why it's wrong:** Incremental scans update documents and keywords, but they do NOT call `buildRelationships()`. Kuzu would re-sync the same relationship data every hour with no benefit. A full rebuild for 50K edges takes < 1 second — the waste is in the unnecessary scheduling overhead and log noise.
 
-**Do this instead:** Bind to `127.0.0.1` when running locally, or add Origin validation middleware. The SDK's `@modelcontextprotocol/sdk/server/middleware/hostHeaderValidation.js` is available in the installed node_modules.
+**Do this instead:** Sync only after `buildRelationships()` is called — which is daily and weekly scans only. The hourly cron skips relationship building and therefore skips Kuzu sync.
 
-### Anti-Pattern 5: Cloning repos at Docker build time
+### Anti-Pattern 5: Making graph_query (LangChain) a blocking MCP tool
 
-**What people do:** `RUN git clone https://github.com/DVWDesign/...` in the Dockerfile.
+**What people do:** Implement `graph_query` as a synchronous-style MCP tool that awaits the LLM call before returning.
 
-**Why it's wrong:** Cloned content is baked into the image layer. The image becomes stale the moment repos are updated. A 500MB image rebuild is needed to get new commits.
+**Why it's wrong:** LLM API calls can take 5-30 seconds. MCP tools timeout. The Express event loop stalls for other requests during the await.
 
-**Do this instead:** Clone at container startup via `docker-entrypoint.sh`. The named volume `/repos` persists across container restarts; subsequent starts do `git pull` (fast) instead of `git clone` (slow).
+**Do this instead:** LangChain.js is already async (`await chain.invoke()`). The MCP tool handler is `async` by convention — the event loop is not blocked. Confirm the MCP SDK tool handler accepts async functions (it does in `@modelcontextprotocol/sdk` >= 1.0). Add a timeout: `Promise.race([chain.invoke(q), timeout(30_000)])`.
 
 ---
 
 ## Scaling Considerations
 
-This is a single-user internal tool. The Docker milestone targets CI readiness and portability, not horizontal scale.
+This milestone targets the same solo-user, single-process deployment as all prior v3.x work.
 
-| Scale | Architecture |
+| Scale                  | Architecture                                                                                                                                                                                                       |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Solo / PM2 (current)   | Both DBs in same process. No changes needed.                                                                                                                                                                       |
+| Docker (volume mount)  | data/documind.kuzu/ in named volume alongside documind.db. Works as-is.                                                                                                                                            |
+| Docker (git-clone)     | Same as volume mount — /app/data holds both DB stores.                                                                                                                                                             |
+| Multi-process (future) | Kuzu's single-writer constraint means the Express process must own the Database object. If a second process needs graph queries, proxy them through the REST /graph endpoint — do not open a second kuzu.Database. |
 
-| --- | --- |
-
-| Solo local (current) | PM2 daemon on macOS. Docker is an optional deployment path. |
-
-| CI server (v3.2 target) | Single container on a Linux VM or GitHub Actions service. SQLite on a persistent volume. |
-
-| Team use (Step #3 precursor) | Add auth to Express and MCP HTTP. Consider multiple containers behind a load balancer — would require migrating from SQLite to PostgreSQL or Turso, as SQLite's single-writer constraint makes horizontal scale impossible. |
-
-**First bottleneck in containerized mode:** SQLite single-writer. In the current solo-use scenario this is fine. If multiple CI pipelines write to the DB simultaneously (e.g., parallel GitHub Action runs sharing the same volume), writes will serialize and pipelines will slow. The fix: either one container at a time (adequate for v3.2) or switch to Turso (future SaaS path).
+**First bottleneck for Kuzu:** Graph algorithm queries (PageRank) are CPU-bound and block the event loop for the duration of the algorithm. At 8K nodes / 50K edges this is fast (< 500ms estimated). If node count grows to 100K+, algorithm queries should move to a Worker Thread to avoid blocking Express request handling.
 
 ---
 
 ## Sources
 
-- Direct codebase inspection: `daemon/mcp-server.mjs`, `daemon/server.mjs`, `ecosystem.config.cjs`, `context/loader.mjs`, `context/schema.mjs`, `config/profiles/dvwdesign.json` (HIGH confidence)
-
-- MCP SDK installed in project: `@modelcontextprotocol/sdk` v1.27.1 — `StreamableHTTPServerTransport` confirmed at `dist/esm/server/streamableHttp.js` (HIGH confidence)
-
-- MCP Specification (2025-03-26): [Transports — Streamable HTTP](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports) — Origin header validation requirement confirmed (HIGH confidence)
-
-- Docker Node.js best practices: [9 Tips for Containerizing Your Node.js Application](https://www.docker.com/blog/9-tips-for-containerizing-your-node-js-application/) (MEDIUM confidence)
-
-- better-sqlite3 Alpine Docker: [Discussion #1270](https://github.com/WiseLibs/better-sqlite3/discussions/1270) — `npm ci` in Alpine stage required (MEDIUM confidence, consistent with native addon rebuild requirement)
-
-- GHCR multi-arch publish: [Publishing Multi-Arch Docker images to GHCR using Buildx and GitHub Actions](https://dev.to/pradumnasaraf/publishing-multi-arch-docker-images-to-ghcr-using-buildx-and-github-actions-2k7j) (MEDIUM confidence)
-
-- dumb-init for signal handling: Standard Node.js container practice, consistent across multiple official Docker guides (HIGH confidence — well-established pattern)
+- Direct codebase inspection: `graph/relations.mjs`, `daemon/server.mjs`, `daemon/mcp-server.mjs`, `daemon/scheduler.mjs`, `config/env.mjs` (HIGH confidence)
+- Kuzu Node.js API: [docs.kuzudb.com/client-apis/nodejs](https://docs.kuzudb.com/client-apis/nodejs/) — async/sync API, ESM support, Database/Connection classes (HIGH confidence)
+- Kuzu concurrency model: [kuzudb.github.io/docs/concurrency](https://kuzudb.github.io/docs/concurrency/) — single READ_WRITE Database constraint confirmed (HIGH confidence)
+- Kuzu algo extension: [docs.kuzudb.com/extensions/algo](https://docs.kuzudb.com/extensions/algo/) and [docs.kuzudb.com/extensions/algo/pagerank](https://docs.kuzudb.com/extensions/algo/pagerank/) — PROJECT_GRAPH, PageRank, pre-installed in >= 0.11.3 (HIGH confidence)
+- Kuzu projected graph + async pool limitation: [docs.kuzudb.com/get-started/graph-algorithms](https://docs.kuzudb.com/get-started/graph-algorithms/) — "projected graphs are bound to a specific Connection instance" confirmed (HIGH confidence)
+- LangChain.js GraphCypherQAChain: [v03.api.js.langchain.com GraphCypherQAChain](https://v03.api.js.langchain.com/classes/langchain.chains_graph_qa_cypher.GraphCypherQAChain.html) — accepts custom graph adapter with getSchema() + query() (MEDIUM confidence — interface contract inferred, not explicit custom adapter docs)
+- langchain-kuzu Python package: [pypi.org/project/langchain-kuzu](https://pypi.org/project/langchain-kuzu/) — Python KuzuQAChain confirmed; JavaScript equivalent not officially available (HIGH confidence on Python; MEDIUM on JS adapter pattern)
+- Kuzu npm package: [npmjs.com/package/kuzu](https://www.npmjs.com/package/kuzu) — pre-built binaries, no node-gyp (HIGH confidence)
 
 ---
 
-### Architecture research for: DocuMind v3.2 — Docker + MCP HTTP + Git-Clone Ingestion
-
-### Researched: 2026-03-23
+*Architecture research for: DocuMind v3.3 — Kuzu Graph Intelligence + LangChain Text-to-Cypher*
+*Researched: 2026-04-07*
