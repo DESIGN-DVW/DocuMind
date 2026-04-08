@@ -67,7 +67,7 @@ Full details: `.planning/milestones/v3.2-ROADMAP.md`
 
 **Milestone Goal:** Replace DocuMind's SQLite-backed graph layer with Kuzu (embedded in-process graph DB), add graph algorithms (PageRank, centrality, cycle detection), integrate LangChain text-to-Cypher for natural language graph queries, and ship an interactive visualization dashboard.
 
-- [ ] **Phase 16: Kuzu Foundation** — Verify ESM import + Docker build; freeze schema; initialize Kuzu DB on daemon startup
+- [x] **Phase 16: Kuzu Foundation** — Verify ESM import + Docker build; freeze schema; initialize Kuzu DB on daemon startup (completed 2026-04-08)
 
 - [ ] **Phase 17: Sync Bridge** — Migrate doc_relationships from SQLite → Kuzu; auto-sync after each rebuild; health reporting
 
@@ -348,7 +348,7 @@ Plans:
 
 | 15. CI & Distribution                | v3.2      | 2/2            | Complete    | 2026-03-28 |
 
-| 16. Kuzu Foundation                  | 2/3 | In Progress|  | -          |
+| 16. Kuzu Foundation                  | 3/3 | Complete   | 2026-04-08 | -          |
 
 | 17. Sync Bridge                      | v3.3      | 0/TBD          | Not started | -          |
 
