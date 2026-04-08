@@ -1,16 +1,14 @@
 ---
-
 gsd_state_version: 1.0
-milestone: v3.3
+milestone: v3.0
 milestone_name: Kuzu Graph Intelligence
-status: roadmap
-last_updated: "2026-04-07T00:00:00.000Z"
+status: unknown
+last_updated: "2026-04-08T01:36:41.242Z"
 progress:
-  total_phases: 6
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-
+  total_phases: 11
+  completed_phases: 11
+  total_plans: 28
+  completed_plans: 28
 ---
 
 # Project State
