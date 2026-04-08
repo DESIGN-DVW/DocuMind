@@ -348,7 +348,7 @@ Plans:
 
 | 15. CI & Distribution                | v3.2      | 2/2            | Complete    | 2026-03-28 |
 
-| 16. Kuzu Foundation                  | 1/3 | In Progress|  | -          |
+| 16. Kuzu Foundation                  | 2/3 | In Progress|  | -          |
 
 | 17. Sync Bridge                      | v3.3      | 0/TBD          | Not started | -          |
 

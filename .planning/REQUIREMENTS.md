@@ -7,9 +7,9 @@
 
 ### Graph DB Foundation (GRAPH)
 
-- [ ] **GRAPH-01**: Kuzu DB initializes with document relationship schema on daemon startup
+- [x] **GRAPH-01**: Kuzu DB initializes with document relationship schema on daemon startup
 
-- [ ] **GRAPH-02**: Kuzu database path is configurable via `DOCUMIND_KUZU_DIR` env var
+- [x] **GRAPH-02**: Kuzu database path is configurable via `DOCUMIND_KUZU_DIR` env var
 
 - [x] **GRAPH-03**: Docker image builds successfully with Kuzu native addon (Debian bookworm base)
 
@@ -95,9 +95,9 @@
 
 | --- | --- | --- |
 
-| GRAPH-01 | Phase 16 | Pending |
+| GRAPH-01 | Phase 16 | Complete |
 
-| GRAPH-02 | Phase 16 | Pending |
+| GRAPH-02 | Phase 16 | Complete |
 
 | GRAPH-03 | Phase 16 | Complete |
 

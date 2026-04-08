@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Phase: 16 of 21 (Kuzu Foundation)
-Plan: 01 complete (1 of 3)
+Plan: 02 complete (2 of 3)
 Status: In progress
-Last activity: 2026-04-08 — Plan 16-01 complete: kuzu@0.11.3 ESM verified, Docker confirmed
+Last activity: 2026-04-08 — Plan 16-02 complete: KUZU_DIR env export + initKuzuSchema with frozen 8-table schema
 
-Progress: [█░░░░░░░░░] 4% (v3.3) — 1/3 plans in Phase 16 done
+Progress: [██░░░░░░░░] 7% (v3.3) — 2/3 plans in Phase 16 done
 
 ## Performance Metrics
 
@@ -70,6 +70,9 @@ Progress: [█░░░░░░░░░] 4% (v3.3) — 1/3 plans in Phase 16 d
 - [16-01] Kuzu shutdown order: result.close() -> conn.close() -> db.close(); standalone scripts need process.exit(0)
 
 - [16-01] Docker: kuzu@0.11.3 uses pre-built binary on node:22-bookworm-slim; no Dockerfile changes needed
+- [16-02] KUZU_DIR follows DB_PATH pattern: path.resolve(ROOT, process.env.DOCUMIND_KUZU_DIR ?? 'data/documind.kuzu')
+- [16-02] initKuzuSchema(kuzuDb): opens short-lived Connection for DDL, closes in finally — caller owns kuzuDb lifecycle
+- [16-02] Kuzu schema frozen: 8 edge table property types locked for Phase 17 sync
 
 - SQLite FTS5 stays in SQLite; Kuzu handles graph only (dual-DB architecture)
 
@@ -94,5 +97,5 @@ None. [16-01 resolved both ESM import and Docker build concerns]
 ## Session Continuity
 
 Last session: 2026-04-08
-Stopped at: Completed 16-01-PLAN.md (kuzu ESM smoke test + Docker verification)
+Stopped at: Completed 16-02-PLAN.md (KUZU_DIR env export + initKuzuSchema frozen 8-table schema)
 Resume file: None
