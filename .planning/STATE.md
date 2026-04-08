@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Phase: 16 of 21 (Kuzu Foundation)
-Plan: — (not yet planned)
-Status: Ready to plan
-Last activity: 2026-04-07 — Roadmap created for v3.3 (phases 16-21)
+Plan: 01 complete (1 of 3)
+Status: In progress
+Last activity: 2026-04-08 — Plan 16-01 complete: kuzu@0.11.3 ESM verified, Docker confirmed
 
-Progress: [░░░░░░░░░░] 0% (v3.3)
+Progress: [█░░░░░░░░░] 4% (v3.3) — 1/3 plans in Phase 16 done
 
 ## Performance Metrics
 
@@ -44,24 +44,43 @@ Progress: [░░░░░░░░░░] 0% (v3.3)
 ### By Phase (v3.2):
 
 | Phase         | Plans | Total    | Avg/Plan |
+
 | ------------- | ----- | -------- | -------- |
+
 | 11 Foundation | 3     | ~6 min   | 2 min    |
+
 | 12 Dockerfile | 2     | ~3 min   | 1.5 min  |
+
 | 13 Git-Clone  | 2     | ~3.5 min | 1.75 min |
+
 | 14 MCP HTTP   | 2     | ~4 min   | 2 min    |
+
 | 15 CI & Dist  | 2     | ~2 min   | 1 min    |
 
 ## Accumulated Context
 
 ### Decisions (v3.3 constraints)
 
-- Kuzu ESM import must be empirically verified in a smoke test BEFORE writing any app code (Phase 16 gates all downstream work)
+- Kuzu ESM import must be empirically verified in a smoke test BEFORE writing any app code (Phase 16 gates all downstream work) [RESOLVED 2026-04-08: `import kuzu from 'kuzu'` works]
+
 - Kuzu schema (8 typed edge tables) is frozen in Phase 16 — schema is immutable once data is loaded
+
+- [16-01] ESM import form: `import kuzu from 'kuzu'` (default import, no createRequire needed)
+
+- [16-01] Kuzu shutdown order: result.close() -> conn.close() -> db.close(); standalone scripts need process.exit(0)
+
+- [16-01] Docker: kuzu@0.11.3 uses pre-built binary on node:22-bookworm-slim; no Dockerfile changes needed
+
 - SQLite FTS5 stays in SQLite; Kuzu handles graph only (dual-DB architecture)
+
 - DOCUMIND_LLM_PROVIDER env var with default=anthropic (claude-sonnet-4-6) for text-to-Cypher
+
 - LangChain text-to-Cypher requires custom KuzuGraphAdapter (~150 lines) — not a Python package wiring task
+
 - VIZ phase uses Vite React in dashboard/ with @design-dvw/ui + Cytoscape.js; diagrams.html stays plain HTML untouched
+
 - Hard dependency chain: 16 → 17 → 18 → 19 → 20 → 21 (no parallelism; each phase gates the next)
+
 - Phase 21 additionally depends on Phase 18 AND Phase 19 before visualization is useful
 
 ### Pending Todos
@@ -70,11 +89,10 @@ None.
 
 ### Blockers/Concerns
 
-- Kuzu ESM import compatibility with Node.js 22 ESM (.mjs) is unverified — highest risk item; must be resolved in Phase 16 before any other v3.3 work
-- Docker build with Kuzu native addon is unverified — must confirm Debian bookworm base is sufficient
+None. [16-01 resolved both ESM import and Docker build concerns]
 
 ## Session Continuity
 
-Last session: 2026-04-07
-Stopped at: Roadmap created — phases 16-21 defined, ready to plan Phase 16
+Last session: 2026-04-08
+Stopped at: Completed 16-01-PLAN.md (kuzu ESM smoke test + Docker verification)
 Resume file: None
