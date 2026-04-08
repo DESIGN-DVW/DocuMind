@@ -57,6 +57,13 @@ export const PORT = Number(process.env.PORT ?? 9000);
  */
 export const DB_PATH = path.resolve(ROOT, process.env.DOCUMIND_DB ?? 'data/documind.db');
 
+/**
+ * Absolute path to the Kuzu graph database directory.
+ * Kuzu stores data as a directory (not a single file).
+ * @constant {string}
+ */
+export const KUZU_DIR = path.resolve(ROOT, process.env.DOCUMIND_KUZU_DIR ?? 'data/documind.kuzu');
+
 // ============================================================================
 // PROFILE
 // ============================================================================
