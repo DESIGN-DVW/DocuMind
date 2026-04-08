@@ -25,7 +25,9 @@ import { processHook } from './hooks.mjs';
 import { initIngestion } from './ingestion.mjs';
 import { loadProfile } from '../context/loader.mjs';
 import { commonDir } from '../context/utils.mjs';
-import { ROOT, PORT, DB_PATH, REPOS_DIR, MCP_MODE } from '../config/env.mjs';
+import { ROOT, PORT, DB_PATH, REPOS_DIR, MCP_MODE, KUZU_DIR } from '../config/env.mjs';
+import kuzu from 'kuzu';
+import { initKuzuSchema } from '../graph/kuzu-init.mjs';
 import { LOCAL_BASE_PATH } from '../config/constants.mjs';
 
 // --- Repository Ingestion (clone mode) ---
@@ -54,6 +56,13 @@ const db = new Database(DB_PATH);
 db.pragma('foreign_keys = ON');
 db.pragma('journal_mode = WAL');
 
+// --- Kuzu Graph Database ---
+// Single kuzu.Database instance — never re-open elsewhere.
+// All other modules receive kuzuDb as a parameter and create their own connections.
+const kuzuDb = new kuzu.Database(KUZU_DIR);
+await initKuzuSchema(kuzuDb);
+console.log(`[Kuzu] Database path: ${KUZU_DIR}`);
+
 // --- Express App ---
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -62,10 +71,22 @@ app.use(express.json({ limit: '10mb' }));
 app.use('/dashboard', express.static(path.join(ROOT, 'dashboard')));
 
 // Health check — includes DB liveness probe for Docker HEALTHCHECK
-app.get('/health', (_req, res) => {
+app.get('/health', async (_req, res) => {
   try {
-    db.prepare('SELECT 1').get();
-    res.json({ status: 'ok', version: '2.0.0', uptime: process.uptime(), mcp_mode: MCP_MODE });
+    db.prepare('SELECT 1').get(); // SQLite probe
+    const conn = new kuzu.Connection(kuzuDb); // Kuzu probe
+    const result = await conn.query('RETURN 1');
+    await result.getAll();
+    try {
+      conn.close();
+    } catch (_) {}
+    res.json({
+      status: 'ok',
+      version: '2.0.0',
+      uptime: process.uptime(),
+      mcp_mode: MCP_MODE,
+      kuzu: { status: 'ok', path: KUZU_DIR },
+    });
   } catch (err) {
     res.status(503).json({ status: 'error', error: err.message });
   }
@@ -537,6 +558,11 @@ function shutdown(signal) {
   console.error(`[DocuMind] ${signal} received — shutting down gracefully`);
   server.close(() => {
     try {
+      try {
+        kuzuDb.close();
+      } catch (_) {
+        /* Kuzu GC handles if close() unavailable */
+      }
       db.pragma('wal_checkpoint(TRUNCATE)');
       db.close();
     } catch (_err) {
@@ -551,4 +577,4 @@ function shutdown(signal) {
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
 
-export { app, db, server };
+export { app, db, kuzuDb, server };
