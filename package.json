@@ -60,7 +60,8 @@
     "daemon:dev": "node daemon/server.mjs",
     "db:migrate": "node scripts/db/migrate.mjs",
     "mcp:dev": "node daemon/mcp-server.mjs",
-    "mcp:inspect": "npx @modelcontextprotocol/inspector node daemon/mcp-server.mjs"
+    "mcp:inspect": "npx @modelcontextprotocol/inspector node daemon/mcp-server.mjs",
+    "smoke-test": "node scripts/kuzu-smoke-test.mjs"
   },
   "lint-staged": {
     "!(.planning)/**/*.md": [
@@ -93,6 +94,7 @@
     "glob": "^11.0.0",
     "gray-matter": "^4.0.3",
     "ignore": "^5.3.0",
+    "kuzu": "^0.11.3",
     "mammoth": "^1.11.0",
     "markdown-it": "^14.0.0",
     "natural": "^8.1.1",

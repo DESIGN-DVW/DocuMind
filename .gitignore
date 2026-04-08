@@ -36,5 +36,12 @@ reports/
 *.sqlite3
 data/
 
+# Kuzu graph database directories
+data/kuzu-smoke-test/
+data/documind.kuzu/
+
 # Environment variables (local paths must not be committed)
 .env
+
+# Session recovery files (local only)
+.claude/sessions/
