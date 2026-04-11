@@ -22,7 +22,7 @@ import {
  * @param {string} root - DocuMind root directory
  * @param {object} ctx - Context profile object from loadProfile()
  */
-export function initScheduler(db, root, ctx) {
+export function initScheduler(db, root, ctx, kuzuDb = null) {
   console.log('[scheduler] Initializing cron jobs...');
 
   // Every 15 minutes: heartbeat + quick stats update
@@ -126,7 +126,7 @@ export function initScheduler(db, root, ctx) {
       )
       .run().lastInsertRowid;
     try {
-      const result = await runScan(db, ctx, { mode: 'deep' });
+      const result = await runScan(db, ctx, { mode: 'deep', kuzuDb });
       db.prepare(
         `
         UPDATE scan_history
