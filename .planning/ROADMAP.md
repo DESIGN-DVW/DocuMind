@@ -240,7 +240,15 @@ Plans:
 
 4. A fresh daemon start with an empty Kuzu dir triggers automatic backfill from SQLite before serving requests
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+
+- [ ] 17-01-PLAN.md — Create graph/kuzu-sync.mjs (syncToKuzu + rebuildKuzuGraph)
+
+- [ ] 17-02-PLAN.md — Wire sync into orchestrator + scheduler + server.mjs (backfill + health)
+
+- [ ] 17-03-PLAN.md — Standalone graph:rebuild script + package.json entry
 
 ### Phase 18: Query Layer
 
@@ -350,7 +358,7 @@ Plans:
 
 | 16. Kuzu Foundation                  | 3/3 | Complete    | 2026-04-08 | -          |
 
-| 17. Sync Bridge                      | v3.3      | 0/TBD          | Not started | -          |
+| 17. Sync Bridge                      | v3.3      | 0/3            | Not started | -          |
 
 | 18. Query Layer                      | v3.3      | 0/TBD          | Not started | -          |
 
