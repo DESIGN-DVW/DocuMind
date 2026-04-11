@@ -15,9 +15,9 @@
 
 ### Sync Bridge (SYNC)
 
-- [ ] **SYNC-01**: After each relationship rebuild, doc_relationships sync automatically from SQLite → Kuzu
+- [x] **SYNC-01**: After each relationship rebuild, doc_relationships sync automatically from SQLite → Kuzu
 
-- [ ] **SYNC-02**: Operator can trigger full Kuzu graph rebuild via `npm run graph:rebuild`
+- [x] **SYNC-02**: Operator can trigger full Kuzu graph rebuild via `npm run graph:rebuild`
 
 - [ ] **SYNC-03**: `/health` endpoint reports Kuzu edge count and sync status vs SQLite
 
@@ -101,9 +101,9 @@
 
 | GRAPH-03 | Phase 16 | Complete |
 
-| SYNC-01 | Phase 17 | Pending |
+| SYNC-01 | Phase 17 | Complete |
 
-| SYNC-02 | Phase 17 | Pending |
+| SYNC-02 | Phase 17 | Complete |
 
 | SYNC-03 | Phase 17 | Pending |
 
@@ -146,4 +146,5 @@
 ---
 
 ### Requirements defined: 2026-04-08
+
 ### Last updated: 2026-04-08 after initial definition

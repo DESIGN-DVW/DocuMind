@@ -1,4 +1,5 @@
 ---
+
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Kuzu Graph Intelligence
@@ -9,6 +10,7 @@ progress:
   completed_phases: 11
   total_plans: 28
   completed_plans: 28
+
 ---
 
 # Project State
@@ -22,12 +24,12 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 
 ## Current Position
 
-Phase: 16 of 21 (Kuzu Foundation)
-Plan: 03 complete (3 of 3) — Phase 16 complete
-Status: Phase 16 complete — ready for Phase 17
-Last activity: 2026-04-08 — Plan 16-03 complete: kuzu.Database wired into daemon/server.mjs; /health probe + SIGTERM shutdown + DOCUMIND_KUZU_DIR all verified
+Phase: 17 of 21 (Sync Bridge)
+Plan: 01 complete (1 of 3) — Phase 17 in progress
+Status: Plan 17-01 complete — graph/kuzu-sync.mjs created with syncToKuzu + rebuildKuzuGraph
+Last activity: 2026-04-11 — Plan 17-01 complete: SQLite→Kuzu sync bridge in graph/kuzu-sync.mjs; both exported functions verified with all 8 typed edge tables
 
-Progress: [███░░░░░░░] 12% (v3.3) — 3/3 plans in Phase 16 done (phase complete)
+Progress: [███░░░░░░░] 12% (v3.3) — 1/3 plans in Phase 17 done
 
 ## Performance Metrics
 
@@ -93,6 +95,12 @@ Progress: [███░░░░░░░] 12% (v3.3) — 3/3 plans in Phase 16 
 
 - Phase 21 additionally depends on Phase 18 AND Phase 19 before visualization is useful
 
+- [17-01] syncToKuzu uses MERGE for node upsert + drop-and-recreate for edges — SQLite is source of truth; rebuildKuzuGraph delegates to syncToKuzu after full wipe
+
+- [17-01] insertEdge uses switch dispatch on relationship_type with explicit per-type property mapping for all 8 edge tables
+
+- [17-01] Connection lifecycle per function call: new kuzu.Connection(kuzuDb) in try, conn.close() in finally — never holds multiple connections simultaneously
+
 ### Pending Todos
 
 None.
@@ -103,6 +111,6 @@ None. [16-01 resolved both ESM import and Docker build concerns]
 
 ## Session Continuity
 
-Last session: 2026-04-08
-Stopped at: Completed 16-03-PLAN.md (kuzu.Database lifecycle wired into daemon/server.mjs — Phase 16 complete)
+Last session: 2026-04-11
+Stopped at: Completed 17-01-PLAN.md (graph/kuzu-sync.mjs — SQLite→Kuzu sync bridge with syncToKuzu + rebuildKuzuGraph)
 Resume file: None
