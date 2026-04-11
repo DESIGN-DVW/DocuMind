@@ -19,7 +19,7 @@
 
 - [x] **SYNC-02**: Operator can trigger full Kuzu graph rebuild via `npm run graph:rebuild`
 
-- [ ] **SYNC-03**: `/health` endpoint reports Kuzu edge count and sync status vs SQLite
+- [x] **SYNC-03**: `/health` endpoint reports Kuzu edge count and sync status vs SQLite
 
 ### Query Layer (QUERY)
 
@@ -105,7 +105,7 @@
 
 | SYNC-02 | Phase 17 | Complete |
 
-| SYNC-03 | Phase 17 | Pending |
+| SYNC-03 | Phase 17 | Complete |
 
 | QUERY-01 | Phase 18 | Pending |
 

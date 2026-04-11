@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Phase: 17 of 21 (Sync Bridge)
-Plan: 01 complete (1 of 3) — Phase 17 in progress
-Status: Plan 17-01 complete — graph/kuzu-sync.mjs created with syncToKuzu + rebuildKuzuGraph
-Last activity: 2026-04-11 — Plan 17-01 complete: SQLite→Kuzu sync bridge in graph/kuzu-sync.mjs; both exported functions verified with all 8 typed edge tables
+Plan: 02 complete (2 of 3) — Phase 17 in progress
+Status: Plan 17-02 complete — orchestrator/scheduler/server wired; startup backfill + /health sync parity live
+Last activity: 2026-04-11 — Plan 17-02 complete: Kuzu auto-populates on deep scan and self-heals on empty startup; /health reports edge parity
 
-Progress: [███░░░░░░░] 12% (v3.3) — 1/3 plans in Phase 17 done
+Progress: [█████░░░░░] 67% (v3.3) — 2/3 plans in Phase 17 done
 
 ## Performance Metrics
 
@@ -83,6 +83,12 @@ Progress: [███░░░░░░░] 12% (v3.3) — 1/3 plans in Phase 17 
 
 - [16-03] Kuzu shutdown order enforced in daemon: kuzuDb.close() -> db.pragma(wal_checkpoint) -> db.close()
 
+- [17-02] Kuzu sync in runDeepScan is non-fatal — syncToKuzu errors do not abort the scan; logged and execution continues
+
+- [17-02] kuzuDb flows as explicit parameter through server → initScheduler → runScan → runDeepScan — no globals
+
+- [17-02] Startup backfill uses node count (not edge count) as empty-graph signal; /health uses strict equality for in-sync vs drift-detected
+
 - SQLite FTS5 stays in SQLite; Kuzu handles graph only (dual-DB architecture)
 
 - DOCUMIND_LLM_PROVIDER env var with default=anthropic (claude-sonnet-4-6) for text-to-Cypher
@@ -112,5 +118,5 @@ None. [16-01 resolved both ESM import and Docker build concerns]
 ## Session Continuity
 
 Last session: 2026-04-11
-Stopped at: Completed 17-01-PLAN.md (graph/kuzu-sync.mjs — SQLite→Kuzu sync bridge with syncToKuzu + rebuildKuzuGraph)
+Stopped at: Completed 17-02-PLAN.md (orchestrator/scheduler/server wired for Kuzu auto-sync + startup backfill + health parity)
 Resume file: None
