@@ -61,7 +61,8 @@
     "db:migrate": "node scripts/db/migrate.mjs",
     "mcp:dev": "node daemon/mcp-server.mjs",
     "mcp:inspect": "npx @modelcontextprotocol/inspector node daemon/mcp-server.mjs",
-    "smoke-test": "node scripts/kuzu-smoke-test.mjs"
+    "smoke-test": "node scripts/kuzu-smoke-test.mjs",
+    "graph:rebuild": "node scripts/rebuild-kuzu-graph.mjs"
   },
   "lint-staged": {
     "!(.planning)/**/*.md": [
