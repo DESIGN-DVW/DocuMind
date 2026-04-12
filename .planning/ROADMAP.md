@@ -69,7 +69,7 @@ Full details: `.planning/milestones/v3.2-ROADMAP.md`
 
 - [x] **Phase 16: Kuzu Foundation** — Verify ESM import + Docker build; freeze schema; initialize Kuzu DB on daemon startup (completed 2026-04-08)
 
-- [ ] **Phase 17: Sync Bridge** — Migrate doc_relationships from SQLite → Kuzu; auto-sync after each rebuild; health reporting
+- [x] **Phase 17: Sync Bridge** — Migrate doc_relationships from SQLite → Kuzu; auto-sync after each rebuild; health reporting (completed 2026-04-12)
 
 - [ ] **Phase 18: Query Layer** — Upgrade /graph REST API and get_related MCP tool to use Kuzu Cypher traversal
 
@@ -358,7 +358,7 @@ Plans:
 
 | 16. Kuzu Foundation                  | 3/3 | Complete    | 2026-04-08 | -          |
 
-| 17. Sync Bridge                      | 2/3 | In Progress|  | -          |
+| 17. Sync Bridge                      | 3/3 | Complete   | 2026-04-12 | -          |
 
 | 18. Query Layer                      | v3.3      | 0/TBD          | Not started | -          |
 

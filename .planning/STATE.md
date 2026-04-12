@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Phase: 17 of 21 (Sync Bridge)
-Plan: 02 complete (2 of 3) — Phase 17 in progress
-Status: Plan 17-02 complete — orchestrator/scheduler/server wired; startup backfill + /health sync parity live
-Last activity: 2026-04-11 — Plan 17-02 complete: Kuzu auto-populates on deep scan and self-heals on empty startup; /health reports edge parity
+Plan: 03 complete (3 of 3) — Phase 17 COMPLETE
+Status: Plan 17-03 complete — standalone graph:rebuild script created; Phase 17 Sync Bridge fully done
+Last activity: 2026-04-12 — Plan 17-03 complete: scripts/rebuild-kuzu-graph.mjs + npm run graph:rebuild; SYNC-02 satisfied
 
-Progress: [█████░░░░░] 67% (v3.3) — 2/3 plans in Phase 17 done
+Progress: [██████████] 100% (v3.3) — 3/3 plans in Phase 17 done
 
 ## Performance Metrics
 
@@ -107,6 +107,8 @@ Progress: [█████░░░░░] 67% (v3.3) — 2/3 plans in Phase 17 
 
 - [17-01] Connection lifecycle per function call: new kuzu.Connection(kuzuDb) in try, conn.close() in finally — never holds multiple connections simultaneously
 
+- [17-03] Standalone rebuild script opens own kuzu.Database — daemon must be stopped first (single-writer constraint); initKuzuSchema called before rebuildKuzuGraph for fresh-dir safety
+
 ### Pending Todos
 
 None.
@@ -117,6 +119,6 @@ None. [16-01 resolved both ESM import and Docker build concerns]
 
 ## Session Continuity
 
-Last session: 2026-04-11
-Stopped at: Completed 17-02-PLAN.md (orchestrator/scheduler/server wired for Kuzu auto-sync + startup backfill + health parity)
+Last session: 2026-04-12
+Stopped at: Completed 17-03-PLAN.md (standalone graph:rebuild script — Phase 17 Sync Bridge complete)
 Resume file: None
