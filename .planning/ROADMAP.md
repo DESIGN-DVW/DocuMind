@@ -358,7 +358,7 @@ Plans:
 
 | 16. Kuzu Foundation                  | 3/3 | Complete    | 2026-04-08 | -          |
 
-| 17. Sync Bridge                      | 3/3 | Complete   | 2026-04-12 | -          |
+| 17. Sync Bridge                      | 3/3 | Complete    | 2026-04-12 | -          |
 
 | 18. Query Layer                      | v3.3      | 0/TBD          | Not started | -          |
 
