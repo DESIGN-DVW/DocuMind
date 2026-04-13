@@ -265,7 +265,12 @@ Plans:
 
 4. Removing a document from SQLite and triggering a sync causes that document to disappear from subsequent Kuzu graph queries
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 18-01-PLAN.md — Create graph/kuzu-queries.mjs + validate label(r[0]) smoke test
+- [ ] 18-02-PLAN.md — Wire kuzuTraverseGraph into /graph REST handler (direction param)
+- [ ] 18-03-PLAN.md — Wire kuzuFindRelated into get_related MCP tool (direction param)
 
 ### Phase 19: Graph Algorithms
 
