@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Phase: 18 of 21 (Query Layer)
-Plan: 02 complete (2 of 3) — Phase 18 in progress
-Status: Plan 18-02 complete — /graph handler branching on docId; Kuzu directional traversal wired; QUERY-01 satisfied
-Last activity: 2026-04-13 — Plan 18-02 complete: daemon/server.mjs /graph handler updated with kuzuTraverseGraph branching
+Plan: 03 in progress (2/3 done, awaiting checkpoint) — Phase 18 almost complete
+Status: Plan 18-03 Task 1 complete — mcp-server.mjs get_related wired to kuzuFindRelated with direction param; checkpoint awaiting human verify
+Last activity: 2026-04-13 — Plan 18-03 Task 1: daemon/mcp-server.mjs updated with Kuzu-backed get_related (90f9b44)
 
-Progress: [██░░░░░░░░] 67% (v3.3 Phase 18) — 2/3 plans in Phase 18 done
+Progress: [██░░░░░░░░] 67% (v3.3 Phase 18) — 2/3 plans in Phase 18 done (18-03 at checkpoint)
 
 ## Performance Metrics
 
@@ -134,5 +134,5 @@ None for Phase 18 query layer — kuzu-queries.mjs is complete and correct.
 ## Session Continuity
 
 Last session: 2026-04-13
-Stopped at: Completed 18-02-PLAN.md (wired kuzuTraverseGraph into /graph endpoint; QUERY-01 satisfied)
+Stopped at: Checkpoint 18-03 Task 2 — awaiting human verify of get_related direction=reverse via MCP client (Task 1 complete: 90f9b44)
 Resume file: None
