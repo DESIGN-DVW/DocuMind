@@ -21,6 +21,16 @@ import kuzu from 'kuzu';
 // ---------------------------------------------------------------------------
 
 /**
+ * Run a Cypher query with optional named params.
+ *
+ * Kuzu 0.11.3 API:
+ *   - conn.query(cypher)               — no params (second arg is progressCallback, not params)
+ *   - conn.prepare(cypher)             — returns PreparedStatement
+ *   - conn.execute(stmt, params)       — executes with { paramName: value } object
+ *
+ * When params is non-empty, use prepare+execute to pass named parameters.
+ * When params is empty ({}), use plain query() for better performance.
+ *
  * @param {import('kuzu').Database} kuzuDb
  * @param {string} cypher
  * @param {Record<string, unknown>} params
@@ -30,7 +40,13 @@ async function runQuery(kuzuDb, cypher, params = {}) {
   const conn = new kuzu.Connection(kuzuDb);
   let result;
   try {
-    result = await conn.query(cypher, params);
+    const hasParams = params && Object.keys(params).length > 0;
+    if (hasParams) {
+      const stmt = await conn.prepare(cypher);
+      result = await conn.execute(stmt, params);
+    } else {
+      result = await conn.query(cypher);
+    }
     const rows = await result.getAll();
     try {
       result.close();

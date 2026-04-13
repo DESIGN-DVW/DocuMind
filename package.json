@@ -62,7 +62,8 @@
     "mcp:dev": "node daemon/mcp-server.mjs",
     "mcp:inspect": "npx @modelcontextprotocol/inspector node daemon/mcp-server.mjs",
     "smoke-test": "node scripts/kuzu-smoke-test.mjs",
-    "graph:rebuild": "node scripts/rebuild-kuzu-graph.mjs"
+    "graph:rebuild": "node scripts/rebuild-kuzu-graph.mjs",
+    "smoke-test:kuzu-queries": "node scripts/smoke-test-kuzu-queries.mjs"
   },
   "lint-staged": {
     "!(.planning)/**/*.md": [
