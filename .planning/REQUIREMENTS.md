@@ -23,9 +23,9 @@
 
 ### Query Layer (QUERY)
 
-- [ ] **QUERY-01**: `GET /graph` supports `direction=forward|reverse|both` parameter (Kuzu backend)
+- [x] **QUERY-01**: `GET /graph` supports `direction=forward|reverse|both` parameter (Kuzu backend)
 
-- [ ] **QUERY-02**: `get_related` MCP tool uses Kuzu Cypher traversal (same response contract, reverse traversal enabled)
+- [x] **QUERY-02**: `get_related` MCP tool uses Kuzu Cypher traversal (same response contract, reverse traversal enabled)
 
 ### Graph Algorithms (ALGO)
 
@@ -107,9 +107,9 @@
 
 | SYNC-03 | Phase 17 | Complete |
 
-| QUERY-01 | Phase 18 | Pending |
+| QUERY-01 | Phase 18 | Complete |
 
-| QUERY-02 | Phase 18 | Pending |
+| QUERY-02 | Phase 18 | Complete |
 
 | ALGO-01 | Phase 19 | Pending |
 

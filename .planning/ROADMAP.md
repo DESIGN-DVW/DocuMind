@@ -268,8 +268,11 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
+
 - [ ] 18-01-PLAN.md — Create graph/kuzu-queries.mjs + validate label(r[0]) smoke test
+
 - [ ] 18-02-PLAN.md — Wire kuzuTraverseGraph into /graph REST handler (direction param)
+
 - [ ] 18-03-PLAN.md — Wire kuzuFindRelated into get_related MCP tool (direction param)
 
 ### Phase 19: Graph Algorithms
@@ -365,7 +368,7 @@ Plans:
 
 | 17. Sync Bridge                      | 3/3 | Complete    | 2026-04-12 | -          |
 
-| 18. Query Layer                      | v3.3      | 0/TBD          | Not started | -          |
+| 18. Query Layer                      | 1/3 | In Progress|  | -          |
 
 | 19. Graph Algorithms                 | v3.3      | 0/TBD          | Not started | -          |
 

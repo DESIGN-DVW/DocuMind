@@ -1,4 +1,5 @@
 ---
+
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Kuzu Graph Intelligence
@@ -9,6 +10,7 @@ progress:
   completed_phases: 12
   total_plans: 31
   completed_plans: 31
+
 ---
 
 # Project State
@@ -22,12 +24,12 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 
 ## Current Position
 
-Phase: 17 of 21 (Sync Bridge)
-Plan: 03 complete (3 of 3) — Phase 17 COMPLETE
-Status: Plan 17-03 complete — standalone graph:rebuild script created; Phase 17 Sync Bridge fully done
-Last activity: 2026-04-12 — Plan 17-03 complete: scripts/rebuild-kuzu-graph.mjs + npm run graph:rebuild; SYNC-02 satisfied
+Phase: 18 of 21 (Query Layer)
+Plan: 01 complete (1 of 3) — Phase 18 in progress
+Status: Plan 18-01 complete — kuzu-queries.mjs with kuzuTraverseGraph + kuzuFindRelated; smoke test added; prepare+execute API fix applied
+Last activity: 2026-04-13 — Plan 18-01 complete: graph/kuzu-queries.mjs + scripts/smoke-test-kuzu-queries.mjs; QUERY-01, QUERY-02 in progress
 
-Progress: [██████████] 100% (v3.3) — 3/3 plans in Phase 17 done
+Progress: [█░░░░░░░░░] 33% (v3.3 Phase 18) — 1/3 plans in Phase 18 done
 
 ## Performance Metrics
 
@@ -107,16 +109,22 @@ Progress: [██████████] 100% (v3.3) — 3/3 plans in Phase 17
 
 - [17-03] Standalone rebuild script opens own kuzu.Database — daemon must be stopped first (single-writer constraint); initKuzuSchema called before rebuildKuzuGraph for fresh-dir safety
 
+- [18-01] Kuzu 0.11.3: conn.query(cypher, obj) treats second arg as progressCallback — named params require conn.prepare(cypher) + conn.execute(stmt, params)
+
+- [18-01] UNION (not UNION ALL) for both-direction graph queries — undirected -[r]- pattern reliability uncertain in Kuzu 0.11.3
+
+- [18-01] label(r[0]) not empirically confirmed (graph empty at test time) — retained pending graph:rebuild; kuzu-sync.mjs needs same prepare+execute fix first
+
 ### Pending Todos
 
-None.
+- Fix graph/kuzu-sync.mjs broken params pattern (conn.query with object arg) — needed for graph:rebuild to work; deferred to future fix task
 
 ### Blockers/Concerns
 
-None. [16-01 resolved both ESM import and Docker build concerns]
+None for Phase 18 query layer — kuzu-queries.mjs is complete and correct.
 
 ## Session Continuity
 
-Last session: 2026-04-12
-Stopped at: Completed 17-03-PLAN.md (standalone graph:rebuild script — Phase 17 Sync Bridge complete)
+Last session: 2026-04-13
+Stopped at: Completed 18-01-PLAN.md (kuzu-queries.mjs Cypher traversal functions + smoke test)
 Resume file: None
