@@ -29,6 +29,7 @@ import { ROOT, PORT, DB_PATH, REPOS_DIR, MCP_MODE, KUZU_DIR } from '../config/en
 import kuzu from 'kuzu';
 import { initKuzuSchema } from '../graph/kuzu-init.mjs';
 import { syncToKuzu, rebuildKuzuGraph } from '../graph/kuzu-sync.mjs';
+import { kuzuTraverseGraph } from '../graph/kuzu-queries.mjs';
 import { LOCAL_BASE_PATH } from '../config/constants.mjs';
 
 // --- Repository Ingestion (clone mode) ---
@@ -252,8 +253,32 @@ app.get('/search', (req, res) => {
 });
 
 // Document graph
-app.get('/graph', (req, res) => {
-  const { repo, type, depth = 2 } = req.query;
+app.get('/graph', async (req, res) => {
+  const { repo, type, depth = 2, docId, direction = 'forward' } = req.query;
+
+  if (docId) {
+    // Kuzu path — directional traversal from a specific node
+    const validDirections = ['forward', 'reverse', 'both'];
+    const resolvedDirection = validDirections.includes(direction) ? direction : 'forward';
+    try {
+      const rows = await kuzuTraverseGraph(
+        kuzuDb,
+        parseInt(docId, 10),
+        resolvedDirection,
+        type || null
+      );
+      const nodeSet = new Set(rows.map(r => r.path));
+      return res.json({
+        node_count: nodeSet.size + 1, // +1 for source node
+        edge_count: rows.length,
+        edges: rows,
+      });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
+  // Existing SQLite list/browse mode — unchanged
   const hasTable = db
     .prepare(
       `SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='doc_relationships'`
