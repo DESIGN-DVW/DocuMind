@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Phase: 18 of 21 (Query Layer)
-Plan: 01 complete (1 of 3) — Phase 18 in progress
-Status: Plan 18-01 complete — kuzu-queries.mjs with kuzuTraverseGraph + kuzuFindRelated; smoke test added; prepare+execute API fix applied
-Last activity: 2026-04-13 — Plan 18-01 complete: graph/kuzu-queries.mjs + scripts/smoke-test-kuzu-queries.mjs; QUERY-01, QUERY-02 in progress
+Plan: 02 complete (2 of 3) — Phase 18 in progress
+Status: Plan 18-02 complete — /graph handler branching on docId; Kuzu directional traversal wired; QUERY-01 satisfied
+Last activity: 2026-04-13 — Plan 18-02 complete: daemon/server.mjs /graph handler updated with kuzuTraverseGraph branching
 
-Progress: [█░░░░░░░░░] 33% (v3.3 Phase 18) — 1/3 plans in Phase 18 done
+Progress: [██░░░░░░░░] 67% (v3.3 Phase 18) — 2/3 plans in Phase 18 done
 
 ## Performance Metrics
 
@@ -115,6 +115,14 @@ Progress: [█░░░░░░░░░] 33% (v3.3 Phase 18) — 1/3 plans in 
 
 - [18-01] label(r[0]) not empirically confirmed (graph empty at test time) — retained pending graph:rebuild; kuzu-sync.mjs needs same prepare+execute fix first
 
+- [18-02] /graph handler made async — required for await kuzuTraverseGraph; SQLite fallback path still sync internally
+
+- [18-02] direction validation guard in server handler (not inside kuzu-queries.mjs) — REST layer owns API surface contract; invalid values silently default to 'forward'
+
+- [18-03] mcp-server.mjs opens own kuzu.Database — safe because MCP runs as a separate OS process; concurrent reads OK with Kuzu WAL mode; process.on('exit') closes kuzuDb
+
+- [18-03] get_related direction param default is 'forward' — backward-compatible; reverse traversal enables "who references this doc?" queries (QUERY-02)
+
 ### Pending Todos
 
 - Fix graph/kuzu-sync.mjs broken params pattern (conn.query with object arg) — needed for graph:rebuild to work; deferred to future fix task
@@ -126,5 +134,5 @@ None for Phase 18 query layer — kuzu-queries.mjs is complete and correct.
 ## Session Continuity
 
 Last session: 2026-04-13
-Stopped at: Completed 18-01-PLAN.md (kuzu-queries.mjs Cypher traversal functions + smoke test)
+Stopped at: Completed 18-02-PLAN.md (wired kuzuTraverseGraph into /graph endpoint; QUERY-01 satisfied)
 Resume file: None
