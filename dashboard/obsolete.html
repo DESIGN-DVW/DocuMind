@@ -112,13 +112,21 @@
       height: 28px;
     }
 
-    .btn-dismiss {
+    .btn-archive-row {
       background: #f1f5f9;
       color: #64748b;
       border: 1px solid #cbd5e1;
     }
 
-    .btn-dismiss:hover { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
+    .btn-archive-row:hover { background: #fef9c3; color: #854d0e; border-color: #fde047; }
+
+    .btn-delete-row {
+      background: #fff1f2;
+      color: #be123c;
+      border: 1px solid #fda4af;
+    }
+
+    .btn-delete-row:hover { background: #ffe4e6; color: #9f1239; border-color: #fb7185; }
 
     /* Badge styles */
     .badge {
@@ -345,7 +353,7 @@
           + '<td>' + escapeHtml(row.repository) + '</td>'
           + '<td title="' + escapeHtml(row.path) + '">' + escapeHtml(row.filename) + '</td>'
           + '<td>' + escapeHtml(String(row.inbound_link_count)) + '</td>'
-          + '<td><button class="btn btn-sm btn-dismiss" data-id="' + row.id + '">Dismiss</button></td>'
+          + '<td><button class="btn btn-sm btn-archive-row" data-id="' + row.id + '">Archive</button> <button class="btn btn-sm btn-delete-row" data-id="' + row.id + '">Delete</button></td>'
           + '</tr>';
       }).join('');
 
@@ -473,33 +481,45 @@
         });
       });
 
-      // Per-row Dismiss button (event delegation)
+      // Per-row Archive + Delete buttons (event delegation)
       document.getElementById('table-body').addEventListener('click', async function(e) {
-        if (!e.target.classList.contains('btn-dismiss')) return;
         var id = Number(e.target.dataset.id);
-        try {
-          var res = await fetch('/obsolete/' + id + '/dismiss', { method: 'POST' });
-          if (!res.ok) throw new Error('Dismiss failed: ' + res.status);
-          // Remove row from allRows and re-render
-          allRows = allRows.filter(function(r) { return r.id !== id; });
-          applyFilters();
-        } catch (err) {
-          showError('Dismiss failed: ' + err.message);
+
+        if (e.target.classList.contains('btn-archive-row')) {
+          try {
+            var res = await fetch('/obsolete/' + id + '/archive', { method: 'POST' });
+            if (!res.ok) throw new Error('Archive failed: ' + res.status);
+            allRows = allRows.filter(function(r) { return r.id !== id; });
+            applyFilters();
+          } catch (err) {
+            showError('Archive failed: ' + err.message);
+          }
+        }
+
+        if (e.target.classList.contains('btn-delete-row')) {
+          try {
+            var res = await fetch('/obsolete/' + id, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Delete failed: ' + res.status);
+            allRows = allRows.filter(function(r) { return r.id !== id; });
+            applyFilters();
+          } catch (err) {
+            showError('Delete failed: ' + err.message);
+          }
         }
       });
 
-      // Archive Selected (batch dismiss)
+      // Archive Selected (batch — permanent)
       document.getElementById('btn-archive').addEventListener('click', async function() {
         var ids = getSelectedIds();
         if (ids.length === 0) return;
-        if (!confirm('Dismiss ' + ids.length + ' document(s) from the dashboard for 30 days?\n\nNo documents will be deleted.')) return;
+        if (!confirm('Archive ' + ids.length + ' document(s) permanently?\nThey will not resurface in future scans.\n\nNo documents will be deleted.')) return;
         try {
-          var res = await fetch('/obsolete/batch-dismiss', {
+          var res = await fetch('/obsolete/batch-archive', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ids: ids })
           });
-          if (!res.ok) throw new Error('Batch dismiss failed: ' + res.status);
+          if (!res.ok) throw new Error('Batch archive failed: ' + res.status);
           var idSet = new Set(ids);
           allRows = allRows.filter(function(r) { return !idSet.has(r.id); });
           document.getElementById('select-all').checked = false;

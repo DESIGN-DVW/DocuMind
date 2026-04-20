@@ -486,6 +486,7 @@ app.get('/obsolete', (req, res) => {
     const conditions = [];
     const params = [];
 
+    conditions.push('obs.archived_at IS NULL');
     if (include_dismissed !== 'true') {
       conditions.push('(obs.dismissed_until IS NULL OR obs.dismissed_until < ?)');
       params.push(now);
@@ -580,6 +581,81 @@ app.post('/obsolete/:id/dismiss', (req, res) => {
     res.json({ status: 'dismissed', id: Number(id), dismissed_until: expiry });
   } catch (err) {
     console.error('[server] /obsolete/:id/dismiss error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Batch archive — permanent suppression; registered BEFORE /:id routes
+app.post('/obsolete/batch-archive', (req, res) => {
+  try {
+    const hasTable = db
+      .prepare(
+        `SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='obsolescence_signals'`
+      )
+      .get();
+    if (!hasTable.count) return res.status(404).json({ error: 'No signals table' });
+
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array required' });
+    }
+    const now = new Date().toISOString();
+    const stmt = db.prepare(`UPDATE obsolescence_signals SET archived_at = ? WHERE id = ?`);
+    const batchArchive = db.transaction(idList => {
+      let updated = 0;
+      for (const id of idList) {
+        const result = stmt.run(now, Number(id));
+        updated += result.changes;
+      }
+      return updated;
+    });
+    const updated = batchArchive(ids);
+    res.json({ status: 'archived', count: updated, archived_at: now });
+  } catch (err) {
+    console.error('[server] /obsolete/batch-archive error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Single archive — permanent suppression for one row
+app.post('/obsolete/:id/archive', (req, res) => {
+  try {
+    const hasTable = db
+      .prepare(
+        `SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='obsolescence_signals'`
+      )
+      .get();
+    if (!hasTable.count) return res.status(404).json({ error: 'Signal not found' });
+
+    const { id } = req.params;
+    const now = new Date().toISOString();
+    const result = db
+      .prepare(`UPDATE obsolescence_signals SET archived_at = ? WHERE id = ?`)
+      .run(now, Number(id));
+    if (result.changes === 0) return res.status(404).json({ error: 'Signal not found' });
+    res.json({ status: 'archived', id: Number(id), archived_at: now });
+  } catch (err) {
+    console.error('[server] /obsolete/:id/archive error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Single delete — permanently removes signal row from DB
+app.delete('/obsolete/:id', (req, res) => {
+  try {
+    const hasTable = db
+      .prepare(
+        `SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='obsolescence_signals'`
+      )
+      .get();
+    if (!hasTable.count) return res.status(404).json({ error: 'Signal not found' });
+
+    const { id } = req.params;
+    const result = db.prepare(`DELETE FROM obsolescence_signals WHERE id = ?`).run(Number(id));
+    if (result.changes === 0) return res.status(404).json({ error: 'Signal not found' });
+    res.json({ status: 'deleted', id: Number(id) });
+  } catch (err) {
+    console.error('[server] DELETE /obsolete/:id error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
