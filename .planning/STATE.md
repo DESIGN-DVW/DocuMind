@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Phase: 22 of 22 (Obsolete Docs Dashboard)
-Plan: 01 complete — 22-02 next
-Status: Plan 22-01 complete — obsolescence_signals table + detectObsolescence() scorer delivered
-Last activity: 2026-04-20 — Plan 22-01: migration 006 + obsolescence-detector.mjs (39f5a66, 5c62a80)
+Plan: 02 complete — 22-03 next
+Status: Plan 22-02 complete — REST endpoints + daily detection cron delivered
+Last activity: 2026-04-20 — Plan 22-02: GET /obsolete + POST dismiss endpoints + scheduler wiring (bd31090, d38abef)
 
-Progress: [███░░░░░░░] 33% (Phase 22) — 1/3 plans done
+Progress: [██████░░░░] 67% (Phase 22) — 2/3 plans done
 
 ## Performance Metrics
 
@@ -129,6 +129,12 @@ Progress: [███░░░░░░░] 33% (Phase 22) — 1/3 plans done
 
 - [22-01] Kuzu unavailability is non-fatal in detectObsolescence — warns + defaults all inbound counts to 0; scheduler-safe
 
+- [22-02] GET /obsolete guards against missing table via sqlite_master check — returns empty result not 500 on fresh install
+
+- [22-02] POST /obsolete/batch-dismiss registered before POST /obsolete/:id/dismiss — prevents Express route capture of literal string 'batch-dismiss'
+
+- [22-02] detectObsolescence called non-fatally after generateDiagramSnapshot in CRON_DAILY — runs only when scan succeeds, never aborts daily job
+
 ### Pending Todos
 
 - Fix graph/kuzu-sync.mjs broken params pattern (conn.query with object arg) — needed for graph:rebuild to work; deferred to future fix task
@@ -140,5 +146,5 @@ None for Phase 18 query layer — kuzu-queries.mjs is complete and correct.
 ## Session Continuity
 
 Last session: 2026-04-20
-Stopped at: Completed 22-01-PLAN.md — 22-02 (scheduler wiring) is next
+Stopped at: Completed 22-02-PLAN.md — 22-03 (dashboard UI) is next
 Resume file: None

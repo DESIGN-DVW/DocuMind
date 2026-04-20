@@ -65,7 +65,7 @@
 
 - [ ] **OBS-03**: Batch-select checkboxes + "Archive Selected" / "Dismiss" action buttons; dismiss suppresses a row for 30 days (no destructive action without confirmation)
 
-- [ ] **OBS-04**: REST endpoint `GET /obsolete` returns paginated signal rows; `POST /obsolete/:id/dismiss` records suppression with expiry
+- [x] **OBS-04**: REST endpoint `GET /obsolete` returns paginated signal rows; `POST /obsolete/:id/dismiss` records suppression with expiry
 
 - [x] **OBS-05**: Detection heuristics: age >180 days + zero inbound Kuzu edges + keyword pattern → confidence ≥ 0.8 (obsolete); similarity duplicate → confidence ≥ 0.7 (redundant)
 
@@ -153,7 +153,7 @@
 
 | OBS-03 | Phase 22 | Pending |
 
-| OBS-04 | Phase 22 | Pending |
+| OBS-04 | Phase 22 | Complete |
 
 | OBS-05 | Phase 22 | Complete |
 
