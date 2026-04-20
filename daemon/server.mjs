@@ -6,9 +6,14 @@
  */
 
 import express from 'express';
+import helmet from 'helmet';
 import Database from 'better-sqlite3';
 import fs from 'fs/promises';
 import path from 'path';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+
+const execFileAsync = promisify(execFile);
 import { initScheduler } from './scheduler.mjs';
 import { initWatcher } from './watcher.mjs';
 import { runScan } from '../orchestrator.mjs';
@@ -94,8 +99,67 @@ console.log(`[Kuzu] Database path: ${KUZU_DIR}`);
   }
 }
 
+// --- Diagram source-doc lookup ---
+// Cache: diagram id → absolute markdown path (or null). Invalidated on restart.
+const sourceDocCache = new Map();
+
+/**
+ * Find the markdown file that contains/references a diagram.
+ *
+ * Search strategy:
+ *   1. Grep the repo's docs/ folder for .md files that reference the .mmd
+ *      basename (e.g. "dispatch-005-workflow"). This finds files that embed
+ *      the diagram via a link or code block reference.
+ *   2. If docs/ doesn't exist, fall back to grepping the repo root.
+ *   3. Returns null (show "—") when no markdown references the diagram —
+ *      i.e., the .mmd was generated standalone by an agent with no source doc.
+ *
+ * Deliberately does NOT search by diagram display name: that string appears
+ * in session logs, READMEs, and memory files, producing false positives.
+ *
+ * @param {string} repoRoot  Absolute path to the repository root
+ * @param {string} mmdBase   .mmd filename without extension, e.g. "dispatch-005-workflow"
+ * @returns {Promise<string|null>}
+ */
+async function findMarkdownSource(repoRoot, mmdBase) {
+  // Guard: repoRoot must be within REPOS_ROOT (same check as PNG endpoint)
+  if (!repoRoot.startsWith(REPOS_ROOT)) return null;
+
+  // Prefer searching only docs/ to avoid session/memory/dispatch noise
+  const docsDir = path.join(repoRoot, 'docs');
+  // Guard: docsDir must still be within repoRoot
+  if (!docsDir.startsWith(repoRoot)) return null;
+
+  let searchRoot;
+  try {
+    await fs.access(docsDir);
+    searchRoot = docsDir;
+  } catch {
+    searchRoot = repoRoot;
+  }
+
+  try {
+    const { stdout } = await execFileAsync(
+      'grep',
+      ['-rl', '--include=*.md', '--', mmdBase, searchRoot],
+      { timeout: 4000 }
+    );
+    const first = stdout.trim().split('\n')[0];
+    // Guard: result must stay within searchRoot
+    if (!first || !first.startsWith(searchRoot)) return null;
+    return first;
+  } catch {
+    // grep exits 1 when no match — not an error
+    return null;
+  }
+}
+
 // --- Express App ---
 const app = express();
+// Internal API server — no TLS, no public exposure.
+// CSP disabled: dashboard uses inline scripts.
+// HSTS disabled: plain HTTP only, HSTS would make browsers refuse HTTP connections.
+app.use(helmet({ contentSecurityPolicy: false, hsts: false }));
 app.use(express.json({ limit: '10mb' }));
 
 // Dashboard static files
@@ -254,7 +318,7 @@ app.get('/search', (req, res) => {
 
 // Document graph
 app.get('/graph', async (req, res) => {
-  const { repo, type, depth = 2, docId, direction = 'forward' } = req.query;
+  const { repo, type, docId, direction = 'forward' } = req.query;
 
   if (docId) {
     // Kuzu path — directional traversal from a specific node
@@ -406,6 +470,120 @@ app.get('/keywords', (req, res) => {
   res.json({ count: results.length, keywords: results });
 });
 
+// Obsolescence signals — paginated, filterable
+app.get('/obsolete', (req, res) => {
+  try {
+    // Guard: table must exist (migration may not have run on fresh install)
+    const hasTable = db
+      .prepare(
+        `SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='obsolescence_signals'`
+      )
+      .get();
+    if (!hasTable.count) return res.json({ total: 0, count: 0, offset: 0, rows: [] });
+
+    const { repo, flag, limit = 50, offset = 0, include_dismissed = 'false' } = req.query;
+    const now = new Date().toISOString();
+    const conditions = [];
+    const params = [];
+
+    if (include_dismissed !== 'true') {
+      conditions.push('(obs.dismissed_until IS NULL OR obs.dismissed_until < ?)');
+      params.push(now);
+    }
+    if (repo) {
+      conditions.push('d.repository = ?');
+      params.push(repo);
+    }
+    if (flag) {
+      conditions.push('obs.flag_label = ?');
+      params.push(flag);
+    }
+
+    const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
+    const sql = `
+      SELECT obs.id, obs.document_id, obs.confidence_score, obs.flag_label,
+             obs.age_days, obs.inbound_link_count, obs.keyword_matched,
+             obs.similarity_score, obs.detected_at, obs.dismissed_until,
+             d.path, d.repository, d.filename, d.modified_at
+      FROM obsolescence_signals obs
+      JOIN documents d ON obs.document_id = d.id
+      ${where}
+      ORDER BY obs.confidence_score DESC
+      LIMIT ? OFFSET ?
+    `;
+    const rowParams = [...params, Number(limit), Number(offset)];
+    const rows = db.prepare(sql).all(...rowParams);
+
+    const countSql = `
+      SELECT COUNT(*) as cnt
+      FROM obsolescence_signals obs
+      JOIN documents d ON obs.document_id = d.id
+      ${where}
+    `;
+    const total = db.prepare(countSql).get(...params).cnt;
+
+    res.json({ total, count: rows.length, offset: Number(offset), rows });
+  } catch (err) {
+    console.error('[server] /obsolete error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Batch dismiss — registered BEFORE /:id/dismiss to avoid route capture
+app.post('/obsolete/batch-dismiss', (req, res) => {
+  try {
+    const hasTable = db
+      .prepare(
+        `SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='obsolescence_signals'`
+      )
+      .get();
+    if (!hasTable.count) return res.status(404).json({ error: 'No signals table' });
+
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array required' });
+    }
+    const expiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const stmt = db.prepare(`UPDATE obsolescence_signals SET dismissed_until = ? WHERE id = ?`);
+    const batchDismiss = db.transaction(idList => {
+      let updated = 0;
+      for (const id of idList) {
+        const result = stmt.run(expiry, Number(id));
+        updated += result.changes;
+      }
+      return updated;
+    });
+    const updated = batchDismiss(ids);
+    res.json({ status: 'dismissed', count: updated, dismissed_until: expiry });
+  } catch (err) {
+    console.error('[server] /obsolete/batch-dismiss error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Single dismiss — registered AFTER batch-dismiss
+app.post('/obsolete/:id/dismiss', (req, res) => {
+  try {
+    const hasTable = db
+      .prepare(
+        `SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='obsolescence_signals'`
+      )
+      .get();
+    if (!hasTable.count) return res.status(404).json({ error: 'Signal not found' });
+
+    const { id } = req.params;
+    const expiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const result = db
+      .prepare(`UPDATE obsolescence_signals SET dismissed_until = ? WHERE id = ?`)
+      .run(expiry, Number(id));
+    if (result.changes === 0) return res.status(404).json({ error: 'Signal not found' });
+    res.json({ status: 'dismissed', id: Number(id), dismissed_until: expiry });
+  } catch (err) {
+    console.error('[server] /obsolete/:id/dismiss error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Helper: derive PNG URL from mermaid_path (actual filename) or fallback to name
 function pngUrlFor(d) {
   if (d.mermaid_path) {
@@ -416,37 +594,71 @@ function pngUrlFor(d) {
 }
 
 // Diagrams
-app.get('/diagrams', (req, res) => {
+app.get('/diagrams', async (req, res) => {
   const { type, stale, repository } = req.query;
   const hasTable = db
     .prepare(`SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='diagrams'`)
     .get();
   if (!hasTable.count) return res.json({ diagrams: [] });
 
-  let sql = 'SELECT * FROM diagrams';
+  let sql = `
+    SELECT d.*, doc.path AS source_path
+    FROM diagrams d
+    LEFT JOIN documents doc ON d.document_id = doc.id
+  `;
   const conditions = [];
   const params = [];
   if (type) {
-    conditions.push('diagram_type = ?');
+    conditions.push('d.diagram_type = ?');
     params.push(type);
   }
   if (stale === 'true') {
-    conditions.push('stale = 1');
+    conditions.push('d.stale = 1');
   }
   if (repository) {
-    conditions.push('repository = ?');
+    conditions.push('d.repository = ?');
     params.push(repository);
   }
   if (conditions.length) sql += ' WHERE ' + conditions.join(' AND ');
-  sql += ' ORDER BY generated_at DESC';
+  sql += ' ORDER BY d.generated_at DESC';
 
   const results = db.prepare(sql).all(...params);
-  const enriched = results.map(d => ({
-    ...d,
-    active_url: d.curated_url || d.figjam_url || null,
-    png_url: pngUrlFor(d),
-    status: computeStatus(d),
-  }));
+
+  // Resolve source_path for each diagram in parallel.
+  // source_path comes from the document JOIN (document_id → documents.path).
+  // If that's null, grep the repo filesystem for the .mmd basename or diagram name.
+  const enriched = await Promise.all(
+    results.map(async d => {
+      let source_path = d.source_path || null;
+
+      if (!source_path && d.mermaid_path && d.repository) {
+        const cacheKey = d.id;
+        if (sourceDocCache.has(cacheKey)) {
+          source_path = sourceDocCache.get(cacheKey);
+        } else {
+          const repoRelPath = repoRegistry.get(d.repository);
+          if (repoRelPath !== undefined) {
+            const repoRoot = path.resolve(REPOS_ROOT, repoRelPath);
+            // Guard: resolved path must stay within REPOS_ROOT
+            if (repoRoot.startsWith(REPOS_ROOT)) {
+              const mmdBase = path.basename(d.mermaid_path, '.mmd');
+              source_path = await findMarkdownSource(repoRoot, mmdBase);
+            }
+            sourceDocCache.set(cacheKey, source_path);
+          }
+        }
+      }
+
+      return {
+        ...d,
+        source_path,
+        active_url: d.curated_url || d.figjam_url || null,
+        png_url: pngUrlFor(d),
+        status: computeStatus(d),
+      };
+    })
+  );
+
   res.json({ count: enriched.length, diagrams: enriched });
 });
 
@@ -542,7 +754,6 @@ app.post('/diagrams/relink', async (req, res) => {
   }
 
   // Propagate URL change across all repos
-  const registryPath = path.join(ROOT, '../RootDispatcher/config/repository-registry.json');
   let propagated = {};
   if (result.oldUrl) {
     try {
@@ -576,6 +787,15 @@ app.post('/diagrams/relink', async (req, res) => {
     oldUrl: result.oldUrl,
     curatedUrl,
     propagated,
+  });
+
+  // Re-index propagated files so DocuMind search reflects the new curated URL
+  setImmediate(async () => {
+    try {
+      await runScan(db, ctx, { mode: 'incremental', repo: result.repository || null });
+    } catch (err) {
+      console.error('[relink] post-curate scan error:', err.message);
+    }
   });
 });
 
@@ -614,7 +834,6 @@ app.post('/diagrams/bulk-relink', async (req, res) => {
     return res.status(400).json({ error: 'Missing "mappings" object { diagramName: curatedUrl }' });
   }
 
-  const registryPath = path.join(ROOT, '../RootDispatcher/config/repository-registry.json');
   try {
     const result = await bulkRelink(db, mappings, registryPath);
     res.json({ status: 'completed', ...result });
