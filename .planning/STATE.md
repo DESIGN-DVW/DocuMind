@@ -1,15 +1,15 @@
 ---
 
 gsd_state_version: 1.0
-milestone: v3.0
+milestone: v3.3
 milestone_name: Kuzu Graph Intelligence
-status: unknown
-last_updated: "2026-04-12T01:29:00.254Z"
+status: in_progress
+last_updated: "2026-04-20T13:24:25Z"
 progress:
-  total_phases: 12
-  completed_phases: 12
-  total_plans: 31
-  completed_plans: 31
+  total_phases: 6
+  completed_phases: 3
+  total_plans: 12
+  completed_plans: 10
 
 ---
 
@@ -24,12 +24,12 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 
 ## Current Position
 
-Phase: 18 of 21 (Query Layer)
-Plan: 03 in progress (2/3 done, awaiting checkpoint) — Phase 18 almost complete
-Status: Plan 18-03 Task 1 complete — mcp-server.mjs get_related wired to kuzuFindRelated with direction param; checkpoint awaiting human verify
-Last activity: 2026-04-13 — Plan 18-03 Task 1: daemon/mcp-server.mjs updated with Kuzu-backed get_related (90f9b44)
+Phase: 22 of 22 (Obsolete Docs Dashboard)
+Plan: 01 complete — 22-02 next
+Status: Plan 22-01 complete — obsolescence_signals table + detectObsolescence() scorer delivered
+Last activity: 2026-04-20 — Plan 22-01: migration 006 + obsolescence-detector.mjs (39f5a66, 5c62a80)
 
-Progress: [██░░░░░░░░] 67% (v3.3 Phase 18) — 2/3 plans in Phase 18 done (18-03 at checkpoint)
+Progress: [███░░░░░░░] 33% (Phase 22) — 1/3 plans done
 
 ## Performance Metrics
 
@@ -123,6 +123,12 @@ Progress: [██░░░░░░░░] 67% (v3.3 Phase 18) — 2/3 plans in 
 
 - [18-03] get_related direction param default is 'forward' — backward-compatible; reverse traversal enables "who references this doc?" queries (QUERY-02)
 
+- [22-01] dismissed_until excluded from ON CONFLICT SET clause — re-running detection never resets a user snooze/dismiss
+
+- [22-01] Single Kuzu Connection per detection pass with full-scan MATCH query (not per-document) for efficiency
+
+- [22-01] Kuzu unavailability is non-fatal in detectObsolescence — warns + defaults all inbound counts to 0; scheduler-safe
+
 ### Pending Todos
 
 - Fix graph/kuzu-sync.mjs broken params pattern (conn.query with object arg) — needed for graph:rebuild to work; deferred to future fix task
@@ -133,6 +139,6 @@ None for Phase 18 query layer — kuzu-queries.mjs is complete and correct.
 
 ## Session Continuity
 
-Last session: 2026-04-13
-Stopped at: Checkpoint 18-03 Task 2 — awaiting human verify of get_related direction=reverse via MCP client (Task 1 complete: 90f9b44)
+Last session: 2026-04-20
+Stopped at: Completed 22-01-PLAN.md — 22-02 (scheduler wiring) is next
 Resume file: None

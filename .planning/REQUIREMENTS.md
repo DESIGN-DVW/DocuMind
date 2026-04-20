@@ -57,6 +57,18 @@
 
 - [ ] **VIZ-05**: `GET /graph/export` provides graph data in JSON format for external visualization tools
 
+### Obsolete Docs Dashboard (Phase 22)
+
+- [x] **OBS-01**: `obsolescence_signals` table stores per-document heuristic scores (age, inbound links, keyword match, similarity), updated by daily cron pass
+
+- [ ] **OBS-02**: `/dashboard/obsolete.html` renders a sortable, filterable table of flagged documents with confidence score, flag label, age, repo, and path
+
+- [ ] **OBS-03**: Batch-select checkboxes + "Archive Selected" / "Dismiss" action buttons; dismiss suppresses a row for 30 days (no destructive action without confirmation)
+
+- [ ] **OBS-04**: REST endpoint `GET /obsolete` returns paginated signal rows; `POST /obsolete/:id/dismiss` records suppression with expiry
+
+- [x] **OBS-05**: Detection heuristics: age >180 days + zero inbound Kuzu edges + keyword pattern → confidence ≥ 0.8 (obsolete); similarity duplicate → confidence ≥ 0.7 (redundant)
+
 ## Future Requirements (v3.4+)
 
 ### Graph Intelligence
@@ -135,11 +147,21 @@
 
 | VIZ-05 | Phase 21 | Pending |
 
+| OBS-01 | Phase 22 | Complete |
+
+| OBS-02 | Phase 22 | Pending |
+
+| OBS-03 | Phase 22 | Pending |
+
+| OBS-04 | Phase 22 | Pending |
+
+| OBS-05 | Phase 22 | Complete |
+
 ### Coverage:
 
-- v3.3 requirements: 20 total
+- v3.3 requirements: 25 total
 
-- Mapped to phases: 20
+- Mapped to phases: 25
 
 - Unmapped: 0 ✓
 
@@ -147,4 +169,4 @@
 
 ### Requirements defined: 2026-04-08
 
-### Last updated: 2026-04-08 after initial definition
+### Last updated: 2026-04-20 — added OBS-01..05 for Phase 22 Obsolete Docs Dashboard
