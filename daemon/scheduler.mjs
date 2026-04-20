@@ -5,17 +5,23 @@
  * Orchestrates periodic scanning, indexing, and analysis tasks
  */
 
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import cron from 'node-cron';
 import { runScan, generateDiagramSnapshot } from '../orchestrator.mjs';
 import { pullAllRepos } from './ingestion.mjs';
+import { detectObsolescence } from '../processors/obsolescence-detector.mjs';
 import {
   CRON_HEARTBEAT,
   CRON_HOURLY,
   CRON_DAILY,
   CRON_WEEKLY,
   CRON_RELINK,
+  CRON_LINT,
   REPO_MODE,
 } from '../config/env.mjs';
+
+const execFileAsync = promisify(execFile);
 
 /**
  * @param {import('better-sqlite3').Database} db
@@ -104,6 +110,15 @@ export function initScheduler(db, root, ctx, kuzuDb = null) {
       } catch (snapErr) {
         console.error('[scheduler] Diagram snapshot failed:', snapErr.message);
       }
+      // Obsolescence detection pass (non-fatal)
+      try {
+        const obsResult = await detectObsolescence(db, kuzuDb);
+        console.log(
+          `[scheduler] Obsolescence detection complete: ${obsResult.scanned} scanned, ${obsResult.flagged} flagged, ${obsResult.cleared} cleared`
+        );
+      } catch (detErr) {
+        console.error('[scheduler] Obsolescence detection failed (non-fatal):', detErr.message);
+      }
     } catch (err) {
       db.prepare(
         `
@@ -151,6 +166,36 @@ export function initScheduler(db, root, ctx, kuzuDb = null) {
       console.error('[scheduler] Weekly analysis failed:', err.message);
     }
   });
+
+  // Daily at 3 AM: markdown lint + auto-fix across all repos
+  if (CRON_LINT !== 'false') {
+    cron.schedule(CRON_LINT, async () => {
+      console.log('[scheduler] Starting daily markdown lint pass...');
+      const repos = ctx.repoRoots ?? [];
+      let fixed = 0;
+      let errors = 0;
+      for (const { name, path: repoPath } of repos) {
+        try {
+          await execFileAsync('npx', ['markdownlint-cli2', '--fix', '**/*.md'], {
+            cwd: repoPath,
+            timeout: 60_000,
+          });
+          console.log(`[scheduler/lint] ${name} — OK`);
+          fixed++;
+        } catch (err) {
+          // markdownlint-cli2 exits 1 when it finds (but fixes) issues — not a fatal error
+          if (err.code === 1) {
+            console.log(`[scheduler/lint] ${name} — fixed lint issues`);
+            fixed++;
+          } else {
+            console.error(`[scheduler/lint] ${name} — error: ${err.message}`);
+            errors++;
+          }
+        }
+      }
+      console.log(`[scheduler] Lint pass complete: ${fixed} repos OK, ${errors} errors`);
+    });
+  }
 
   // Every 6 hours: check for diagrams pending curation
   cron.schedule(CRON_RELINK, () => {
@@ -214,6 +259,7 @@ export function initScheduler(db, root, ctx, kuzuDb = null) {
   console.log(`  ${CRON_HOURLY}     — hourly incremental scan`);
   console.log(`  ${CRON_RELINK}   — pending diagram relinks check`);
   console.log(`  ${CRON_DAILY}     — daily full scan + analysis + diagram snapshot`);
+  if (CRON_LINT !== 'false') console.log(`  ${CRON_LINT}     — daily markdown lint + auto-fix`);
   console.log(`  ${CRON_WEEKLY}     — weekly deep analysis + diagram snapshot`);
   if (REPO_MODE === 'clone') {
     console.log(`  ${CRON_HOURLY}     — clone mode: git pull + re-scan`);
