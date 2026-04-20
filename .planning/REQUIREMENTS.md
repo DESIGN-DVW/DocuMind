@@ -61,9 +61,9 @@
 
 - [x] **OBS-01**: `obsolescence_signals` table stores per-document heuristic scores (age, inbound links, keyword match, similarity), updated by daily cron pass
 
-- [ ] **OBS-02**: `/dashboard/obsolete.html` renders a sortable, filterable table of flagged documents with confidence score, flag label, age, repo, and path
+- [x] **OBS-02**: `/dashboard/obsolete.html` renders a sortable, filterable table of flagged documents with confidence score, flag label, age, repo, and path
 
-- [ ] **OBS-03**: Batch-select checkboxes + "Archive Selected" / "Dismiss" action buttons; dismiss suppresses a row for 30 days (no destructive action without confirmation)
+- [x] **OBS-03**: Batch-select checkboxes + "Archive Selected" / "Dismiss" action buttons; dismiss suppresses a row for 30 days (no destructive action without confirmation)
 
 - [x] **OBS-04**: REST endpoint `GET /obsolete` returns paginated signal rows; `POST /obsolete/:id/dismiss` records suppression with expiry
 
@@ -149,9 +149,9 @@
 
 | OBS-01 | Phase 22 | Complete |
 
-| OBS-02 | Phase 22 | Pending |
+| OBS-02 | Phase 22 | Complete |
 
-| OBS-03 | Phase 22 | Pending |
+| OBS-03 | Phase 22 | Complete |
 
 | OBS-04 | Phase 22 | Complete |
 
