@@ -328,6 +328,33 @@ Plans:
 
 **Plans**: TBD
 
+### Phase 22: Obsolete Docs Dashboard
+
+**Goal**: A dashboard page at `/dashboard/obsolete.html` surfaces documents flagged as obsolete, redundant, stale, or needing archival — with confidence scores, flag labels, batch-select checkboxes, and action buttons (Archive, Delete, Mark Updated, Dismiss). A scheduled detection pass populates an `obsolescence_signals` table using heuristics: document age, zero inbound graph links, semantic similarity to other docs, and keyword patterns ("deprecated", "archive", "old", "TODO: delete").
+**Depends on**: Phase 17 (Kuzu sync for inbound-link signal), Phase 3 (similarity scores)
+**Requirements**: OBS-01, OBS-02, OBS-03, OBS-04, OBS-05
+**Success Criteria** (what must be TRUE):
+
+1. Opening `/dashboard/obsolete.html` shows a filterable, sortable table of documents with confidence score, flag label (obsolete / redundant / stale / needs-update), and age since last modification
+
+2. Selecting multiple rows with checkboxes and clicking "Archive Selected" moves the action payload to a dismissal queue — no document is deleted without explicit user confirmation
+
+3. Clicking "Dismiss" on a row removes it from the dashboard for 30 days (suppression stored in DB); the document is not modified
+
+4. The daily cron pass runs the detection heuristics and upserts rows into `obsolescence_signals`; confidence scores update when the underlying document changes
+
+5. A document with zero inbound Kuzu edges, last modified >180 days ago, and a title containing "old" / "archive" / "deprecated" receives a confidence score ≥ 0.8 and flag "obsolete"
+
+**Plans**: 3 plans
+
+Plans:
+
+- [ ] 22-01-PLAN.md — DB migration (obsolescence_signals) + detection module (processors/obsolescence-detector.mjs)
+
+- [ ] 22-02-PLAN.md — REST endpoints (GET /obsolete, POST /obsolete/:id/dismiss, POST /obsolete/batch-dismiss) + scheduler wiring
+
+- [ ] 22-03-PLAN.md — Plain-HTML dashboard (dashboard/obsolete.html) with sortable table, batch-select, and dismiss actions
+
 ## Progress
 
 | Phase                                | Milestone | Plans Complete | Status      | Completed  |
@@ -375,3 +402,5 @@ Plans:
 | 20. Text-to-Cypher                   | v3.3      | 0/TBD          | Not started | -          |
 
 | 21. Visualization Dashboard          | v3.3      | 0/TBD          | Not started | -          |
+
+| 22. Obsolete Docs Dashboard          | v3.3      | 0/3            | Planning    | -          |
