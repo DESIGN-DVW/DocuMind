@@ -497,6 +497,7 @@
         }
 
         if (e.target.classList.contains('btn-delete-row')) {
+          if (!confirm('Permanently delete this signal? It may resurface on the next daily scan if the document is still flagged.')) return;
           try {
             var res = await fetch('/obsolete/' + id, { method: 'DELETE' });
             if (!res.ok) throw new Error('Delete failed: ' + res.status);
