@@ -131,6 +131,8 @@ DocuMind loads configuration from environment variables, with optional `.env` fi
 
 | `DOCUMIND_CRON_RELINK`    | `0 */6 * * *`                                    | Cron for relink processor check                                                                   |
 
+| `DOCUMIND_CRON_LINT`      | `0 3 * * *`                                      | Cron for markdown lint + auto-fix pass (set to `false` to disable)                               |
+
 | `DOCUMIND_MCP_MODE`         | `stdio`                                          | MCP transport mode: `stdio` (local Claude Code) or `http` (remote consumers over HTTP)            |
 
 | `DOCUMIND_MCP_TOKEN`        | *(unset)*                                        | Bearer token(s) for MCP HTTP endpoint (comma-separated). Required when MCP mode is `http`.        |
@@ -555,3 +557,41 @@ This repo is part of the DVWDesign ecosystem coordinated by RootDispatcher.
 
 **Status:** Active (PM2 daemon on port 9000)
 **Engine:** Node.js >= 20.0.0
+
+---
+
+## graphify
+
+DocuMind has a persistent knowledge graph at `graphify-out/graph.json` (last built 2026-04-21).
+
+### Before answering codebase questions
+
+Check the graph first — it captures module relationships, API surfaces, and doc-to-code connections that span multiple files:
+
+```bash
+graphify query "<your question>" --graph graphify-out/graph.json
+```
+
+### After code or doc changes
+
+Rebuild incrementally (uses cache — only re-extracts changed files):
+
+```bash
+graphify update /Users/Shared/htdocs/github/DVWDesign/DocuMind
+```
+
+Or from the DocuMind directory:
+
+```bash
+graphify update .
+```
+
+### Graph output location
+
+`graphify-out/` — `graph.json`, `graph.html` (interactive), `GRAPH_REPORT.md`
+
+### When to rebuild
+
+- After adding new processors, endpoints, or scripts
+- After significant refactoring (new modules, renamed files)
+- At session start if `graphify-out/graph.json` is more than a week old
