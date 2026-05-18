@@ -6,11 +6,21 @@
 
 ---
 
+> **STATUS UPDATE — 2026-05-17**
+>
+> **Priority 1 (fileKey for `generate_diagram`) is RESOLVED.** The `generate_diagram` tool now accepts a `fileKey` parameter, allowing diagrams to render directly into an existing FigJam file rather than always creating a new standalone file. See the [updated Feature Requests section](#feature-requests-revised) for what is now resolved vs. still open.
+>
+> **Remaining constraint:** `generate_diagram` with `fileKey` still targets the **default page** of the file — page/section selection is not yet exposed. The central board's default page must be the intended landing zone, or curation to the correct page is still needed after generation.
+>
+> The DVWDesign diagram workflow has been updated to use `fileKey` by default. The dual-URL tracking infrastructure (`figjam_url` + `curated_url`) is retained for legacy diagrams and for cases where post-generation curation is still needed.
+
+---
+
 ## Summary
 
-The Figma MCP has strong read capabilities and a powerful general-purpose write tool (`use_figma`). However, the **diagram-specific tools** lack lifecycle support: `generate_diagram` always creates a new standalone file and cannot update an existing one. This forces teams managing diagram collections into a manual curation workflow and significant external infrastructure.
+The Figma MCP has strong read capabilities and a powerful general-purpose write tool (`use_figma`). However, the **diagram-specific tools** lacked lifecycle support: `generate_diagram` previously always created a new standalone file and could not update an existing one. This forced teams managing diagram collections into a manual curation workflow and significant external infrastructure.
 
-We've investigated `use_figma` as a workaround and document both the gaps and the path forward below.
+Priority 1 of the feature requests below has since been resolved. We document the full history, the gaps that remain, and the `use_figma` workaround analysis below.
 
 ---
 
@@ -62,7 +72,7 @@ Can create, modify, and delete any object in an open Figma/FigJam file: frames, 
 
 | `create_new_file`              | **Create**            | New file (drafts)      |
 
-| `generate_diagram`             | **Create**            | New FigJam file        |
+| `generate_diagram`             | **Create**            | New or existing FigJam file (fileKey optional) |
 
 | `add_code_connect_map`         | **Create**            | Code Connect mapping   |
 
@@ -78,13 +88,13 @@ The `use_figma` tool executes arbitrary Plugin API JavaScript against any file v
 
 ## The Specific Problem: `generate_diagram` Lifecycle
 
-`generate_diagram` accepts `name`, `mermaidSyntax`, and `userIntent`. It always creates a **new standalone FigJam file** and returns a URL. There is:
+`generate_diagram` accepts `name`, `mermaidSyntax`, `userIntent`, and — **as of 2026-05** — an optional `fileKey` to target an existing file. It previously always created a **new standalone FigJam file**. The remaining gaps are:
 
-- No `fileKey` parameter to target an existing file
+- No `pageId` or `sectionId` parameter — renders to the **default page** of the target file only
 
-- No way to update a previously generated diagram in-place
+- No way to update a previously generated diagram node in-place (still creates new content within the file)
 
-- No way to generate into a specific page/section of an existing board
+- No way to delete standalone files after migration to the central board
 
 ### What this means in practice
 
@@ -160,23 +170,34 @@ Full technical details: [DIAGRAM-WORKFLOW.md](DIAGRAM-WORKFLOW.md)
 
 ## Feature Requests (Revised)
 
-### Priority 1: Add `fileKey` to `generate_diagram`
+### ~~Priority 1: Add `fileKey` to `generate_diagram`~~ — RESOLVED (2026-05-17)
 
-Allow `generate_diagram` to accept an optional `fileKey` (and optionally `pageId` or `sectionId`) to render into an existing FigJam file instead of always creating a new one.
+~~Allow `generate_diagram` to accept an optional `fileKey` (and optionally `pageId` or `sectionId`) to render into an existing FigJam file instead of always creating a new one.~~
 
-**Impact:** Eliminates orphaned files, preserves URLs, removes the need for dual URL tracking and propagation. This single change would eliminate ~70% of our external infrastructure.
+**Resolved:** `generate_diagram` now accepts `fileKey`. Diagrams render into the specified existing file rather than always creating a new standalone one. Page selection is not yet exposed (see Priority 2).
 
-### Priority 2: `generate_diagram` with board targeting
+Usage:
 
-Extend the above to support rendering into a specific page or section of a FigJam board. Parameters like `fileKey` + `pageId` + `sectionName` would allow direct-to-board generation.
+```text
+generate_diagram({
+  name: "DocuMind - Architecture Flowchart",
+  mermaidSyntax: "flowchart TD\n  A --> B",
+  userIntent: "Show the module dependency flow",
+  fileKey: "L8gOzoOCb90ur2g9fDI9hm"   // central board file key
+})
+```
 
-**Impact:** Eliminates the manual curation step entirely.
+### Priority 2: `generate_diagram` with board page/section targeting
+
+Add `pageId` (or `pageName`) and optionally `sectionId` to `generate_diagram`. Currently, when `fileKey` is provided, content always lands on the file's **default page**. Page selection would allow direct-to-section generation without any manual curation step.
+
+**Impact:** Eliminates the remaining manual curation step for new diagrams.
 
 ### Priority 3: File deletion endpoint
 
 Add a REST API endpoint or MCP tool to delete Figma/FigJam files. This is the only CRUD operation missing from every API tier.
 
-**Impact:** Enables automated cleanup of orphaned standalone files.
+**Impact:** Enables automated cleanup of orphaned standalone files generated before the `fileKey` update.
 
 ### Priority 4: Richer `get_figjam` content
 
@@ -262,4 +283,4 @@ The `use_figma` tool theoretically enables write operations on existing FigJam f
 
 The simplest path forward remains: **add `fileKey` (and optionally `pageId`) to `generate_diagram`** so it can render into an existing file. Alternatively, have `generate_diagram` return a real file key instead of a redirect URL, enabling `use_figma` follow-up calls.
 
-### This report documents real production experience with the Figma MCP beta. We've invested significant engineering effort into workarounds that a small API surface change would largely eliminate.
+### This report documents real production experience with the Figma MCP beta. We've invested significant engineering effort into workarounds that a small API surface change would largely eliminate

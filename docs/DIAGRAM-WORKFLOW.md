@@ -144,7 +144,9 @@ npx -y -p puppeteer -p @mermaid-js/mermaid-cli mmdc -i docs/diagrams/{name}.mmd 
 
 ### Step 4 -- FigJam is generated
 
-Claude calls the `generate_diagram` MCP tool to create a standalone FigJam file. The file is named with the convention `"{RepoName} - {Diagram Title}"`.
+Claude calls the `generate_diagram` MCP tool with the `fileKey` of the central board (`L8gOzoOCb90ur2g9fDI9hm`). The diagram renders directly into the central board instead of a new standalone file. The file is named with the convention `"{RepoName} - {Diagram Title}"`.
+
+**Note:** The diagram lands on the central board's **default page**. If the target repo has a dedicated page on the board, curation (Step after commit) is still needed to move the content to the correct page/section.
 
 ### Step 5 -- Registry entry is created
 

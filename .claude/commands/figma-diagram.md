@@ -37,35 +37,7 @@ The user provides ONE of:
 
 Write the `.mmd` file to `docs/diagrams/{name}.mmd` in the current repo.
 
-**Choose the right Mermaid syntax for the content.** The registry supports 7 types — auto-detected from syntax:
-
-| Content                                   | Mermaid Syntax                               | Detected As          |
-
-| ----------------------------------------- | -------------------------------------------- | -------------------- |
-
-| Process flow, pipeline, decision logic    | `flowchart TD` / `flowchart LR`              | `flowchart`          |
-
-| Repo structure, file/folder hierarchy     | `graph TD` with folder/directory node labels | `folder_tree`        |
-
-| Entity relationships, module dependencies | `classDiagram`                               | `relationship_graph` |
-
-| Decision tree, troubleshooting, routing   | `flowchart TD` with diamond decision nodes   | `decision_tree`      |
-
-| Interactions over time between systems    | `sequenceDiagram`                            | `sequence`           |
-
-| Lifecycle stages, status transitions      | `stateDiagram-v2`                            | `state`              |
-
-| Timelines, schedules, phased work         | `gantt`                                      | `gantt`              |
-
-Do NOT default to `flowchart` for everything. Match the syntax to the content:
-
-- Showing how systems talk to each other over time? Use `sequenceDiagram`.
-
-- Showing document/diagram lifecycle stages? Use `stateDiagram-v2`.
-
-- Showing repo folder structure? Use `graph TD` with folder keywords.
-
-- Showing milestone phases on a timeline? Use `gantt`.
+Supported diagram types: `flowchart`, `sequenceDiagram`, `stateDiagram-v2`, `gantt`, `classDiagram`, `erDiagram`.
 
 Use clear, descriptive node labels. Keep diagrams readable — max ~30 nodes per diagram.
 
@@ -81,11 +53,22 @@ Verify the PNG was created and is non-empty.
 
 ## Step 3 — Generate FigJam
 
-Use `generate_diagram` MCP tool with the Mermaid source content.
+Use `generate_diagram` MCP tool with the Mermaid source content and the central board's `fileKey`.
+
+Extract the `fileKey` from the central board URL documented in `docs/DIAGRAM-WORKFLOW.md` (the segment between `/board/` and the next `/`).
+
+```text
+generate_diagram({
+  name: "{RepoName} - {Diagram Title}",
+  mermaidSyntax: "{contents of .mmd file}",
+  userIntent: "{brief description of what this diagram shows}",
+  fileKey: "{central-board-file-key}"   // from docs/DIAGRAM-WORKFLOW.md § Central Board
+})
+```
 
 **Naming convention:** Prefix with repo name: `"{RepoName} - {Diagram Title}"`
 
-The tool creates a standalone FigJam file and returns a URL.
+The tool renders the diagram into the central FigJam board and returns a URL. Content lands on the board's **default page** — curation to the correct repo page may still be needed.
 
 ## Step 4 — Register Diagram
 
@@ -156,4 +139,4 @@ Do NOT commit automatically — let the user review first.
 
 - If PNG generation fails (puppeteer issue), try: `npx -y -p puppeteer -p @mermaid-js/mermaid-cli mmdc -i {input} -o {output} --puppeteerConfig '{"args":["--no-sandbox"]}'`
 
-- The FigJam URL is a standalone file — the user will later curate it into the central board and use `/figma-curate` to relink
+- The FigJam URL now points to the central board (not a standalone file) — use `/figma-curate` to record the final node-level URL once the diagram is placed on the correct page/section

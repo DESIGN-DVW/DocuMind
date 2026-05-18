@@ -276,9 +276,83 @@
       border-radius: 20px;
       pointer-events: none;
     }
+
+    /* Source cell */
+    td.source-cell {
+      font-family: 'SF Mono', 'Menlo', monospace;
+      font-size: 0.78rem;
+      color: #64748b;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    td.source-cell a.source-link {
+      color: #6366f1;
+      text-decoration: none;
+      display: inline-block;
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      vertical-align: bottom;
+    }
+
+    td.source-cell a.source-link:hover { text-decoration: underline; }
+
+    .btn-copy {
+      background: none;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      color: #64748b;
+      line-height: 1;
+      vertical-align: middle;
+    }
+
+    .btn-copy:hover { background: #f1f5f9; border-color: #94a3b8; }
+    .btn-copy.copied { color: #22c55e; border-color: #22c55e; }
+  /* ── Dashboard nav ─────────────────────────────────── */
+  .dash-nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 4px 12px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .dash-nav__brand {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #64748b;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-right: 12px;
+  }
+  .dash-nav a {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #475569;
+    text-decoration: none;
+    transition: background 0.15s;
+  }
+  .dash-nav a:hover { background: #f1f5f9; color: #0f172a; }
+  .dash-nav a.active { background: #e0f2fe; color: #0369a1; font-weight: 600; }
   </style>
 </head>
 <body>
+
+  <nav class="dash-nav">
+    <span class="dash-nav__brand">DocuMind</span>
+    <a href="/dashboard/obsolete.html">Obsolete Docs</a>
+    <a href="/dashboard/diagrams.html" class="active">Diagram Curation</a>
+  </nav>
 
   <h1>Diagram Curation Dashboard</h1>
 
@@ -301,9 +375,9 @@
     <label for="filter-text">Name:</label>
     <input id="filter-text" type="text" placeholder="Search by name...">
 
-    <button class="btn btn-primary" onclick="applyFilters()">Filter</button>
-    <button class="btn btn-secondary" onclick="resetFilters()">Reset</button>
-    <button class="btn btn-secondary" onclick="loadDiagrams()">Refresh</button>
+    <button type="button" class="btn btn-primary" onclick="applyFilters()">Filter</button>
+    <button type="button" class="btn btn-secondary" onclick="resetFilters()">Reset</button>
+    <button type="button" class="btn btn-secondary" onclick="loadDiagrams()">Refresh</button>
 
     <span class="row-count" id="row-count"></span>
   </div>
@@ -318,11 +392,12 @@
           <th>Generated URL</th>
           <th>Curated URL</th>
           <th>PNG</th>
+          <th>Source</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody id="diagram-tbody">
-        <tr><td colspan="7" class="loading">Loading diagrams...</td></tr>
+        <tr><td colspan="8" class="loading">Loading diagrams...</td></tr>
       </tbody>
     </table>
   </div>
@@ -341,14 +416,14 @@
 
     async function loadDiagrams() {
       var tbody = document.getElementById('diagram-tbody');
-      tbody.innerHTML = '<tr><td colspan="7" class="loading">Loading diagrams...</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="loading">Loading diagrams...</td></tr>';
       showError('');
 
       try {
         var res = await fetch('/diagrams');
         if (!res.ok) {
           showError('Failed to load diagrams: HTTP ' + res.status);
-          tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Failed to load diagrams.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Failed to load diagrams.</td></tr>';
           return;
         }
         var data = await res.json();
@@ -357,7 +432,7 @@
         applyFilters();
       } catch (err) {
         showError('Network error loading diagrams: ' + err.message);
-        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Network error — is the daemon running?</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Network error — is the daemon running?</td></tr>';
       }
     }
 
@@ -423,7 +498,7 @@
       tbody.innerHTML = '';
 
       if (rows.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No diagrams match the current filters.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No diagrams match the current filters.</td></tr>';
         count.textContent = '0 diagrams';
         return;
       }
@@ -446,6 +521,16 @@
           ? '<img class="thumb" src="' + escapeHtml(row.png_url) + '" alt="' + escapeHtml(row.name) + '" loading="lazy" onerror="this.style.display=\'none\'" onclick="openLightbox(\'' + escapeHtml(row.png_url) + '\', \'' + escapeHtml(row.name) + '\')">'
           : '<span class="no-thumb">—</span>';
 
+        // Source: markdown file containing this diagram (resolved server-side via grep)
+        var sourcePath = row.source_path || null;
+        var sourceBase = sourcePath ? sourcePath.split('/').pop() : null;
+        var sourceCell = sourcePath
+          ? '<td class="source-cell">' +
+              '<a href="vscode://file/' + escapeHtml(sourcePath) + '" class="source-link" title="' + escapeHtml(sourcePath) + '">' + escapeHtml(sourceBase) + '</a>' +
+              ' <button class="btn-copy" onclick="copyPath(\'' + escapeHtml(sourcePath) + '\', this)" title="Copy full path">⎘</button>' +
+            '</td>'
+          : '<td class="source-cell" style="color:#cbd5e1">—</td>';
+
         tr.innerHTML =
           '<td class="name-cell" title="' + escapeHtml(row.name) + '">' + escapeHtml(row.name) + '</td>' +
           '<td>' + escapeHtml(row.repository) + '</td>' +
@@ -453,12 +538,42 @@
           '<td>' + figjamCell + '</td>' +
           '<td id="curated-' + escapeHtml(row.name) + '">' + curatedCell + '</td>' +
           '<td>' + pngCell + '</td>' +
+          sourceCell +
           '<td class="actions">' +
             '<button class="btn btn-sm btn-curate" onclick="curate(\'' + escapeHtml(row.name) + '\')">Curate</button>' +
             '<button class="btn btn-sm btn-delete" onclick="markDeleted(\'' + escapeHtml(row.name) + '\')">Mark deleted</button>' +
           '</td>';
 
         tbody.appendChild(tr);
+      });
+    }
+
+    // ----------------------------------------------------------------
+    // Copy path to clipboard
+    // ----------------------------------------------------------------
+
+    function copyPath(path, btn) {
+      navigator.clipboard.writeText(path).then(function() {
+        btn.textContent = '✓';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          btn.textContent = '⎘';
+          btn.classList.remove('copied');
+        }, 1500);
+      }).catch(function() {
+        // Fallback for non-secure contexts
+        var inp = document.createElement('input');
+        inp.value = path;
+        document.body.appendChild(inp);
+        inp.select();
+        document.execCommand('copy');
+        document.body.removeChild(inp);
+        btn.textContent = '✓';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          btn.textContent = '⎘';
+          btn.classList.remove('copied');
+        }, 1500);
       });
     }
 
@@ -497,6 +612,13 @@
             curatedCell.innerHTML = '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener">Link</a>';
           }
           showError('');
+
+          // Notify DocuMind to re-scan the repo so propagated files are re-indexed
+          fetch('/hook', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ event: 'scan', repo: row && row.repository })
+          }).catch(function() {}); // fire-and-forget
         } else {
           var errData = await res.json().catch(function() { return { error: 'Unknown error' }; });
           showError('Curate failed for "' + name + '": ' + (errData.error || 'HTTP ' + res.status));

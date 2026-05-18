@@ -19,8 +19,20 @@
       font-size: 1.5rem;
       font-weight: 600;
       color: #0f172a;
+      margin-bottom: 6px;
+    }
+    .page-note {
+      font-size: 0.8rem;
+      color: #94a3b8;
       margin-bottom: 16px;
     }
+    .repo-hint { color: #94a3b8; font-size: 0.78rem; margin-left: 4px; }
+    .sig { display: inline-block; padding: 1px 5px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; margin: 1px; }
+    .sig-age   { background: #fef3c7; color: #92400e; }
+    .sig-orphan{ background: #ede9fe; color: #6d28d9; }
+    .sig-kwd   { background: #fce7f3; color: #9d174d; }
+    .sig-sim   { background: #d1fae5; color: #065f46; }
+    .filter-checkbox { display: flex; align-items: center; gap: 4px; cursor: pointer; }
 
     /* Error banner */
     #error-banner {
@@ -233,11 +245,47 @@
       color: #94a3b8;
       font-style: italic;
     }
+  /* ── Dashboard nav ─────────────────────────────────── */
+  .dash-nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 4px 12px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .dash-nav__brand {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #64748b;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-right: 12px;
+  }
+  .dash-nav a {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #475569;
+    text-decoration: none;
+    transition: background 0.15s;
+  }
+  .dash-nav a:hover { background: #f1f5f9; color: #0f172a; }
+  .dash-nav a.active { background: #e0f2fe; color: #0369a1; font-weight: 600; }
   </style>
 </head>
 <body>
 
+  <nav class="dash-nav">
+    <span class="dash-nav__brand">DocuMind</span>
+    <a href="/dashboard/obsolete.html" class="active">Obsolete Docs</a>
+    <a href="/dashboard/diagrams.html">Diagram Curation</a>
+  </nav>
+
   <h1>Obsolete Docs Dashboard</h1>
+  <p class="page-note">Same-named files (CLAUDE.md, README.md…) appear separately per repo — use the Repo column to distinguish them.</p>
 
   <div id="error-banner"></div>
 
@@ -265,6 +313,11 @@
     <label for="filter-text">Search:</label>
     <input type="text" id="filter-text" placeholder="Filter by path...">
 
+    <label class="filter-checkbox">
+      <input type="checkbox" id="filter-hide-mmd" checked>
+      <span>Hide diagram files</span>
+    </label>
+
     <button id="btn-reset" class="btn btn-secondary">Reset</button>
   </div>
 
@@ -284,8 +337,9 @@
           <th data-sort="flag_label">Flag</th>
           <th data-sort="age_days">Age (days)</th>
           <th data-sort="repository">Repo</th>
-          <th data-sort="path">Path</th>
+          <th data-sort="path">File</th>
           <th>Inbound Links</th>
+          <th>Why</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -324,6 +378,15 @@
       return '#6366f1';
     }
 
+    function buildSignals(row) {
+      var s = [];
+      if (row.age_days > 180)           s.push('<span class="sig sig-age" title="Not modified in ' + row.age_days + ' days">age</span>');
+      if (row.inbound_link_count === 0)  s.push('<span class="sig sig-orphan" title="No inbound links">orphan</span>');
+      if (row.keyword_matched)           s.push('<span class="sig sig-kwd" title="Path contains deprecated/archive keyword">kwd</span>');
+      if (row.similarity_score >= 0.7)   s.push('<span class="sig sig-sim" title="Similar doc exists (score ' + (row.similarity_score || 0).toFixed(2) + ')">sim</span>');
+      return s.join('');
+    }
+
     function renderTable(rows) {
       var tbody = document.getElementById('table-body');
       var wrapper = document.getElementById('table-wrapper');
@@ -342,6 +405,8 @@
         var conf = (row.confidence_score * 100).toFixed(0) + '%';
         var barColor = confColor(row.confidence_score);
         var flagClass = 'badge badge-' + escapeHtml(row.flag_label);
+        var fileCell = escapeHtml(row.filename)
+          + '<span class="repo-hint">(' + escapeHtml(row.repository) + ')</span>';
         return '<tr data-id="' + row.id + '">'
           + '<td><input type="checkbox" class="row-check" data-id="' + row.id + '"></td>'
           + '<td>'
@@ -351,8 +416,9 @@
           + '<td><span class="' + flagClass + '">' + escapeHtml(row.flag_label) + '</span></td>'
           + '<td>' + escapeHtml(String(row.age_days)) + '</td>'
           + '<td>' + escapeHtml(row.repository) + '</td>'
-          + '<td title="' + escapeHtml(row.path) + '">' + escapeHtml(row.filename) + '</td>'
+          + '<td title="' + escapeHtml(row.path) + '">' + fileCell + '</td>'
           + '<td>' + escapeHtml(String(row.inbound_link_count)) + '</td>'
+          + '<td>' + buildSignals(row) + '</td>'
           + '<td><button class="btn btn-sm btn-archive-row" data-id="' + row.id + '">Archive</button> <button class="btn btn-sm btn-delete-row" data-id="' + row.id + '">Delete</button></td>'
           + '</tr>';
       }).join('');
@@ -420,7 +486,8 @@
       hideError();
 
       try {
-        var res = await fetch('/obsolete?limit=500');
+        var hideMmd = document.getElementById('filter-hide-mmd').checked ? 'true' : 'false';
+        var res = await fetch('/obsolete?limit=500&hide_diagram_files=' + hideMmd);
         if (!res.ok) throw new Error('Server error: ' + res.status);
         var data = await res.json();
         allRows = data.rows || [];
@@ -450,6 +517,7 @@
       document.getElementById('filter-repo').addEventListener('change', applyFilters);
       document.getElementById('filter-flag').addEventListener('change', applyFilters);
       document.getElementById('filter-text').addEventListener('input', applyFilters);
+      document.getElementById('filter-hide-mmd').addEventListener('change', loadData);
 
       document.getElementById('select-all').addEventListener('change', function() {
         var isChecked = document.getElementById('select-all').checked;
@@ -489,8 +557,14 @@
           try {
             var res = await fetch('/obsolete/' + id + '/archive', { method: 'POST' });
             if (!res.ok) throw new Error('Archive failed: ' + res.status);
+            var data = await res.json();
             allRows = allRows.filter(function(r) { return r.id !== id; });
             applyFilters();
+            var msg = data.gitignore_updated
+              ? 'Archived — added to .gitignore'
+              : 'Archived (repo root not found — .gitignore not updated)';
+            document.getElementById('stats-summary').textContent = msg;
+            setTimeout(function() { updateStats({ total: allRows.length, count: allRows.length }); }, 3000);
           } catch (err) {
             showError('Archive failed: ' + err.message);
           }

@@ -63,6 +63,18 @@ const db = new Database(DB_PATH);
 db.pragma('foreign_keys = ON');
 db.pragma('journal_mode = WAL');
 
+// Apply pending migrations that are not in schema.sql
+db.exec(`CREATE TABLE IF NOT EXISTS action_log (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  action       TEXT    NOT NULL,
+  target_id    INTEGER,
+  target_path  TEXT,
+  target_repo  TEXT,
+  actor        TEXT    DEFAULT 'user',
+  performed_at TEXT    NOT NULL
+)`);
+console.log('[DocuMind] action_log table ready');
+
 // --- Kuzu Graph Database ---
 // Single kuzu.Database instance — never re-open elsewhere.
 // All other modules receive kuzuDb as a parameter and create their own connections.
@@ -481,7 +493,14 @@ app.get('/obsolete', (req, res) => {
       .get();
     if (!hasTable.count) return res.json({ total: 0, count: 0, offset: 0, rows: [] });
 
-    const { repo, flag, limit = 50, offset = 0, include_dismissed = 'false' } = req.query;
+    const {
+      repo,
+      flag,
+      limit = 50,
+      offset = 0,
+      include_dismissed = 'false',
+      hide_diagram_files = 'true',
+    } = req.query;
     const now = new Date().toISOString();
     const conditions = [];
     const params = [];
@@ -498,6 +517,18 @@ app.get('/obsolete', (req, res) => {
     if (flag) {
       conditions.push('obs.flag_label = ?');
       params.push(flag);
+    }
+    if (hide_diagram_files !== 'false') {
+      const hasDiagramsTable = db
+        .prepare(
+          `SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='diagrams'`
+        )
+        .get();
+      if (hasDiagramsTable.count) {
+        conditions.push(
+          `d.path NOT IN (SELECT mermaid_path FROM diagrams WHERE mermaid_path IS NOT NULL)`
+        );
+      }
     }
 
     const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
@@ -617,8 +648,8 @@ app.post('/obsolete/batch-archive', (req, res) => {
   }
 });
 
-// Single archive — permanent suppression for one row
-app.post('/obsolete/:id/archive', (req, res) => {
+// Single archive — permanent suppression, .gitignore update, action_log entry
+app.post('/obsolete/:id/archive', async (req, res) => {
   try {
     const hasTable = db
       .prepare(
@@ -629,11 +660,54 @@ app.post('/obsolete/:id/archive', (req, res) => {
 
     const { id } = req.params;
     const now = new Date().toISOString();
-    const result = db
-      .prepare(`UPDATE obsolescence_signals SET archived_at = ? WHERE id = ?`)
-      .run(now, Number(id));
-    if (result.changes === 0) return res.status(404).json({ error: 'Signal not found' });
-    res.json({ status: 'archived', id: Number(id), archived_at: now });
+
+    // Fetch signal + document info before archiving
+    const signal = db
+      .prepare(
+        `
+      SELECT obs.id, obs.document_id, d.path, d.repository, d.filename
+      FROM obsolescence_signals obs
+      JOIN documents d ON obs.document_id = d.id
+      WHERE obs.id = ?
+    `
+      )
+      .get(Number(id));
+    if (!signal) return res.status(404).json({ error: 'Signal not found' });
+
+    // Soft-delete the signal
+    db.prepare(`UPDATE obsolescence_signals SET archived_at = ? WHERE id = ?`).run(now, Number(id));
+
+    // Write action_log entry
+    db.prepare(
+      `
+      INSERT INTO action_log (action, target_id, target_path, target_repo, actor, performed_at)
+      VALUES ('archive', ?, ?, ?, 'user', ?)
+    `
+    ).run(Number(id), signal.path, signal.repository, now);
+
+    // Append to repo's .gitignore (best-effort — non-fatal if repo root not found)
+    let gitignore_updated = false;
+    try {
+      const repoRoot = ctx.repoRoots.find(r => r.name === signal.repository)?.path;
+      if (repoRoot) {
+        const gitignorePath = path.join(repoRoot, '.gitignore');
+        const relPath = path.relative(repoRoot, signal.path);
+        let existing = '';
+        try {
+          existing = await fs.readFile(gitignorePath, 'utf-8');
+        } catch (_) {
+          /* create new */
+        }
+        if (!existing.split('\n').some(l => l.trim() === relPath)) {
+          await fs.appendFile(gitignorePath, `\n# Archived by DocuMind (${now})\n${relPath}\n`);
+          gitignore_updated = true;
+        }
+      }
+    } catch (giErr) {
+      console.warn('[server] .gitignore update failed (non-fatal):', giErr.message);
+    }
+
+    res.json({ status: 'archived', id: Number(id), archived_at: now, gitignore_updated });
   } catch (err) {
     console.error('[server] /obsolete/:id/archive error:', err.message);
     res.status(500).json({ error: err.message });

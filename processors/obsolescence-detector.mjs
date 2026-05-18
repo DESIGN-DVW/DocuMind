@@ -135,8 +135,18 @@ export async function detectObsolescence(db, kuzuDb) {
     docIdsScored.add(doc.id);
   }
 
+  // 6a. Load archived document IDs — skip upsert for these to prevent overwriting archived_at
+  const archivedDocIds = new Set(
+    db
+      .prepare(`SELECT document_id FROM obsolescence_signals WHERE archived_at IS NOT NULL`)
+      .all()
+      .map(r => r.document_id)
+  );
+  const toUpsertFiltered = toUpsert.filter(r => !archivedDocIds.has(r.document_id));
+
   // 6. Upsert scored rows in a single transaction
   //    CRITICAL: dismissed_until is NOT in the SET clause — preserves user dismissals
+  //    CRITICAL: archived documents are excluded — preserves archived_at state
   const upsertStmt = db.prepare(
     `INSERT INTO obsolescence_signals
        (document_id, confidence_score, flag_label, age_days, inbound_link_count,
@@ -166,16 +176,19 @@ export async function detectObsolescence(db, kuzuDb) {
     }
   });
 
-  upsertMany(toUpsert);
+  upsertMany(toUpsertFiltered);
 
   // 7. Clean up stale signals (documents that no longer qualify or were removed)
+  //    CRITICAL: archived signals are never deleted — archived_at IS NOT NULL rows preserved
   let deletedCount = 0;
   if (docIdsScored.size > 0) {
     const placeholders = Array.from(docIdsScored)
       .map(() => '?')
       .join(', ');
     const deleteResult = db
-      .prepare(`DELETE FROM obsolescence_signals WHERE document_id NOT IN (${placeholders})`)
+      .prepare(
+        `DELETE FROM obsolescence_signals WHERE document_id NOT IN (${placeholders}) AND archived_at IS NULL`
+      )
       .run(...Array.from(docIdsScored));
     deletedCount = deleteResult.changes;
   } else {
