@@ -2,7 +2,7 @@
 
 name: figma-curate
 description: "Relink a diagram after curation — update DB, registry snapshot, and all markdown references with the curated FigJam URL via the curate_diagram MCP tool"
-allowed-tools: [Read, Edit, Glob, Grep, mcp__documind__get_diagrams, mcp__documind__curate_diagram]
+allowed-tools: [Bash, Read, Edit, Glob, Grep, mcp__documind__get_diagrams, mcp__documind__curate_diagram]
 
 ---
 
@@ -65,7 +65,26 @@ The tool returns:
 
 ```
 
-## Step 3 — Report
+## Step 3 — Export PNG from Figma
+
+After a successful `curate_diagram` call, replace the mmdc-generated PNG with a higher-quality Figma export.
+
+Parse `fileKey` and `nodeId` from the curated URL (pattern: `.../board/{fileKey}/...?node-id={nodeId}`, e.g. `node-id=184-410`). Derive the PNG output path from `mermaid_path` in the `curate_diagram` response (replace `.mmd` with `.png`). Then run:
+
+```bash
+
+node /Users/Shared/htdocs/github/DVWDesign/DocuMind/scripts/export-figma-png.mjs \
+  --fileKey {fileKey} \
+  --nodeId {nodeId} \
+  --output {mermaid_path_with_png_extension}
+
+```
+
+Report: `PNG replaced with Figma export ({size}kb)`. If `FIGMA_PAT` is not set (exit code 1), warn and continue — the mmdc placeholder is kept as-is (non-fatal).
+
+**Bulk mode:** Run the export script for each diagram after its `curate_diagram` call completes.
+
+## Step 4 — Report
 
 Print summary using the tool response:
 

@@ -45,11 +45,14 @@ Use clear, descriptive node labels. Keep diagrams readable — max ~30 nodes per
 
 ```bash
 
-npx -y -p puppeteer -p @mermaid-js/mermaid-cli mmdc -i docs/diagrams/{name}.mmd -o docs/diagrams/{name}.png
+npx -y -p puppeteer -p @mermaid-js/mermaid-cli mmdc \
+  -i docs/diagrams/{name}.mmd \
+  -o docs/diagrams/{name}.png \
+  --puppeteerConfig '{"defaultViewport":{"width":3072,"height":2048,"deviceScaleFactor":2}}'
 
 ```
 
-Verify the PNG was created and is non-empty.
+Verify the PNG was created and is non-empty. This is a placeholder at 2× retina resolution — it will be replaced with a higher-quality Figma export when the diagram is curated via `/figma-curate`.
 
 ## Step 3 — Generate FigJam
 
@@ -58,12 +61,14 @@ Use `generate_diagram` MCP tool with the Mermaid source content and the central 
 Extract the `fileKey` from the central board URL documented in `docs/DIAGRAM-WORKFLOW.md` (the segment between `/board/` and the next `/`).
 
 ```text
+
 generate_diagram({
   name: "{RepoName} - {Diagram Title}",
   mermaidSyntax: "{contents of .mmd file}",
   userIntent: "{brief description of what this diagram shows}",
   fileKey: "{central-board-file-key}"   // from docs/DIAGRAM-WORKFLOW.md § Central Board
 })
+
 ```
 
 **Naming convention:** Prefix with repo name: `"{RepoName} - {Diagram Title}"`
@@ -137,6 +142,6 @@ Do NOT commit automatically — let the user review first.
 
 - If `generate_diagram` fails, still produce `.mmd` + `.png` and note FigJam as pending
 
-- If PNG generation fails (puppeteer issue), try: `npx -y -p puppeteer -p @mermaid-js/mermaid-cli mmdc -i {input} -o {output} --puppeteerConfig '{"args":["--no-sandbox"]}'`
+- If PNG generation fails (puppeteer issue), try: `npx -y -p puppeteer -p @mermaid-js/mermaid-cli mmdc -i {input} -o {output} --puppeteerConfig '{"args":["--no-sandbox"],"defaultViewport":{"width":3072,"height":2048,"deviceScaleFactor":2}}'`
 
 - The FigJam URL now points to the central board (not a standalone file) — use `/figma-curate` to record the final node-level URL once the diagram is placed on the correct page/section

@@ -138,9 +138,14 @@ The command runs:
 
 ```bash
 
-npx -y -p puppeteer -p @mermaid-js/mermaid-cli mmdc -i docs/diagrams/{name}.mmd -o docs/diagrams/{name}.png
+npx -y -p puppeteer -p @mermaid-js/mermaid-cli mmdc \
+  -i docs/diagrams/{name}.mmd \
+  -o docs/diagrams/{name}.png \
+  --puppeteerConfig '{"defaultViewport":{"width":3072,"height":2048,"deviceScaleFactor":2}}'
 
 ```
+
+This produces a 2× retina placeholder PNG. It is replaced with a higher-quality Figma export when the diagram is curated (see **How to Curate a Diagram**).
 
 ### Step 4 -- FigJam is generated
 
@@ -190,7 +195,13 @@ Run the `/figma-curate` slash command with:
 
 - The new curated URL from the central board
 
-The `curate_diagram` MCP tool then handles everything in one call:
+The command handles everything in sequence:
+
+1. Calls `curate_diagram` MCP tool — updates the DB, regenerates `DIAGRAM-REGISTRY.md`, rewrites all markdown references across repos
+
+2. Exports a high-quality PNG from the curated FigJam node via the Figma REST API (`scale=2`) and replaces the mmdc placeholder in `docs/diagrams/{name}.png`
+
+The `curate_diagram` MCP tool itself:
 
 - Updates the `diagrams` table with the curated URL
 
@@ -209,6 +220,48 @@ Diagram B -> https://figma.com/board/...
 ```
 
 After curation, you can safely delete the standalone FigJam file.
+
+---
+
+## How to Update a Diagram
+
+Updating a diagram follows the same flow as creating one. There is no in-place edit — the diagram is regenerated from its `.mmd` source and the user swaps the old shape on the board.
+
+### When to update
+
+- The `.mmd` source has changed (DocuMind marks the diagram as stale)
+- The diagram needs structural changes (new nodes, different layout)
+- Run `/diagram-registry` to see all stale diagrams
+
+### Update flow
+
+### Step 1 — Regenerate
+
+Run `/figma-diagram` with the existing `.mmd` file path as input. This:
+
+- Overwrites the `.mmd` with the updated content
+- Regenerates the `.png` preview
+- Calls `generate_diagram` with `fileKey` — new node lands on the central board default page
+- Updates `source_hash` in the registry and clears the stale flag
+
+### Step 2 — Swap on the board
+
+The old and new diagrams now coexist on the board. Manually:
+
+1. Delete the old shape (the one with the previous curated URL)
+2. Move the new shape into the correct repo Page and Section
+3. Copy the new `?node-id=XXX` URL from the board
+
+### Step 3 — Curate
+
+Run `/figma-curate` with the diagram name and new URL:
+
+```text
+/figma-curate
+{Diagram Name} -> https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/...?node-id=XXX
+```
+
+This replaces the old curated URL across all repos automatically, and also exports a fresh Figma PNG to replace the stale one in `docs/diagrams/`.
 
 ---
 
@@ -269,7 +322,7 @@ Quick reference for locating diagram artifacts:
 
 | Mermaid source (`.mmd`) | `docs/diagrams/` in each repository |
 
-| PNG preview (`.png`) | `docs/diagrams/` in each repository (same directory as `.mmd`) |
+| PNG preview (`.png`) | `docs/diagrams/` in each repository — initially mmdc 2× retina; replaced by Figma export on curation |
 
 | Registry database | DocuMind SQLite at `data/documind.db`, table `diagrams` |
 
