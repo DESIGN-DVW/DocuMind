@@ -112,9 +112,51 @@ If auto-detection picks the wrong type, the `.mmd` syntax can usually be adjuste
 
 ---
 
+## Pre-configured Destinations
+
+The preferred workflow is for each repo to have a **pre-configured FigJam destination** — a specific section on the central board where its diagrams always land. This eliminates the manual "move to correct section" step after generation.
+
+### How destinations work
+
+The user creates a named Section in FigJam for each repo before agents start generating diagrams. The section's `node-id` is recorded in that repo's agent profile. When the agent generates a diagram, it passes both `fileKey` and `nodeId` — the diagram lands in the designated section immediately.
+
+```text
+Agent profile includes:
+  figma_destination:
+    fileKey: "L8gOzoOCb90ur2g9fDI9hm"
+    nodeId:  "234-3965"           ← repo's designated section node-id
+```
+
+### Section-scoped access
+
+Each agent reads and writes only to its designated section(s). This provides:
+
+- **Organization:** diagrams are always in the right place from the start
+- **Confidentiality:** agents cannot accidentally overwrite another repo's diagrams
+- **Auditability:** the registry tracks which agent owns which section
+
+### Agent pre-flight check
+
+Before generating any diagram, the agent reads the DocuMind registry to check current state. This prevents duplicate generation and ensures the agent acts on accurate information.
+
+States to check via `get_diagrams({ repo: "{RepoName}" })`:
+
+| State | Meaning | Agent action |
+| --- | --- | --- |
+| `curated_url` present | Diagram exists and is placed | Skip generation; regenerate only if `.mmd` changed |
+| `stale: 1` | Source changed since last generation | Regenerate and re-curate |
+| `curated_url` null | Generated but not yet placed | Curate — do not regenerate |
+| No entry | Never generated | Generate and register |
+
+---
+
 ## How to Create a Diagram
 
 Use the `/figma-diagram` slash command. The process has six steps, all handled by the command:
+
+### Step 0 -- Pre-flight registry check
+
+Before writing any file, call `get_diagrams` filtered by the current repo to check existing diagram state. If a diagram with the same name already exists and is not stale, skip generation and report its current status instead.
 
 ### Step 1 -- Provide input
 
@@ -149,9 +191,27 @@ This produces a 2× retina placeholder PNG. It is replaced with a higher-quality
 
 ### Step 4 -- FigJam is generated
 
-Claude calls the `generate_diagram` MCP tool with the `fileKey` of the central board (`L8gOzoOCb90ur2g9fDI9hm`). The diagram renders directly into the central board instead of a new standalone file. The file is named with the convention `"{RepoName} - {Diagram Title}"`.
+Claude calls `generate_diagram` with the central board `fileKey` and — when the repo has a pre-configured destination — the `nodeId` of the repo's designated section.
 
-**Note:** The diagram lands on the central board's **default page**. If the target repo has a dedicated page on the board, curation (Step after commit) is still needed to move the content to the correct page/section.
+**With pre-configured destination (preferred):**
+
+```text
+
+generate_diagram({
+  name: "{RepoName} - {Diagram Title}",
+  mermaidSyntax: "{contents of .mmd file}",
+  userIntent: "{brief description}",
+  fileKey: "{central-board-file-key}",
+  nodeId:  "{repo-section-node-id}"    ← from repo agent profile
+})
+
+```
+
+The diagram lands directly in the designated section. Curation is then a registry-only step (record the node URL) — no manual move required.
+
+**Without pre-configured destination (fallback):**
+
+Omit `nodeId`. The diagram lands on the central board's default page. Manual placement into the correct section is required before curation.
 
 ### Step 5 -- Registry entry is created
 
@@ -173,19 +233,22 @@ The command does NOT auto-commit. Review the generated files, then commit when s
 
 ## How to Curate a Diagram
 
-Curation moves a standalone FigJam diagram onto the central board. This is a manual + automated process:
+Curation records the final board node URL in the registry and propagates it across all repos. The manual effort depends on whether a pre-configured destination was used at generation time.
 
-### Manual part
+### If `nodeId` was used at generation time (preferred)
 
-1. Open the standalone FigJam file (URL from the registry or from the markdown link)
+The diagram is already in the correct section. No board move needed.
 
-2. Open the central board: `https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/`
+1. Open the central board and navigate to the repo's designated section
+2. Click the diagram to confirm it landed correctly
+3. Copy the `?node-id=XXX` URL from the browser address bar
 
-3. Navigate to the correct repo Page (or create one if it does not exist)
+### If no `nodeId` was used (fallback — default page)
 
-4. Copy or move the diagram content into the appropriate Section on that Page
-
-5. Copy the new URL from the central board
+1. Open the central board: `https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/`
+2. Locate the diagram on the default page
+3. Move it to the correct repo section
+4. Copy the new `?node-id=XXX` URL from the browser address bar
 
 ### Automated part
 
@@ -246,11 +309,11 @@ Run `/figma-diagram` with the existing `.mmd` file path as input. This:
 
 ### Step 2 — Swap on the board
 
-The old and new diagrams now coexist on the board. Manually:
+The old and new diagrams now coexist on the board.
 
-1. Delete the old shape (the one with the previous curated URL)
-2. Move the new shape into the correct repo Page and Section
-3. Copy the new `?node-id=XXX` URL from the board
+**If `nodeId` was used:** the new diagram landed in the correct section. Delete the old shape and copy the new `?node-id=XXX` URL.
+
+**If no `nodeId`:** delete the old shape, move the new one into the correct section, then copy the URL.
 
 ### Step 3 — Curate
 

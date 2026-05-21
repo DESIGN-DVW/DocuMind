@@ -2,7 +2,7 @@
 
 name: figma-diagram
 description: "Create a FigJam diagram following the triple output rule (.mmd + .png + FigJam + registry)"
-allowed-tools: [Bash, Read, Write, Edit, Glob, Grep, mcp__claude_ai_Figma__generate_diagram, mcp__documind__register_diagram]
+allowed-tools: [Bash, Read, Write, Edit, Glob, Grep, mcp__claude_ai_Figma__generate_diagram, mcp__documind__register_diagram, mcp__documind__get_diagrams]
 
 ---
 
@@ -18,6 +18,21 @@ Create a diagram following the ecosystem triple output standard. Every diagram p
 
 Read the full standard:
 `/Users/Shared/htdocs/github/DVWDesign/RootDispatcher/memory/global-rules.md` (section: Diagrams & Visualization)
+
+---
+
+## Step 0 — Pre-flight registry check
+
+Before writing any file, call `get_diagrams({ repo: "{CurrentRepoName}" })` to read the current diagram state for this repo.
+
+| Registry state                                    | Agent action                                  |
+| ------------------------------------------------- | --------------------------------------------- |
+| Diagram exists, `stale: 0`, `curated_url` present | Skip — diagram is current. Report its status. |
+| Diagram exists, `stale: 1`                        | Proceed — source changed, regeneration needed |
+| Diagram exists, `curated_url` null                | Remind user to curate — do not regenerate     |
+| No entry found                                    | Proceed — first generation                    |
+
+Also confirm the repo's `nodeId` destination is known before proceeding to Step 3.
 
 ---
 
@@ -56,9 +71,9 @@ Verify the PNG was created and is non-empty. This is a placeholder at 2× retina
 
 ## Step 3 — Generate FigJam
 
-Use `generate_diagram` MCP tool with the Mermaid source content and the central board's `fileKey`.
+Use `generate_diagram` MCP tool. The diagram lands on the `nodeId` provided by the user or the repo's agent profile — not the board's default page.
 
-Extract the `fileKey` from the central board URL documented in `docs/DIAGRAM-WORKFLOW.md` (the segment between `/board/` and the next `/`).
+Read the repo's allowed page IDs from `docs/DIAGRAM-WORKFLOW.md § Central Board` or from the user. Then call:
 
 ```text
 
@@ -66,14 +81,17 @@ generate_diagram({
   name: "{RepoName} - {Diagram Title}",
   mermaidSyntax: "{contents of .mmd file}",
   userIntent: "{brief description of what this diagram shows}",
-  fileKey: "{central-board-file-key}"   // from docs/DIAGRAM-WORKFLOW.md § Central Board
+  fileKey: "{central-board-file-key}",
+  nodeId:  "{repo-section-node-id}"    // from repo's allowed page IDs — required
 })
 
 ```
 
 **Naming convention:** Prefix with repo name: `"{RepoName} - {Diagram Title}"`
 
-The tool renders the diagram into the central FigJam board and returns a URL. Content lands on the board's **default page** — curation to the correct repo page may still be needed.
+The diagram renders into the repo's designated section on the central board. No post-generation move is needed — the landing destination is the final location.
+
+If no `nodeId` is configured for this repo yet, omit it and flag to the user that a destination section needs to be created before the next diagram.
 
 ## Step 4 — Register Diagram
 
@@ -144,4 +162,4 @@ Do NOT commit automatically — let the user review first.
 
 - If PNG generation fails (puppeteer issue), try: `npx -y -p puppeteer -p @mermaid-js/mermaid-cli mmdc -i {input} -o {output} --puppeteerConfig '{"args":["--no-sandbox"],"defaultViewport":{"width":3072,"height":2048,"deviceScaleFactor":2}}'`
 
-- The FigJam URL now points to the central board (not a standalone file) — use `/figma-curate` to record the final node-level URL once the diagram is placed on the correct page/section
+- The FigJam URL points to the repo's designated section on the central board — use `/figma-curate` to record the node-level URL in the registry. If `nodeId` was used at generation time, the diagram is already in the correct location; curation is registry-only (no board move needed)
