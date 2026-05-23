@@ -27,8 +27,10 @@ Thumbs.db
 *.tmp
 .cache/
 
-# Reports
+# Reports (exclude test/build output, but allow docs/ deliverables)
 reports/
+!docs/reports/
+!docs/reports/**
 
 # Database files
 *.db
