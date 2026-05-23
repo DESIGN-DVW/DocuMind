@@ -443,7 +443,13 @@ async function getRepoFiles(ctx, repo) {
   for (const root of roots) {
     const files = await glob('**/*.md', {
       cwd: root.path,
-      ignore: ['**/node_modules/**', '**/.git/**', '**/dist/**', '**/build/**'],
+      ignore: [
+        '**/node_modules/**',
+        '**/.git/**',
+        '**/dist/**',
+        '**/build/**',
+        '**/.claude/worktrees/**',
+      ],
       absolute: true,
     });
 
