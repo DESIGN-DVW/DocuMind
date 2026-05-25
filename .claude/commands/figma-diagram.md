@@ -26,10 +26,15 @@ Read the full standard:
 Before writing any file, call `get_diagrams({ repo: "{CurrentRepoName}" })` to read the current diagram state for this repo.
 
 | Registry state                                    | Agent action                                  |
+
 | ------------------------------------------------- | --------------------------------------------- |
+
 | Diagram exists, `stale: 0`, `curated_url` present | Skip — diagram is current. Report its status. |
+
 | Diagram exists, `stale: 1`                        | Proceed — source changed, regeneration needed |
+
 | Diagram exists, `curated_url` null                | Remind user to curate — do not regenerate     |
+
 | No entry found                                    | Proceed — first generation                    |
 
 Also confirm the repo's `nodeId` destination is known before proceeding to Step 3.
