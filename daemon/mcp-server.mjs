@@ -7,8 +7,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import { z } from 'zod';
 import { loadProfile } from '../context/loader.mjs';
-import kuzu from 'kuzu';
-import { kuzuFindRelated } from '../graph/kuzu-queries.mjs';
+import { findRelated } from '../graph/sqlite-traversal.mjs';
 import { createRequire } from 'module';
 import fs from 'fs/promises';
 import { indexMarkdown } from '../processors/markdown-processor.mjs';
@@ -27,7 +26,6 @@ const { sync: markdownlintSync, applyFixes } = require('markdownlint');
 import {
   ROOT,
   DB_PATH,
-  KUZU_DIR,
   PROFILE_PATH,
   MCP_MODE,
   MCP_TOKEN,
@@ -36,18 +34,6 @@ import {
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
-
-// MCP server opens its own Kuzu DB — safe because mcp-server.mjs runs in a separate
-// OS process from daemon/server.mjs. Each process may open one kuzu.Database.
-// This instance is read-only (SELECT queries only).
-const kuzuDb = new kuzu.Database(KUZU_DIR);
-
-// Graceful shutdown — close on process exit
-process.on('exit', () => {
-  try {
-    kuzuDb.close();
-  } catch (_) {}
-});
 
 const ctx = await loadProfile();
 
@@ -185,7 +171,7 @@ server.registerTool(
   'get_related',
   {
     description:
-      'Get documents related to a given document ID via Kuzu graph traversal. Supports reverse traversal to find documents that reference this one.',
+      'Get documents related to a given document ID via graph traversal. Supports reverse traversal to find documents that reference this one.',
     inputSchema: {
       doc_id: z.number().int().describe('Document ID to traverse from'),
       hops: z.number().int().min(1).max(3).default(2).describe('Maximum traversal depth (1-3)'),
@@ -197,7 +183,7 @@ server.registerTool(
   },
   async ({ doc_id, hops, direction }) => {
     try {
-      const results = await kuzuFindRelated(kuzuDb, doc_id, hops, direction);
+      const results = findRelated(db, doc_id, hops, direction);
       return {
         content: [
           {
@@ -1216,9 +1202,8 @@ if (MCP_MODE === 'stdio') {
   const { app } = await import('./server.mjs');
 
   // --- Mount StreamableHTTPServerTransport ---
-  const { StreamableHTTPServerTransport } = await import(
-    '@modelcontextprotocol/sdk/server/streamableHttp.js'
-  );
+  const { StreamableHTTPServerTransport } =
+    await import('@modelcontextprotocol/sdk/server/streamableHttp.js');
 
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: undefined, // stateless — no session tracking

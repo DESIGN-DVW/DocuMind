@@ -17,7 +17,6 @@ import path from 'path';
 import { indexMarkdown } from './processors/markdown-processor.mjs';
 import { indexKeywords } from './processors/keyword-processor.mjs';
 import { buildRelationships } from './graph/relations.mjs';
-import { syncToKuzu } from './graph/kuzu-sync.mjs';
 
 // ---------------------------------------------------------------------------
 // Intelligence helpers — similarity, staleness, deviation detection
@@ -580,7 +579,7 @@ async function runFullScan(db, ctx, repo, startMs) {
  * @param {number} startMs
  * @returns {Promise<object>} result object
  */
-async function runDeepScan(db, ctx, startMs, kuzuDb = null) {
+async function runDeepScan(db, ctx, startMs) {
   // 1. Full document indexing across all repos
   const fullResult = await runFullScan(db, ctx, null, startMs);
 
@@ -600,18 +599,6 @@ async function runDeepScan(db, ctx, startMs, kuzuDb = null) {
 
   // 3. Graph rebuild
   const edgeCount = buildRelationships(db);
-
-  // 3b. Sync to Kuzu (Phase 17)
-  let kuzuEdgeCount = 0;
-  if (kuzuDb) {
-    try {
-      const syncResult = await syncToKuzu(db, kuzuDb);
-      kuzuEdgeCount = syncResult.edgeCount;
-      console.log(`[orchestrator] Kuzu sync complete: ${kuzuEdgeCount} edges mirrored`);
-    } catch (syncErr) {
-      console.error('[orchestrator] Kuzu sync failed (non-fatal):', syncErr.message);
-    }
-  }
 
   // 4. Staleness detection (requires relationship graph to be built first)
   const staleCount = detectStaleness(db);
@@ -699,7 +686,7 @@ export async function generateDiagramSnapshot(db, rootDir) {
  * // { mode: 'incremental', repo: 'DocuMind', documentsFound: 42, added: 0, updated: 3, skipped: 39, durationMs: 1200 }
  */
 export async function runScan(db, ctx, options = {}) {
-  const { mode = 'incremental', repo = null, kuzuDb = null } = options;
+  const { mode = 'incremental', repo = null } = options;
   const startMs = Date.now();
   console.log(`[orchestrator] Starting ${mode} scan${repo ? ` for ${repo}` : ''}...`);
 
@@ -713,7 +700,7 @@ export async function runScan(db, ctx, options = {}) {
         result = await runFullScan(db, ctx, repo, startMs);
         break;
       case 'deep':
-        result = await runDeepScan(db, ctx, startMs, kuzuDb);
+        result = await runDeepScan(db, ctx, startMs);
         break;
       default:
         throw new Error(`[orchestrator] Unknown scan mode: ${mode}`);

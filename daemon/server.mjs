@@ -30,11 +30,8 @@ import { processHook } from './hooks.mjs';
 import { initIngestion } from './ingestion.mjs';
 import { loadProfile } from '../context/loader.mjs';
 import { commonDir } from '../context/utils.mjs';
-import { ROOT, PORT, DB_PATH, REPOS_DIR, MCP_MODE, KUZU_DIR } from '../config/env.mjs';
-import kuzu from 'kuzu';
-import { initKuzuSchema } from '../graph/kuzu-init.mjs';
-import { syncToKuzu, rebuildKuzuGraph } from '../graph/kuzu-sync.mjs';
-import { kuzuTraverseGraph } from '../graph/kuzu-queries.mjs';
+import { ROOT, PORT, DB_PATH, REPOS_DIR, MCP_MODE } from '../config/env.mjs';
+import { traverseGraph } from '../graph/sqlite-traversal.mjs';
 import { LOCAL_BASE_PATH } from '../config/constants.mjs';
 
 // --- Repository Ingestion (clone mode) ---
@@ -74,42 +71,6 @@ db.exec(`CREATE TABLE IF NOT EXISTS action_log (
   performed_at TEXT    NOT NULL
 )`);
 console.log('[DocuMind] action_log table ready');
-
-// --- Kuzu Graph Database ---
-// Single kuzu.Database instance — never re-open elsewhere.
-// All other modules receive kuzuDb as a parameter and create their own connections.
-const kuzuDb = new kuzu.Database(KUZU_DIR);
-await initKuzuSchema(kuzuDb);
-console.log(`[Kuzu] Database path: ${KUZU_DIR}`);
-
-// Startup backfill: if Kuzu graph is empty, populate from SQLite before serving requests
-{
-  const checkConn = new kuzu.Connection(kuzuDb);
-  let kuzuNodeCount = 0;
-  try {
-    const res = await checkConn.query('MATCH (d:Document) RETURN COUNT(d) AS cnt');
-    const rows = await res.getAll();
-    kuzuNodeCount = rows[0]?.cnt ?? 0;
-    try {
-      res.close();
-    } catch (_) {}
-  } finally {
-    try {
-      checkConn.close();
-    } catch (_) {}
-  }
-  if (kuzuNodeCount === 0) {
-    console.log('[Kuzu] Empty graph detected — backfilling from SQLite...');
-    try {
-      const backfillResult = await rebuildKuzuGraph(db, kuzuDb);
-      console.log(
-        `[Kuzu] Backfill complete: ${backfillResult.nodeCount} nodes, ${backfillResult.edgeCount} edges`
-      );
-    } catch (backfillErr) {
-      console.error('[Kuzu] Backfill failed (non-fatal):', backfillErr.message);
-    }
-  }
-}
 
 // --- Diagram source-doc lookup ---
 // Cache: diagram id → absolute markdown path (or null). Invalidated on restart.
@@ -178,61 +139,16 @@ app.use(express.json({ limit: '10mb' }));
 app.use('/dashboard', express.static(path.join(ROOT, 'dashboard')));
 
 // Health check — includes DB liveness probe for Docker HEALTHCHECK
-app.get('/health', async (_req, res) => {
+app.get('/health', (_req, res) => {
   try {
     db.prepare('SELECT 1').get(); // SQLite probe
-
-    // Count SQLite edges (source of truth)
-    const sqliteEdges = db.prepare('SELECT COUNT(*) as count FROM doc_relationships').get().count;
-
-    // Kuzu liveness + edge count
-    const REL_TYPES = [
-      'imports',
-      'dispatched_to',
-      'supersedes',
-      'related_to',
-      'parent_of',
-      'variant_of',
-      'depends_on',
-      'generated_from',
-    ];
-    const kuzuConn = new kuzu.Connection(kuzuDb);
-    let kuzuEdges = 0;
-    try {
-      const probeRes = await kuzuConn.query('RETURN 1');
-      await probeRes.getAll();
-      try {
-        probeRes.close();
-      } catch (_) {}
-
-      for (const rel of REL_TYPES) {
-        const r = await kuzuConn.query(`MATCH ()-[e:${rel}]->() RETURN COUNT(e) AS cnt`);
-        const rows = await r.getAll();
-        kuzuEdges += rows[0]?.cnt ?? 0;
-        try {
-          r.close();
-        } catch (_) {}
-      }
-    } finally {
-      try {
-        kuzuConn.close();
-      } catch (_) {}
-    }
-
-    const syncStatus = kuzuEdges === sqliteEdges ? 'in-sync' : 'drift detected';
-
+    const edgeCount = db.prepare('SELECT COUNT(*) as count FROM doc_relationships').get().count;
     res.json({
       status: 'ok',
       version: '2.0.0',
       uptime: process.uptime(),
       mcp_mode: MCP_MODE,
-      kuzu: {
-        status: 'ok',
-        path: KUZU_DIR,
-        edge_count: kuzuEdges,
-        sqlite_edge_count: sqliteEdges,
-        sync_status: syncStatus,
-      },
+      graph: { edge_count: edgeCount, store: 'sqlite' },
     });
   } catch (err) {
     res.status(503).json({ status: 'error', error: err.message });
@@ -333,16 +249,10 @@ app.get('/graph', async (req, res) => {
   const { repo, type, docId, direction = 'forward' } = req.query;
 
   if (docId) {
-    // Kuzu path — directional traversal from a specific node
     const validDirections = ['forward', 'reverse', 'both'];
     const resolvedDirection = validDirections.includes(direction) ? direction : 'forward';
     try {
-      const rows = await kuzuTraverseGraph(
-        kuzuDb,
-        parseInt(docId, 10),
-        resolvedDirection,
-        type || null
-      );
+      const rows = traverseGraph(db, parseInt(docId, 10), resolvedDirection, type || null);
       const nodeSet = new Set(rows.map(r => r.path));
       return res.json({
         node_count: nodeSet.size + 1, // +1 for source node
@@ -1013,7 +923,7 @@ const server = app.listen(PORT, () => {
   console.log(`Database: ${DB_PATH}`);
 
   // Initialize background services
-  initScheduler(db, ROOT, ctx, kuzuDb);
+  initScheduler(db, ROOT, ctx);
   initWatcher(db, ROOT, ctx);
 });
 
@@ -1022,11 +932,6 @@ function shutdown(signal) {
   console.error(`[DocuMind] ${signal} received — shutting down gracefully`);
   server.close(() => {
     try {
-      try {
-        kuzuDb.close();
-      } catch (_) {
-        /* Kuzu GC handles if close() unavailable */
-      }
       db.pragma('wal_checkpoint(TRUNCATE)');
       db.close();
     } catch (_err) {
@@ -1041,4 +946,4 @@ function shutdown(signal) {
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
 
-export { app, db, kuzuDb, server };
+export { app, db, server };

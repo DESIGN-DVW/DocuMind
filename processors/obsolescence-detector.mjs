@@ -6,14 +6,12 @@
  *
  * Signals:
  *   - age      : document not modified in >180 days
- *   - link     : zero inbound Kuzu graph edges
+ *   - link     : zero inbound SQLite doc_relationships edges
  *   - keyword  : path/filename matches deprecated/archive/old-/todo-delete patterns
  *   - similarity: max similarity score >= 0.7 (redundant content)
  *
- * Exported: detectObsolescence(db, kuzuDb) -> { scanned, flagged, cleared }
+ * Exported: detectObsolescence(db) -> { scanned, flagged, cleared }
  */
-
-import kuzu from 'kuzu';
 
 const KEYWORD_RE = /deprecated|archive|old[-_]|todo[:\s]*delete/i;
 const AGE_THRESHOLD_DAYS = 180;
@@ -22,11 +20,10 @@ const SIM_THRESHOLD = 0.7;
 /**
  * Run obsolescence detection over all indexed documents.
  *
- * @param {import('better-sqlite3').Database} db     - SQLite DB instance
- * @param {import('kuzu').Database|null}      kuzuDb - Kuzu DB instance (may be null)
+ * @param {import('better-sqlite3').Database} db - SQLite DB instance
  * @returns {{ scanned: number, flagged: number, cleared: number }}
  */
-export async function detectObsolescence(db, kuzuDb) {
+export async function detectObsolescence(db) {
   // 1. Guard: ensure migration has run
   const tableExists = db
     .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='obsolescence_signals'")
@@ -51,33 +48,17 @@ export async function detectObsolescence(db, kuzuDb) {
     .all();
   const simMap = new Map(simRows.map(r => [r.doc_id, r.max_score]));
 
-  // 3. Load inbound-link counts from Kuzu graph
+  // 3. Load inbound-link counts from SQLite doc_relationships
   const inboundMap = new Map();
-  if (kuzuDb) {
-    const conn = new kuzu.Connection(kuzuDb);
-    try {
-      const cypher =
-        'MATCH (src:Document)-[r]->(tgt:Document) RETURN tgt.id AS doc_id, count(r) AS cnt';
-      const result = await conn.query(cypher);
-      const rows = await result.getAll();
-      try {
-        result.close();
-      } catch (_) {}
-      for (const row of rows) {
-        inboundMap.set(row.doc_id, Number(row.cnt));
-      }
-    } catch (err) {
-      console.warn(
-        '[obsolescence-detector] Kuzu query failed — using inbound count = 0 for all docs:',
-        err.message
-      );
-    } finally {
-      try {
-        conn.close();
-      } catch (_) {}
-    }
-  } else {
-    console.warn('[obsolescence-detector] No kuzuDb provided — inbound link counts unavailable');
+  const inboundRows = db
+    .prepare(
+      `SELECT target_doc_id AS doc_id, COUNT(*) AS cnt
+       FROM doc_relationships
+       GROUP BY target_doc_id`
+    )
+    .all();
+  for (const row of inboundRows) {
+    inboundMap.set(row.doc_id, Number(row.cnt));
   }
 
   // 4. Load all documents

@@ -28,7 +28,7 @@ const execFileAsync = promisify(execFile);
  * @param {string} root - DocuMind root directory
  * @param {object} ctx - Context profile object from loadProfile()
  */
-export function initScheduler(db, root, ctx, kuzuDb = null) {
+export function initScheduler(db, root, ctx) {
   console.log('[scheduler] Initializing cron jobs...');
 
   // Every 15 minutes: heartbeat + quick stats update
@@ -112,7 +112,7 @@ export function initScheduler(db, root, ctx, kuzuDb = null) {
       }
       // Obsolescence detection pass (non-fatal)
       try {
-        const obsResult = await detectObsolescence(db, kuzuDb);
+        const obsResult = await detectObsolescence(db);
         console.log(
           `[scheduler] Obsolescence detection complete: ${obsResult.scanned} scanned, ${obsResult.flagged} flagged, ${obsResult.cleared} cleared`
         );
@@ -141,7 +141,7 @@ export function initScheduler(db, root, ctx, kuzuDb = null) {
       )
       .run().lastInsertRowid;
     try {
-      const result = await runScan(db, ctx, { mode: 'deep', kuzuDb });
+      const result = await runScan(db, ctx, { mode: 'deep' });
       db.prepare(
         `
         UPDATE scan_history

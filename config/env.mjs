@@ -57,13 +57,6 @@ export const PORT = Number(process.env.PORT ?? 9000);
  */
 export const DB_PATH = path.resolve(ROOT, process.env.DOCUMIND_DB ?? 'data/documind.db');
 
-/**
- * Absolute path to the Kuzu graph database directory.
- * Kuzu stores data as a directory (not a single file).
- * @constant {string}
- */
-export const KUZU_DIR = path.resolve(ROOT, process.env.DOCUMIND_KUZU_DIR ?? 'data/documind.kuzu');
-
 // ============================================================================
 // PROFILE
 // ============================================================================
@@ -144,6 +137,13 @@ export const CRON_WEEKLY = process.env.DOCUMIND_CRON_WEEKLY ?? '0 3 * * 0';
  * @constant {string}
  */
 export const CRON_RELINK = process.env.DOCUMIND_CRON_RELINK ?? '0 */6 * * *';
+
+/**
+ * Cron expression for markdown lint + auto-fix pass (default: daily at 3 AM)
+ * Runs after the daily full scan (2 AM). Skipped if DOCUMIND_CRON_LINT=false.
+ * @constant {string}
+ */
+export const CRON_LINT = process.env.DOCUMIND_CRON_LINT ?? '0 3 * * *';
 
 // ============================================================================
 // MCP TRANSPORT
