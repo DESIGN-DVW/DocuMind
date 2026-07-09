@@ -2,8 +2,10 @@
 /**
  * propagate-lint-rules.mjs
  *
- * Propagates DVW001 (table-separator-spacing) and MD060A (force-align-table-columns)
+ * Propagates DVW001 (table-separator-spacing) and DVW002 (no-blank-lines-in-tables)
  * custom markdownlint rules to all DVWDesign repositories with markdown files.
+ * Also removes the retired MD060A (force-align-table-columns) rule everywhere —
+ * column padding is cosmetic churn; markdown is not a design tool.
  *
  * Usage:
  *   node scripts/propagate-lint-rules.mjs              # propagate to all repos
@@ -66,7 +68,10 @@ const ALL_TARGET_REPOS = [
   'shared-packages',
 ];
 
-const RULE_FILES = ['table-separator-spacing.cjs', 'force-align-table-columns.cjs'];
+const RULE_FILES = ['table-separator-spacing.cjs', 'no-blank-lines-in-tables.cjs'];
+
+/** Retired rules to delete from target repos (and drop from their configs) */
+const OBSOLETE_RULE_FILES = ['force-align-table-columns.cjs'];
 
 /** Target .markdownlint-cli2.jsonc content (custom rules only, no extends) */
 const MARKDOWNLINT_CONFIG = `// markdownlint-cli2 configuration
@@ -74,7 +79,7 @@ const MARKDOWNLINT_CONFIG = `// markdownlint-cli2 configuration
 {
   "customRules": [
     "./config/rules/table-separator-spacing.cjs",
-    "./config/rules/force-align-table-columns.cjs"
+    "./config/rules/no-blank-lines-in-tables.cjs"
   ],
   "ignores": [
     "node_modules",
@@ -152,8 +157,9 @@ function mergeCustomRules(existingContent) {
 
   const rulesNeeded = [
     './config/rules/table-separator-spacing.cjs',
-    './config/rules/force-align-table-columns.cjs',
+    './config/rules/no-blank-lines-in-tables.cjs',
   ];
+  const rulesRetired = ['./config/rules/force-align-table-columns.cjs'];
 
   let changed = false;
   for (const rule of rulesNeeded) {
@@ -161,6 +167,11 @@ function mergeCustomRules(existingContent) {
       parsed.customRules.push(rule);
       changed = true;
     }
+  }
+  const withoutRetired = parsed.customRules.filter(rule => !rulesRetired.includes(rule));
+  if (withoutRetired.length !== parsed.customRules.length) {
+    parsed.customRules = withoutRetired;
+    changed = true;
   }
 
   if (!changed) return existingContent;
@@ -226,6 +237,17 @@ function propagateToRepo(repoName, dryRun) {
     }
   }
 
+  // 2b. Delete retired rule files
+  for (const ruleFile of OBSOLETE_RULE_FILES) {
+    const dest = path.join(rulesDir, ruleFile);
+    if (fs.existsSync(dest)) {
+      result.actions.push(`Remove retired rule ${ruleFile}`);
+      if (!dryRun) {
+        fs.unlinkSync(dest);
+      }
+    }
+  }
+
   // 3. Create or merge .markdownlint-cli2.jsonc
   if (fs.existsSync(configDest)) {
     const existing = fs.readFileSync(configDest, 'utf8');
@@ -246,13 +268,7 @@ function propagateToRepo(repoName, dryRun) {
   }
 
   // 4. Install markdownlint-cli2 devDependency if missing
-  const depsToCheck = [
-    { pkg: 'markdownlint-cli2', installPkg: 'markdownlint-cli2' },
-    {
-      pkg: 'markdownlint-rule-force-align-table-columns',
-      installPkg: 'markdownlint-rule-force-align-table-columns',
-    },
-  ];
+  const depsToCheck = [{ pkg: 'markdownlint-cli2', installPkg: 'markdownlint-cli2' }];
 
   for (const { pkg, installPkg } of depsToCheck) {
     if (!hasDevDep(repoPath, pkg)) {

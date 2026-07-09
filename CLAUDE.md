@@ -108,35 +108,20 @@ npm run daemon:logs         # pm2 logs documind
 DocuMind loads configuration from environment variables, with optional `.env` file support via Node 22's `process.loadEnvFile()`. All config is centralized in `config/env.mjs`.
 
 | Variable                  | Default                                          | Description                                                                                       |
-
 | ------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
-
 | `PORT`                    | `9000`                                           | HTTP server port                                                                                  |
-
 | `DOCUMIND_DB`             | `data/documind.db`                               | Path to SQLite database (relative to project root)                                                |
-
 | `DOCUMIND_PROFILE`        | `config/profiles/dvwdesign.json`                 | Active repository profile JSON                                                                    |
-
 | `DOCUMIND_REPOS_DIR`      | *(unset — uses macOS fallback in constants.mjs)* | Base directory containing all repositories to scan. When set, overrides the hardcoded macOS path. |
-
 | `DOCUMIND_REPOS`          | *(unset — all repos)*                            | Comma-separated list of repo names to scan (overrides profile)                                    |
-
 | `DOCUMIND_CRON_HEARTBEAT` | `*/15 * * * *`                                   | Cron for file watcher heartbeat check                                                             |
-
 | `DOCUMIND_CRON_HOURLY`    | `0 * * * *`                                      | Cron for incremental scan                                                                         |
-
 | `DOCUMIND_CRON_DAILY`     | `0 2 * * *`                                      | Cron for full scan + analysis                                                                     |
-
 | `DOCUMIND_CRON_WEEKLY`    | `0 3 * * 0`                                      | Cron for PDF re-index + keyword refresh                                                           |
-
 | `DOCUMIND_CRON_RELINK`    | `0 */6 * * *`                                    | Cron for relink processor check                                                                   |
-
 | `DOCUMIND_CRON_LINT`      | `0 3 * * *`                                      | Cron for markdown lint + auto-fix pass (set to `false` to disable)                               |
-
 | `DOCUMIND_MCP_MODE`         | `stdio`                                          | MCP transport mode: `stdio` (local Claude Code) or `http` (remote consumers over HTTP)            |
-
 | `DOCUMIND_MCP_TOKEN`        | *(unset)*                                        | Bearer token(s) for MCP HTTP endpoint (comma-separated). Required when MCP mode is `http`.        |
-
 | `DOCUMIND_MCP_CORS_ORIGINS` | *(unset)*                                        | Allowed CORS origins for MCP HTTP endpoint (comma-separated). Empty disables CORS.                |
 
 Copy `.env.example` to `.env` for local development. In Docker, pass vars directly. The daemon starts without `.env` — macOS defaults are used as fallbacks.
@@ -144,45 +129,27 @@ Copy `.env.example` to `.env` for local development. In Docker, pass vars direct
 ## API Endpoints (port 9000)
 
 | Endpoint      | Method | Description                         |
-
 | ------------- | ------ | ----------------------------------- |
-
 | `/health`     | GET    | Health check + version              |
-
 | `/stats`      | GET    | Dashboard statistics                |
-
 | `/search?q=`  | GET    | Full-text search via FTS5           |
-
 | `/graph`      | GET    | Document relationship graph         |
-
 | `/tree/:repo` | GET    | Folder hierarchy + diagrams         |
-
 | `/keywords`   | GET    | Keyword cloud data                  |
-
 | `/diagrams`   | GET    | Diagram registry                    |
-
 | `/scan`       | POST   | Trigger scan (optional: `{ repo }`) |
-
 | `/index`      | POST   | Reindex documents                   |
-
 | `/convert`    | POST   | Convert file (DOCX/RTF/PDF)         |
-
 | `/hook`       | POST   | Claude hook receiver                |
-
 | `/mcp`        | POST/GET/DELETE | MCP Streamable HTTP endpoint (requires bearer token; active only in `http` mode) |
 
 ### Scheduled Tasks
 
 | Schedule     | Task                                                    |
-
 | ------------ | ------------------------------------------------------- |
-
 | Every 15 min | File watcher heartbeat check                            |
-
 | Every hour   | Incremental scan (changed files only, via content_hash) |
-
 | Daily 2 AM   | Full scan + similarity detection + deviation analysis   |
-
 | Weekly Sun   | PDF re-index + keyword refresh + graph rebuild          |
 
 ## Database Schema (SQLite + FTS5)
@@ -375,28 +342,31 @@ Configuration: `config/.markdownlint.json`
 
 - MD040: ALL code blocks MUST have language type
 
-### Table Separator Format
+### Table Format
+
+Three non-negotiable rules, enforced by DVW001 + DVW002 (auto-fixed by `markdownlint-cli2 --fix`):
+
+1. **Never put a blank line between table rows.** A blank line terminates a GFM table — everything after it renders as raw text. Rows must be consecutive lines. (DVW002)
+2. **Separators are minimal and spaced:** `| - |` — one space, one hyphen. Any dash count is accepted (`| --- |`), but never compact `|---|`. (DVW001)
+3. **Never pad cells or separators to visually align columns.** Markdown is not a design tool; alignment padding is diff noise with zero rendering effect. The old MD060A align rule is retired — do not re-enable it.
 
 ```text
-
 CORRECT:
+| Column | Column |
+| - | - |
+| data | data |
 
+WRONG (blank lines break the table; padding is noise):
 | Column | Column |
 
 | ------ | ------ |
 
-WRONG:
-
-| Column | Column |
-
-| -------- | -------- |
-
+| data   | data   |
 ```
 
-Rule: one space between pipe and dashes on each side.
-Alignment markers are allowed: `| :--- | :---: | ---: |`
+Alignment markers are allowed: `| :- | :-: | -: |`
 
-Auto-fixed by `npm run fix:custom` (pattern `table-3`).
+**Wide tables:** if rows exceed ~80 characters, write an HTML `<table>` embedded in the markdown instead (table elements are MD033-allowed). Applies to Storybook docs too.
 
 ### Fenced Code Block Identifiers
 
@@ -569,7 +539,9 @@ DocuMind has a persistent knowledge graph at `graphify-out/graph.json` (last bui
 Check the graph first — it captures module relationships, API surfaces, and doc-to-code connections that span multiple files:
 
 ```bash
+
 graphify query "<your question>" --graph graphify-out/graph.json
+
 ```
 
 ### After code or doc changes
@@ -577,13 +549,17 @@ graphify query "<your question>" --graph graphify-out/graph.json
 Rebuild incrementally (uses cache — only re-extracts changed files):
 
 ```bash
+
 graphify update /Users/Shared/htdocs/github/DVWDesign/DocuMind
+
 ```
 
 Or from the DocuMind directory:
 
 ```bash
+
 graphify update .
+
 ```
 
 ### Graph output location
@@ -593,5 +569,7 @@ graphify update .
 ### When to rebuild
 
 - After adding new processors, endpoints, or scripts
+
 - After significant refactoring (new modules, renamed files)
+
 - At session start if `graphify-out/graph.json` is more than a week old

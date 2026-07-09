@@ -4,7 +4,7 @@
 {
   "customRules": [
     "./config/rules/table-separator-spacing.cjs",
-    "./config/rules/force-align-table-columns.cjs"
+    "./config/rules/no-blank-lines-in-tables.cjs"
   ],
   "config": {
     "MD013": false,
@@ -24,7 +24,8 @@
     "archive",
     "_archive",
     "archives",
-    "docs/slides"
+    "docs/slides",
+    "config/markdownlint"
   ],
   "overrides": [
     {

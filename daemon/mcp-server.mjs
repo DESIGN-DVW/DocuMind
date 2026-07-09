@@ -21,7 +21,9 @@ import {
 import { writingNow } from './registry-lock.mjs';
 
 const require = createRequire(import.meta.url);
-const { sync: markdownlintSync, applyFixes } = require('markdownlint');
+// markdownlint >= 0.35 moved the sync API to the 'markdownlint/sync' subpath
+const { lint: markdownlintSync } = require('markdownlint/sync');
+const { applyFixes } = require('markdownlint');
 
 import {
   ROOT,
@@ -672,7 +674,7 @@ server.registerTool(
 
       const customRules = [];
       try {
-        customRules.push(require(path.join(RULES_DIR, 'force-align-table-columns.cjs')));
+        customRules.push(require(path.join(RULES_DIR, 'no-blank-lines-in-tables.cjs')));
         customRules.push(require(path.join(RULES_DIR, 'table-separator-spacing.cjs')));
       } catch {
         /* custom rules optional */
@@ -751,7 +753,7 @@ server.registerTool(
 
       const customRules = [];
       try {
-        customRules.push(require(path.join(RULES_DIR, 'force-align-table-columns.cjs')));
+        customRules.push(require(path.join(RULES_DIR, 'no-blank-lines-in-tables.cjs')));
         customRules.push(require(path.join(RULES_DIR, 'table-separator-spacing.cjs')));
       } catch {
         /* custom rules optional */
