@@ -94,7 +94,7 @@ Full requirements record: `.planning/milestones/v3.3-REQUIREMENTS.md`
 
 **Milestone Goal:** Automated slides publishing pipeline — EN Marp decks as single source of truth, DeepL French translation, HTML/PDF/PPTX rendering, FTP deploy, and Figma Slides push, orchestrated by the DocuMind daemon with agent-driven content updates.
 
-- [ ] **Phase 23: Foundation & Hygiene** — Ledger migration, env var scaffolding, gitignore/dockerignore hygiene for the pipeline
+- [x] **Phase 23: Foundation & Hygiene** — Ledger migration, env var scaffolding, gitignore/dockerignore hygiene for the pipeline (completed 2026-07-10)
 
 - [ ] **Phase 24: Render Stage** — EN deck → HTML/PDF/PPTX via marp-cli, proven under the PM2 daemon environment
 
@@ -517,7 +517,7 @@ Plans:
 | 20. Text-to-Cypher                           | v3.3      | N/A             | Cancelled   | -          |
 | 21. Visualization Dashboard                  | v3.3      | N/A             | Cancelled   | -          |
 | 22. Obsolete Docs Dashboard                  | v3.3      | 3/3             | Complete    | 2026-04-20 |
-| 23. Foundation & Hygiene                     | 2/3 | In Progress|  | -          |
+| 23. Foundation & Hygiene                     | v3.4      | 3/3             | Complete    | 2026-07-10 |
 | 24. Render Stage                             | v3.4      | 0/TBD           | Not started | -          |
 | 25. Translation Stage                        | v3.4      | 0/TBD           | Not started | -          |
 | 26. Ledger Wiring                            | v3.4      | 0/TBD           | Not started | -          |

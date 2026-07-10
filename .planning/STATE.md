@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v3.4
 milestone_name: Presentation Pipeline
-current_phase: 23
-current_plan: 03
-status: executing
-last_updated: "2026-07-10"
+current_phase: 24
+current_plan: null
+status: ready_to_plan
+last_updated: "2026-07-11"
 progress:
   total_phases: 7
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
   completed_plans: 3
 ---
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 ## Current Position
 
 **Milestone:** v3.4 Presentation Pipeline
-**Phase:** 23 - Foundation & Hygiene (in progress)
+**Phase:** 23 - Foundation & Hygiene — COMPLETE (verified 2026-07-10, human-approved 2026-07-11); next: Phase 24 - Render Stage (not yet planned)
 **Plan:** All 3 plans complete (23-01, 23-02, 23-03)
-**Status:** Executing — wave 1 complete, phase verification pending
-**Last activity:** 2026-07-10 — All Phase 23 plans complete: slide exports untracked + gitignored (FOUND-01), pipeline env vars scaffolded (FOUND-02), slide_pipeline_runs ledger migrated (FOUND-03). Branch `feat/2026-07-10-v3.4-foundation-hygiene` merged back into `fix/2026-07-07-table-lint-rules`.
+**Status:** Phase 23 complete — ready to plan Phase 24
+**Last activity:** 2026-07-11 — Phase 23 verified (3/4 criteria full, 1 environment-blocked partial) and human-approved. User created .env.local with real DeepL/FTP/LibreOffice values (now gitignored + dockerignored); note config/env.mjs only loads `.env`, so .env.local must be renamed or the loader extended. User taking the package-lock.json/Docker item (.npmrc has legacy-peer-deps=true).
 
 ## Accumulated Context
 
