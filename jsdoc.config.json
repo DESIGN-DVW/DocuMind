@@ -1,12 +1,6 @@
 {
   "source": {
-    "include": [
-      "scripts",
-      "config",
-      "data",
-      "docs",
-      "index"
-    ],
+    "include": ["scripts", "config", "data", "docs", "index"],
     "includePattern": "\\.(js|mjs)$",
     "excludePattern": "(node_modules|dist|build|storybook-static|\\.test\\.|\\.stories\\.|mock)"
   },
@@ -20,10 +14,7 @@
   },
   "tags": {
     "allowUnknownTags": true,
-    "dictionaries": [
-      "jsdoc",
-      "closure"
-    ]
+    "dictionaries": ["jsdoc", "closure"]
   },
   "templates": {
     "cleverLinks": true,
@@ -55,9 +46,7 @@
       }
     }
   },
-  "plugins": [
-    "plugins/markdown"
-  ],
+  "plugins": ["plugins/markdown"],
   "markdown": {
     "parser": "gfm",
     "hardwrap": false,
