@@ -95,19 +95,12 @@ Figma's own canvas-native AI, launched May 20 2026.
 ## Before → After
 
 | Before | After |
-
 | --- | --- |
-
 | Diagram updated in code, FigJam forgotten | SHA-256 staleness detection — stale diagrams surfaced automatically |
-
 | Design handoff = screenshot in Notion | MCP reads Figma component tree directly into code |
-
 | Grep across 14 repos manually | Full-text search: 620+ files, < 100ms |
-
 | 22kb PNG — unreadable at full width | 185kb Figma REST export — retina quality |
-
 | Diagrams land on default board page | Pre-configured section destinations — no manual moves |
-
 | 14 markdown files with different URLs | One `curate_diagram` call updates all 14 simultaneously |
 
 ---
@@ -115,20 +108,11 @@ Figma's own canvas-native AI, launched May 20 2026.
 ## The Numbers
 
 | Metric | Result |
-
 | --- | --- |
-
 | PNG quality improvement | **8×** (22kb → 185kb) |
-
 | Files searchable | **620+** across 14+ repos |
-
 | Search latency | **< 100ms** |
-
 | Repos updated per curation call | **14 simultaneously** |
-
-| Figma Buzz ROI (3yr) | **311%** vs build-in-house |
-
-| Avoided build cost | **$316K–$480K** |
 
 ---
 
@@ -160,42 +144,14 @@ Figma's own canvas-native AI, launched May 20 2026.
 
 ---
 
-## Figma Buzz + Campaign Manager
-
-### (From RandD existing analysis)
-
-| What Campaign Manager Does | What Figma Buzz Does |
-
-| --- | --- |
-
-| Campaign planning & coordination | — |
-
-| Client approvals & collaboration | — |
-
-| — | Bulk asset generation (100s in minutes) |
-
-| — | CSV-driven brand variations |
-
-| Publishing automation | — |
-
-### 0% overlap. 100% synergistic
-
-### ROI: 311% over 3 years. $316K–$480K saved vs building in-house
-
----
-
 ## Training Program
 
 Three tiers. Designed for scale.
 
 | Tier | Who | Format | Duration | Outcome |
-
 | --- | --- | --- | --- | --- |
-
 | **T1 Awareness** | All stakeholders | Webinar + demo | 30 min | Understands what's possible |
-
 | **T2 User** | Designers, PMs | Workshop + playbook | 1 day | Uses the framework independently |
-
 | **T3 Admin** | Devs, agents | Deep-dive | 2 days | Extends and maintains the framework |
 
 All sessions recorded. Playbook included. Quarterly updates as tools evolve.
@@ -207,23 +163,14 @@ All sessions recorded. Playbook included. Quarterly updates as tools evolve.
 Three packages. Choose by scope.
 
 | | **Starter** | **Standard** | **Premium** |
-
 | --- | --- | --- | --- |
-
 | Framework Setup | ✓ | ✓ | ✓ |
-
 | T1 Awareness | ✓ | ✓ | ✓ |
-
 | T2 User Training | — | ✓ | ✓ |
-
 | T3 Admin Training | — | — | ✓ |
-
 | Coaching Sessions | 1 | 3 | Unlimited (6mo) |
-
 | Material License | — | 1 year | 1 year |
-
 | Retainer | — | — | 6 months |
-
 | **Total** | **€3,500–6,000** | **€9,000–14,000** | **€18,000–28,000** |
 
 ### All prices indicative. Custom scoping available
