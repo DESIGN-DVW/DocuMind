@@ -4,14 +4,14 @@ gsd_state_version: 1.0
 milestone: v3.4
 milestone_name: Presentation Pipeline
 current_phase: 23
-current_plan: null
-status: ready-to-plan
+current_plan: 03
+status: executing
 last_updated: "2026-07-10"
 progress:
   total_phases: 7
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 3
+  completed_plans: 1
 
 ---
 
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 ## Current Position
 
 **Milestone:** v3.4 Presentation Pipeline
-**Phase:** 23 - Foundation & Hygiene (not started)
-**Plan:** —
-**Status:** Ready to plan
-**Last activity:** 2026-07-10 — Roadmap created: 7 phases (23-29), 25/25 requirements mapped, 0 orphans
+**Phase:** 23 - Foundation & Hygiene (in progress)
+**Plan:** 23-03 (complete) — 23-01, 23-02 still pending
+**Status:** Executing — plan 23-03 done, waiting on 23-01/23-02
+**Last activity:** 2026-07-10 — Plan 23-03 executed: slide_pipeline_runs ledger table + latest_slide_runs view (migration 009), FOUND-03 complete
 
 ## Accumulated Context
 
@@ -56,6 +56,8 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 
 - v3.3 → carried: Kuzu retired per ADR-001; SQLite recursive CTEs handle graph traversal; Graphify handles visualization
 
+- Phase 23 Plan 03: `slide_pipeline_runs` ledger uses `trigger_source` (not `trigger`, a SQLite reserved keyword) and per-stage translate/render/deploy status/duration/error columns so Phases 24/25/28 need no follow-up migration
+
 ### Prereq gaps (user-side)
 
 - DEEPL_API_KEY not set anywhere (no .env in DocuMind yet)
@@ -79,6 +81,8 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 - Phase 29 (Ecosystem Surface & Notification): LOW confidence on the `figma-use-slides` skill's input contract — stays a documented runbook until Figma MCP auth unblocks
 
 ## Session Log
+
+- 2026-07-10: Phase 23 Plan 03 executed — migration 009 adds `slide_pipeline_runs` table + `latest_slide_runs` view, applied via `npm run db:migrate`, verified via sqlite3 CLI; FOUND-03 marked complete
 
 - 2026-07-10: Buzz references + retired-study ROI claims removed from both decks (external + internal)
 
