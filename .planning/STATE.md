@@ -1,18 +1,16 @@
 ---
-
 gsd_state_version: 1.0
 milestone: v3.4
 milestone_name: Presentation Pipeline
 current_phase: 23
-current_plan: 03
+current_plan: 02
 status: executing
 last_updated: "2026-07-10"
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
-
+  completed_plans: 2
 ---
 
 # Session State
@@ -28,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 
 **Milestone:** v3.4 Presentation Pipeline
 **Phase:** 23 - Foundation & Hygiene (in progress)
-**Plan:** 23-03 (complete) — 23-01, 23-02 still pending
-**Status:** Executing — plan 23-03 done, waiting on 23-01/23-02
-**Last activity:** 2026-07-10 — Plan 23-03 executed: slide_pipeline_runs ledger table + latest_slide_runs view (migration 009), FOUND-03 complete
+**Plan:** 02 and 03 complete — 01 remaining
+**Status:** Executing — plans 02, 03 done, waiting on 01
+**Last activity:** 2026-07-10 — Plan 23-02 complete: presentation-pipeline env vars scaffolded (.env.example, config/env.mjs, CLAUDE.md); FOUND-02 satisfied
 
 ## Accumulated Context
 
@@ -57,6 +55,8 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 - v3.3 → carried: Kuzu retired per ADR-001; SQLite recursive CTEs handle graph traversal; Graphify handles visualization
 
 - Phase 23 Plan 03: `slide_pipeline_runs` ledger uses `trigger_source` (not `trigger`, a SQLite reserved keyword) and per-stage translate/render/deploy status/duration/error columns so Phases 24/25/28 need no follow-up migration
+- [Phase 23]: v3.4: config/env.mjs wired for all 6 presentation-pipeline vars now (not deferred) so Phases 24/25/28 never touch env plumbing
+- [Phase 23]: v3.4: Docker image build blocked by pre-existing missing package-lock.json (unrelated to this plan) — logged to deferred-items.md, must resolve before Phase 28 deploy needs a working image
 
 ### Prereq gaps (user-side)
 
@@ -81,6 +81,8 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 - Phase 29 (Ecosystem Surface & Notification): LOW confidence on the `figma-use-slides` skill's input contract — stays a documented runbook until Figma MCP auth unblocks
 
 ## Session Log
+
+- 2026-07-10: Phase 23 Plan 02 executed — presentation-pipeline env vars scaffolded across .env.example, config/env.mjs, CLAUDE.md (placeholders only, zero real secrets); Docker secret-hygiene static checks passed; unrelated missing package-lock.json build gap logged to deferred-items.md; FOUND-02 marked complete
 
 - 2026-07-10: Phase 23 Plan 03 executed — migration 009 adds `slide_pipeline_runs` table + `latest_slide_runs` view, applied via `npm run db:migrate`, verified via sqlite3 CLI; FOUND-03 marked complete
 

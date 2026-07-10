@@ -10,7 +10,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 ### Foundation & Hygiene
 
 - [ ] **FOUND-01**: Rendered slide exports (HTML/PDF/PPTX) are gitignored; stale committed binaries removed from the git index without deleting local copies (no history rewrite)
-- [ ] **FOUND-02**: `.env.example` documents all pipeline variables (DEEPL_API_KEY, FTP_HOST/USER/PASSWORD/REMOTE_PATH, SOFFICE_PATH) — no real secrets in repo or Docker image
+- [x] **FOUND-02**: `.env.example` documents all pipeline variables (DEEPL_API_KEY, FTP_HOST/USER/PASSWORD/REMOTE_PATH, SOFFICE_PATH) — no real secrets in repo or Docker image
 - [x] **FOUND-03**: `slide_pipeline_runs` ledger table + `latest_slide_runs` view exist via versioned migration
 
 ### Render
@@ -82,7 +82,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 | - | - | - |
 | FOUND-01 | Phase 23 | Pending |
-| FOUND-02 | Phase 23 | Pending |
+| FOUND-02 | Phase 23 | Complete |
 | FOUND-03 | Phase 23 | Complete |
 | RNDR-01 | Phase 24 | Pending |
 | RNDR-02 | Phase 24 | Pending |
