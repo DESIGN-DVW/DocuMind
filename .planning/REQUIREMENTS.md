@@ -1,172 +1,95 @@
-# Requirements: DocuMind v3.3
+# Requirements: DocuMind v3.4 Presentation Pipeline
 
-**Defined:** 2026-04-08
-**Core Value:** When you look at a document, you instantly see what it's connected to — what links to it, what duplicates it, and whether it's stale.
+**Defined:** 2026-07-10
+**Core Value:** When you look at a document, you instantly see what it's connected to — the relationship graph is the intelligence layer. v3.4 extends this to presentations: the EN deck is the source of truth, and every downstream artifact stays automatically current.
 
-## v3.3 Requirements
+## v3.4 Requirements
 
-### Graph DB Foundation (GRAPH)
+Requirements for this milestone. Each maps to roadmap phases.
 
-- [x] **GRAPH-01**: Kuzu DB initializes with document relationship schema on daemon startup
+### Foundation & Hygiene
 
-- [x] **GRAPH-02**: Kuzu database path is configurable via `DOCUMIND_KUZU_DIR` env var
+- [ ] **FOUND-01**: Rendered slide exports (HTML/PDF/PPTX) are gitignored; stale committed binaries removed from the git index without deleting local copies (no history rewrite)
+- [ ] **FOUND-02**: `.env.example` documents all pipeline variables (DEEPL_API_KEY, FTP_HOST/USER/PASSWORD/REMOTE_PATH, SOFFICE_PATH) — no real secrets in repo or Docker image
+- [ ] **FOUND-03**: `slide_pipeline_runs` ledger table + `latest_slide_runs` view exist via versioned migration
 
-- [x] **GRAPH-03**: Docker image builds successfully with Kuzu native addon (Debian bookworm base)
+### Render
 
-### Sync Bridge (SYNC)
+- [ ] **RNDR-01**: User can render any EN deck to HTML, PDF, and PPTX with a single `npm run slides:build`
+- [ ] **RNDR-02**: Editable PPTX is produced via `--pptx-editable` when soffice is resolvable (SOFFICE_PATH); when not, the build warns explicitly — never a silent image-based fallback
+- [ ] **RNDR-03**: Renders succeed under the PM2 daemon environment (browser + soffice resolution verified daemon-side, not just interactive shell)
 
-- [x] **SYNC-01**: After each relationship rebuild, doc_relationships sync automatically from SQLite → Kuzu
+### Translation
 
-- [x] **SYNC-02**: Operator can trigger full Kuzu graph rebuild via `npm run graph:rebuild`
+- [ ] **TRNS-01**: A changed EN deck produces a sibling `.fr.md` with all prose translated to French via DeepL
+- [ ] **TRNS-02**: Front-matter, Marp directives (`<!-- _class: ... -->`), code fences, inline code, URLs, and glossary-pinned proper nouns survive translation byte-identical
+- [ ] **TRNS-03**: Translated tables remain DVW001/DVW002 compliant; generated `.fr.md` passes the lint gate before render
+- [ ] **TRNS-04**: DeepL glossary pins brand/product terms (DVWDesign, Figma, Marp, MCP, DocuMind, FigJam); front-matter footer strings are never sent to DeepL
+- [ ] **TRNS-05**: Unchanged decks are not re-translated (content-hash idempotency — quota protection)
+- [ ] **TRNS-06**: `.fr.md` files are tracked in git and carry a generated-file header warning (manual edits get overwritten; corrections go to the glossary)
 
-- [x] **SYNC-03**: `/health` endpoint reports Kuzu edge count and sync status vs SQLite
+### Orchestration
 
-### Query Layer (QUERY)
+- [ ] **PIPE-01**: Saving an EN deck under docs/slides/ automatically triggers translate → render → deploy via the daemon watcher
+- [ ] **PIPE-02**: Generated files (`.fr.md`, HTML/PDF/PPTX) never retrigger the pipeline — glob exclusion verified loop-free end-to-end
+- [ ] **PIPE-03**: Rapid successive saves coalesce into one run; a per-deck run lock prevents overlapping runs
+- [ ] **PIPE-04**: Every pipeline run is recorded in the ledger with per-stage outcome and timing
+- [ ] **PIPE-05**: Content changes applied from dispatches (e.g. ProductMarketing) flow through the same watcher trigger path as manual edits
 
-- [x] **QUERY-01**: `GET /graph` supports `direction=forward|reverse|both` parameter (Kuzu backend)
+### Deploy
 
-- [x] **QUERY-02**: `get_related` MCP tool uses Kuzu Cypher traversal (same response contract, reverse traversal enabled)
+- [ ] **DPLY-01**: Rendered EN + FR HTML deploys to the web host via FTP using atomic stage-then-rename (no half-published state)
+- [ ] **DPLY-02**: Deploy runs in dry-run mode (logs intended actions, uploads nothing) whenever FTP credentials are absent
+- [ ] **DPLY-03**: Each deploy records a manifest of uploaded files with hashes and timestamps
 
-### Graph Algorithms (ALGO)
+### Surfaces & Ecosystem
 
-- [ ] **ALGO-01**: `graph_rank` MCP tool returns documents ranked by PageRank
+- [ ] **SURF-01**: `POST /slides/build` REST endpoint triggers the pipeline for one deck or all decks
+- [ ] **SURF-02**: `build_slides` MCP tool lets agents trigger the pipeline as a tool call
+- [ ] **SURF-03**: A successful deploy publishes an AgentHub discovery via REST (`POST /api/discoveries` on port 3004)
+- [ ] **SURF-04**: A weekly drift-check cron compares deployed hashes against current sources and surfaces mismatches
 
-- [ ] **ALGO-02**: `graph_cycles` MCP tool returns circular dependency chains (SCC)
+### Figma Slides
 
-- [ ] **ALGO-03**: `graph_orphans` MCP tool returns isolated documents (WCC)
+- [ ] **FIGS-01**: A runbook documents pushing the final external deck to Figma Slides via `use_figma` (manual agent procedure — automation deferred until Figma MCP auth + input contract verified)
 
-### Text-to-Cypher (CYPHER)
+## Future Requirements
 
-- [ ] **CYPHER-01**: `graph_query` MCP tool accepts natural language, returns graph query results
+Deferred. Tracked but not in current roadmap.
 
-- [ ] **CYPHER-02**: `DOCUMIND_LLM_PROVIDER` env var selects LLM (default: `anthropic`)
+### Pipeline
 
-- [ ] **CYPHER-03**: Generated Cypher sanitized to block write operations (DELETE/MERGE/DROP)
-
-- [ ] **CYPHER-04**: `graph_query` degrades gracefully when no API key is configured
-
-### Visualization (VIZ)
-
-- [ ] **VIZ-01**: `dashboard/` is a minimal Vite React app consuming `@design-dvw/ui`, builds to static files served by Express
-
-- [ ] **VIZ-02**: `graph.html` displays interactive Cytoscape.js document graph with `@design-dvw/ui` shell (Card, Badge, Button)
-
-- [ ] **VIZ-03**: Graph page supports filtering by repo, relationship type, and traversal depth
-
-- [ ] **VIZ-04**: Kuzu Explorer runs as optional PM2 service (`documind-kuzu-explorer`) for developer access
-
-- [ ] **VIZ-05**: `GET /graph/export` provides graph data in JSON format for external visualization tools
-
-### Obsolete Docs Dashboard (Phase 22)
-
-- [x] **OBS-01**: `obsolescence_signals` table stores per-document heuristic scores (age, inbound links, keyword match, similarity), updated by daily cron pass
-
-- [x] **OBS-02**: `/dashboard/obsolete.html` renders a sortable, filterable table of flagged documents with confidence score, flag label, age, repo, and path
-
-- [x] **OBS-03**: Batch-select checkboxes + "Archive Selected" / "Dismiss" action buttons; dismiss suppresses a row for 30 days (no destructive action without confirmation)
-
-- [x] **OBS-04**: REST endpoint `GET /obsolete` returns paginated signal rows; `POST /obsolete/:id/dismiss` records suppression with expiry
-
-- [x] **OBS-05**: Detection heuristics: age >180 days + zero inbound Kuzu edges + keyword pattern → confidence ≥ 0.8 (obsolete); similarity duplicate → confidence ≥ 0.7 (redundant)
-
-## Future Requirements (v3.4+)
-
-### Graph Intelligence
-
-- Louvain community detection (document cluster discovery)
-
-- GraphRAG / vector search integration
-
-- Migrate diagrams.html to React + @design-dvw/ui
-
-### Graph DB
-
-- Fork evaluation: Bighorn or Ladybug as Kuzu replacement once npm packages are stable
-
-- LangChain JS official Kuzu adapter (when/if published)
+- **PIPE-F1**: Automated Figma Slides push (pending Figma MCP auth + `figma-use-slides` input-contract verification)
+- **PIPE-F2**: Additional target languages beyond French
+- **PIPE-F3**: PDF/PPTX deployment to web host (v3.4 deploys HTML only)
 
 ## Out of Scope
 
+Explicitly excluded. Documented to prevent scope creep.
+
 | Feature | Reason |
-
-| --- | --- |
-
-| Replace SQLite FTS5 with Kuzu | FTS5 has no Kuzu equivalent; Kuzu handles graph, SQLite handles search |
-
-| Kuzu as server process | Must stay in-process (embedded); server mode breaks single-writer constraint |
-
-| Multi-tenant Kuzu | Single-user embedded architecture; SaaS layer is a separate milestone |
-
-| Real-time graph updates | Batch sync after scan is sufficient; streaming adds complexity with no clear benefit |
-
-| Migrate diagrams.html to React | Separate dashboard refactor milestone; diagrams.html stays plain HTML in v3.3 |
+| - | - |
+| Git history rewrite for stale binaries | Force-push disruption not worth ~8MB; rm --cached + gitignore suffices |
+| Footer/front-matter translation | Brand strings stay identical in both languages; front-matter never sent to DeepL |
+| SFTP support | basic-ftp speaks FTP/FTPS only; revisit only if host requires SFTP (protocol unconfirmed) |
+| Live-edit sync back from Figma Slides | Figma is a publish target, not a source; EN .md is the only source of truth |
+| Slide theming/design overhaul | Pipeline milestone; deck design is content work, not infrastructure |
 
 ## Traceability
 
+Which phases cover which requirements. Updated during roadmap creation.
+
 | Requirement | Phase | Status |
+| - | - | - |
+| (populated by roadmapper) | | |
 
-| --- | --- | --- |
+**Coverage:**
 
-| GRAPH-01 | Phase 16 | Complete |
-
-| GRAPH-02 | Phase 16 | Complete |
-
-| GRAPH-03 | Phase 16 | Complete |
-
-| SYNC-01 | Phase 17 | Complete |
-
-| SYNC-02 | Phase 17 | Complete |
-
-| SYNC-03 | Phase 17 | Complete |
-
-| QUERY-01 | Phase 18 | Complete |
-
-| QUERY-02 | Phase 18 | Complete |
-
-| ALGO-01 | Phase 19 | Pending |
-
-| ALGO-02 | Phase 19 | Pending |
-
-| ALGO-03 | Phase 19 | Pending |
-
-| CYPHER-01 | Phase 20 | Pending |
-
-| CYPHER-02 | Phase 20 | Pending |
-
-| CYPHER-03 | Phase 20 | Pending |
-
-| CYPHER-04 | Phase 20 | Pending |
-
-| VIZ-01 | Phase 21 | Pending |
-
-| VIZ-02 | Phase 21 | Pending |
-
-| VIZ-03 | Phase 21 | Pending |
-
-| VIZ-04 | Phase 21 | Pending |
-
-| VIZ-05 | Phase 21 | Pending |
-
-| OBS-01 | Phase 22 | Complete |
-
-| OBS-02 | Phase 22 | Complete |
-
-| OBS-03 | Phase 22 | Complete |
-
-| OBS-04 | Phase 22 | Complete |
-
-| OBS-05 | Phase 22 | Complete |
-
-### Coverage:
-
-- v3.3 requirements: 25 total
-
-- Mapped to phases: 25
-
-- Unmapped: 0 ✓
+- v3.4 requirements: 25 total
+- Mapped to phases: 0
+- Unmapped: 25 ⚠️ (pending roadmap)
 
 ---
 
-### Requirements defined: 2026-04-08
-
-### Last updated: 2026-04-20 — added OBS-01..05 for Phase 22 Obsolete Docs Dashboard
+*Requirements defined: 2026-07-10*
+*Last updated: 2026-07-10 after scoping decisions (FR tracked in git, footers untranslated, no history rewrite, all surfaces in scope)*
