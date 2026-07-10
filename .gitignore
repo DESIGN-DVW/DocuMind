@@ -47,3 +47,8 @@ data/documind.kuzu/
 
 # Session recovery files (local only)
 .claude/sessions/
+
+# Presentation pipeline: rendered exports are regenerated on demand, never committed
+docs/slides/**/*.html
+docs/slides/**/*.pdf
+docs/slides/**/*.pptx

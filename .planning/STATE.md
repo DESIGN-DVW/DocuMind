@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.4
 milestone_name: Presentation Pipeline
 current_phase: 23
-current_plan: 02
+current_plan: 03
 status: executing
 last_updated: "2026-07-10"
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 3
-  completed_plans: 2
+  completed_plans: 3
 ---
 
 # Session State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 
 **Milestone:** v3.4 Presentation Pipeline
 **Phase:** 23 - Foundation & Hygiene (in progress)
-**Plan:** 02 and 03 complete — 01 remaining
-**Status:** Executing — plans 02, 03 done, waiting on 01
-**Last activity:** 2026-07-10 — Plan 23-02 complete: presentation-pipeline env vars scaffolded (.env.example, config/env.mjs, CLAUDE.md); FOUND-02 satisfied
+**Plan:** All 3 plans complete (23-01, 23-02, 23-03)
+**Status:** Executing — wave 1 complete, phase verification pending
+**Last activity:** 2026-07-10 — All Phase 23 plans complete: slide exports untracked + gitignored (FOUND-01), pipeline env vars scaffolded (FOUND-02), slide_pipeline_runs ledger migrated (FOUND-03). Branch `feat/2026-07-10-v3.4-foundation-hygiene` merged back into `fix/2026-07-07-table-lint-rules`.
 
 ## Accumulated Context
 
@@ -58,6 +58,8 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 - [Phase 23]: v3.4: config/env.mjs wired for all 6 presentation-pipeline vars now (not deferred) so Phases 24/25/28 never touch env plumbing
 - [Phase 23]: v3.4: Docker image build blocked by pre-existing missing package-lock.json (unrelated to this plan) — logged to deferred-items.md, must resolve before Phase 28 deploy needs a working image
 
+- Phase 23 Plan 01: Branched from the tip of `fix/2026-07-07-table-lint-rules` instead of literal `master` (master lacks `docs/slides/` entirely — stuck at an old phase-16 commit); executed in an isolated `git worktree` rather than the shared working directory because sibling agents were concurrently committing plans 23-02/23-03 there. Branch `feat/2026-07-10-v3.4-foundation-hygiene` needs a merge back before this work is fully integrated.
+
 ### Prereq gaps (user-side)
 
 - DEEPL_API_KEY not set anywhere (no .env in DocuMind yet)
@@ -83,6 +85,8 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 ## Session Log
 
 - 2026-07-10: Phase 23 Plan 02 executed — presentation-pipeline env vars scaffolded across .env.example, config/env.mjs, CLAUDE.md (placeholders only, zero real secrets); Docker secret-hygiene static checks passed; unrelated missing package-lock.json build gap logged to deferred-items.md; FOUND-02 marked complete
+
+- 2026-07-10: Phase 23 Plan 01 executed — 6 stale slide export binaries (HTML/PDF/PPTX, May 2026) untracked from git index via `git rm --cached` (files remain on disk); path-scoped `.gitignore` rules added for `docs/slides/**/*.{html,pdf,pptx}`; FOUND-01 marked complete. Executed in isolated worktree on new branch `feat/2026-07-10-v3.4-foundation-hygiene` (base: `fix/2026-07-07-table-lint-rules` @ 2ed9f60), merged back same day. **Open item:** `stash@{0}` on `fix/2026-07-07-table-lint-rules` ("WIP: table-lint-rules fixes (unrelated to 23-01)...") holds unrelated in-progress table-lint edits + the two Buzz-cleaned deck `.md` edits that were on that branch when this plan started; needs manual `git stash pop` + conflict review.
 
 - 2026-07-10: Phase 23 Plan 03 executed — migration 009 adds `slide_pipeline_runs` table + `latest_slide_runs` view, applied via `npm run db:migrate`, verified via sqlite3 CLI; FOUND-03 marked complete
 
