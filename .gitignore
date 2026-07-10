@@ -44,6 +44,7 @@ data/documind.kuzu/
 
 # Environment variables (local paths must not be committed)
 .env
+.env.local
 
 # Session recovery files (local only)
 .claude/sessions/

@@ -3,6 +3,7 @@ node_modules
 data
 .planning
 .env
+.env.local
 *.db
 *.db-wal
 *.db-shm
