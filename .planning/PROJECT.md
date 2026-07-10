@@ -84,21 +84,29 @@ When you look at a document, you instantly see what it's connected to — what l
 
 - ✓ All phase VERIFICATION.md files complete (Phase 4 backfilled) — v3.1
 
+- ✓ Graph traversal via SQLite recursive CTEs (Kuzu retired per ADR-001) — v3.3
+
+- ✓ Obsolete docs dashboard with archive + delete actions — v3.3
+
 ### Active
 
-<!-- v3.3 scope — Kuzu Graph Intelligence -->
+<!-- v3.4 scope — Presentation Pipeline -->
 
-- [ ] Kuzu embedded graph DB installed alongside SQLite
+- [ ] Marp toolchain: marp-cli devDependency, .marprc.yml, slides:* npm scripts (HTML/PDF/PPTX incl. --pptx-editable)
 
-- [ ] doc_relationships migrated from SQLite to Kuzu (typed edges, Cypher queries)
+- [ ] DeepL translation stage: EN deck → generated .fr.md, Marp directives/code/proper nouns preserved, glossary support
 
-- [ ] Graph algorithms: reverse traversal, PageRank, centrality, cycle detection
+- [ ] Render stage: EN + FR → HTML/PDF/PPTX via single slides:build
 
-- [ ] LangChain KuzuGraph integration: text-to-Cypher natural language graph queries
+- [ ] FTP deploy stage with dry-run mode (creds pending in .env)
 
-- [ ] New MCP tools for graph intelligence (query by name, ranked results, cycle detection)
+- [ ] Figma Slides push runbook via use_figma MCP (blocked on Figma MCP auth)
 
-- [ ] Existing /graph REST API updated to query Kuzu
+- [ ] Orchestration: daemon watcher trigger → translate → render → deploy, with loop protection
+
+- [ ] ProductMarketing content updates flow as dispatches into EN source; AgentHub discovery published on deploy
+
+- [ ] Rendered outputs gitignored; stale committed binaries removed
 
 ### Future
 
@@ -109,6 +117,10 @@ When you look at a document, you instantly see what it's connected to — what l
 - [ ] SaaS layer (multi-tenant, auth, billing)
 
 ### Out of Scope
+
+- Kuzu graph DB — retired per ADR-001 (2026-07); SQLite recursive CTEs cover graph traversal, Graphify covers visualization
+
+- Figma Buzz integration — RandD study concluded stop (2026-07); removed from all marketing material
 
 - OAuth / multi-tenant auth — revisit if SaaS path chosen
 
@@ -163,45 +175,44 @@ The strategic path forward:
 ## Key Decisions
 
 | Decision                              | Rationale                                                      | Outcome      |
-
 | ------------------------------------- | -------------------------------------------------------------- | ------------ |
-
 | Keep SQLite, no NoSQL                 | Single writer, read-heavy, ~50K doc ceiling, zero config       | ✓ Good       |
-
 | Build MCP alongside REST              | Main value is agents querying DocuMind                         | ✓ Good       |
-
 | Schema + profiles before processors   | Data model must be stable before processors write to it        | ✓ Good       |
-
 | Graph is the priority feature         | Relationship map is the day-one intelligence test              | ✓ Good       |
-
 | Context profiles for portability      | JSON config swaps behavior for code/marketing/ops verticals    | ✓ Good       |
-
 | Fold relink_diagram into curate_diagram | One tool sets URL + propagates + generates snapshot           | ✓ Good       |
-
 | DB as single source for diagrams      | Per-repo DIAGRAM-REGISTRY.md files deprecated                  | ✓ Good       |
-
 | Separate lint_file + fix_file         | Matches CLI pattern, agent decides when to fix                 | ✓ Good       |
+| Retire Kuzu → SQLite CTE (ADR-001)    | Dual-DB complexity not justified; CTEs + Graphify cover needs  | ✓ Good       |
+| EN Marp .md = only hand-edited slide artifact | FR/HTML/PDF/PPTX/hosted copies are generated, never edited | — Pending |
+| Rendered slide exports gitignored     | ~8MB binary churn per edit; pipeline makes regeneration free   | — Pending    |
+| DeepL for FR translation              | Always-French requirement; API-driven, glossary-capable        | — Pending    |
 
 ---
 
-## Current Milestone: v3.3 Kuzu Graph Intelligence
+## Current Milestone: v3.4 Presentation Pipeline
 
-**Goal:** Replace DocuMind's SQLite-backed graph layer with Kuzu (embedded in-process graph DB), add graph algorithms (PageRank, centrality, cycle detection), and integrate LangChain KuzuGraph for natural language text-to-Cypher queries via MCP.
+**Goal:** Automated slides publishing pipeline — EN Marp decks as single source of truth, DeepL French translation, HTML/PDF/PPTX rendering, FTP deploy, and Figma Slides push, orchestrated by the DocuMind daemon with agent-driven content updates.
 
-### Target features:
+### Target features
 
-- Kuzu embedded graph DB installed alongside SQLite (FTS5 stays in SQLite)
+- Marp toolchain (marp-cli devDep, .marprc.yml, slides:* scripts, editable PPTX via LibreOffice)
 
-- doc_relationships migrated from SQLite → Kuzu (Cypher queries, typed edges)
+- DeepL translation stage producing generated .fr.md decks (directives/code/proper nouns preserved)
 
-- Graph algorithms: reverse traversal, PageRank, centrality, cycle detection
+- Single slides:build rendering EN + FR to HTML/PDF/PPTX
 
-- LangChain KuzuGraph integration: text-to-Cypher bridge — natural language → Cypher → results
+- FTP deploy with dry-run mode until credentials land in .env
 
-- New MCP tools for graph intelligence (graph_query, graph_rank, graph_cycles)
+- Figma Slides push runbook via use_figma MCP (final presentation document)
 
-- Existing /graph REST API upgraded to query Kuzu
+- Daemon watcher orchestration: EN deck change → translate → render → deploy, loop-protected
+
+- ProductMarketing updates arrive as RootDispatcher dispatches; AgentHub discovery on deploy
+
+**Known prereq gaps:** DEEPL_API_KEY missing, FTP creds missing, Figma MCP unauthorized, soffice not on PATH.
 
 ---
 
-### Last updated: 2026-04-04 after v3.3 milestone started
+### Last updated: 2026-07-10 after v3.4 milestone started
