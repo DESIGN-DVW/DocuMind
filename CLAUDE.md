@@ -123,6 +123,12 @@ DocuMind loads configuration from environment variables, with optional `.env` fi
 | `DOCUMIND_MCP_MODE`         | `stdio`                                          | MCP transport mode: `stdio` (local Claude Code) or `http` (remote consumers over HTTP)            |
 | `DOCUMIND_MCP_TOKEN`        | *(unset)*                                        | Bearer token(s) for MCP HTTP endpoint (comma-separated). Required when MCP mode is `http`.        |
 | `DOCUMIND_MCP_CORS_ORIGINS` | *(unset)*                                        | Allowed CORS origins for MCP HTTP endpoint (comma-separated). Empty disables CORS.                |
+| `DEEPL_API_KEY` | *(unset)* | DeepL API key for EN→FR slide translation. Translate stage is unavailable when unset. |
+| `FTP_HOST` | *(unset)* | FTP host for slide deploy. Deploy runs dry-run when FTP credentials are absent. |
+| `FTP_USER` | *(unset)* | FTP username for slide deploy. |
+| `FTP_PASSWORD` | *(unset)* | FTP password for slide deploy. Never committed. |
+| `FTP_REMOTE_PATH` | `/public_html/slides` | Remote path where rendered slides are published. |
+| `SOFFICE_PATH` | `/Applications/LibreOffice.app/Contents/MacOS/soffice` | Path to LibreOffice soffice binary for editable PPTX export. |
 
 Copy `.env.example` to `.env` for local development. In Docker, pass vars directly. The daemon starts without `.env` — macOS defaults are used as fallbacks.
 
