@@ -11,7 +11,7 @@ progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
 
 ---
 
@@ -28,9 +28,9 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 
 **Milestone:** v3.4 Presentation Pipeline
 **Phase:** 23 - Foundation & Hygiene (in progress)
-**Plan:** 23-03 (complete) — 23-01, 23-02 still pending
-**Status:** Executing — plan 23-03 done, waiting on 23-01/23-02
-**Last activity:** 2026-07-10 — Plan 23-03 executed: slide_pipeline_runs ledger table + latest_slide_runs view (migration 009), FOUND-03 complete
+**Plan:** 23-01, 23-03 (complete) — 23-02 still pending
+**Status:** Executing — plans 23-01 and 23-03 done, waiting on 23-02
+**Last activity:** 2026-07-10 — Plan 23-01 executed: stale slide export binaries (HTML/PDF/PPTX) untracked from git index, path-scoped .gitignore rules added, FOUND-01 complete. Executed on branch `feat/2026-07-10-v3.4-foundation-hygiene` (isolated worktree, based on `fix/2026-07-07-table-lint-rules` @ 2ed9f60) due to concurrent sibling plan execution (23-02/23-03) in the shared working directory — needs merge back before phase 23 is fully integrated.
 
 ## Accumulated Context
 
@@ -58,6 +58,8 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 
 - Phase 23 Plan 03: `slide_pipeline_runs` ledger uses `trigger_source` (not `trigger`, a SQLite reserved keyword) and per-stage translate/render/deploy status/duration/error columns so Phases 24/25/28 need no follow-up migration
 
+- Phase 23 Plan 01: Branched from the tip of `fix/2026-07-07-table-lint-rules` instead of literal `master` (master lacks `docs/slides/` entirely — stuck at an old phase-16 commit); executed in an isolated `git worktree` rather than the shared working directory because sibling agents were concurrently committing plans 23-02/23-03 there. Branch `feat/2026-07-10-v3.4-foundation-hygiene` needs a merge back before this work is fully integrated.
+
 ### Prereq gaps (user-side)
 
 - DEEPL_API_KEY not set anywhere (no .env in DocuMind yet)
@@ -81,6 +83,8 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 - Phase 29 (Ecosystem Surface & Notification): LOW confidence on the `figma-use-slides` skill's input contract — stays a documented runbook until Figma MCP auth unblocks
 
 ## Session Log
+
+- 2026-07-10: Phase 23 Plan 01 executed — 6 stale slide export binaries (HTML/PDF/PPTX, May 2026) untracked from git index via `git rm --cached` (files remain on disk); path-scoped `.gitignore` rules added for `docs/slides/**/*.{html,pdf,pptx}`; FOUND-01 marked complete. Executed in isolated worktree on new branch `feat/2026-07-10-v3.4-foundation-hygiene` (base: `fix/2026-07-07-table-lint-rules` @ 2ed9f60) — needs PR/merge back. **Open item:** `stash@{0}` on `fix/2026-07-07-table-lint-rules` ("WIP: table-lint-rules fixes (unrelated to 23-01)...") holds unrelated in-progress table-lint edits + the two Buzz-cleaned deck `.md` edits that were on that branch when this plan started; needs manual `git stash pop` + conflict review once concurrent phase-23 execution settles.
 
 - 2026-07-10: Phase 23 Plan 03 executed — migration 009 adds `slide_pipeline_runs` table + `latest_slide_runs` view, applied via `npm run db:migrate`, verified via sqlite3 CLI; FOUND-03 marked complete
 
