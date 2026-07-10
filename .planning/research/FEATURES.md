@@ -1,262 +1,205 @@
 # Feature Research
 
-**Domain:** Kuzu Graph DB + LangChain text-to-Cypher for a documentation intelligence system
-**Researched:** 2026-04-07
-**Confidence:** HIGH (Kuzu algo extension from docs.kuzudb.com); HIGH (LangChain KuzuGraph from PyPI + official
-langchain docs); MEDIUM (text-to-Cypher NL query patterns from community sources + ACL 2025 paper);
-MEDIUM (documentation-domain graph algorithm applicability — synthesized from domain knowledge)
-
----
+**Domain:** Docs-as-code presentation pipeline (Marp markdown decks → translated, rendered, deployed slides)
+**Researched:** 2026-07-10
+**Confidence:** MEDIUM-HIGH (Marp/DeepL mechanics verified against official docs/GitHub; daemon-orchestration and Figma Slides specifics partly inferred from community sources — flagged per item)
 
 ## Context Note
 
-This research covers ONLY what v3.3 adds on top of DocuMind v3.1. Already built and NOT re-researched:
-
-- 8-type document relationship graph (imports, parent_of, variant_of, supersedes, depends_on,
-  related_to, generated_from, dispatched_to) stored in SQLite `doc_relationships` table
-- Forward-only CTE traversal up to 3 hops via `/graph` REST endpoint
-- `get_related` MCP tool
-- FTS5 full-text search, TF-IDF keyword extraction, similarity/deviation detection
-
-The question is: what does replacing the SQLite graph layer with Kuzu + adding LangChain text-to-Cypher
-actually unlock? Answer: bidirectional traversal, graph algorithms native to graph DBs, variable-length
-patterns without CTE complexity, and natural language queries from agents without writing Cypher.
-
----
-
-## What Cypher Enables That SQL CTEs Cannot
-
-This is the foundational justification for the migration. Not "Cypher is nicer" — concrete capabilities:
-
-| Capability | SQL CTE Approach | Cypher Approach | Why It Matters |
-| ---------- | ---------------- | --------------- | -------------- |
-| Reverse traversal | Requires `UNION` of forward + flipped join, re-written per query | `MATCH (a)<-[r]-(b)` — direction reversal is a syntax character | "What documents reference this CLAUDE.md?" currently requires a separate query variant |
-| Bidirectional traversal | Two CTEs unioned, O(n^2) on large hop counts | `MATCH (a)-[r]-(b)` (undirected) — single pass | "What is connected to this doc, regardless of direction?" |
-| Variable-length any-depth | Forward CTE with explicit max-hop guard; 3-hop cap is a workaround for performance | `MATCH (a)-[*1..5]->(b)` — built-in kleene star with termination guarantee | Unlimited traversal depth without query rewrites |
-| Shortest path between docs | Not expressible in SQLite without graph-specific extension | `MATCH (a)-[r* SHORTEST 1..10]->(b)` — native shortest path keyword | "What is the connection chain between CLAUDE.md and a dispatch?" |
-| All shortest paths | Not supported | `MATCH (a)-[r* ALL SHORTEST 1..10]->(b)` — returns all minimal paths | Dependency chain analysis |
-| Pattern matching on cycles | Requires explicit visited-set anti-join; expensive | SCC algo extension detects mutual reachability natively | Circular dependency detection in doc graph |
-| Multi-hop with relationship type filtering | CTE must carry rel_type through each recursion step | `MATCH (a)-[:supersedes|depends_on*1..3]->(b)` — inline type filter | "Find all superseded chains of length > 2" |
-| Ranked graph results | No native ordering by graph position; requires post-processing | PageRank scores returned as node property — `ORDER BY pagerank DESC` | "Which docs are most referenced? Which are orphans?" |
-
-**Confidence:** HIGH — Cypher vs SQL CTE comparison corroborated by multiple sources including
-academic benchmarks (LDBC-SF100, 280M nodes / 1.7B edges) and Kuzu documentation.
-
----
+This file replaces the prior (v3.3 Kuzu graph DB) research content, which is obsolete — Kuzu was
+retired per ADR-001 (2026-07, SQLite recursive CTEs cover graph traversal). This research covers the
+v3.4 Presentation Pipeline milestone only: automated translate → render → deploy pipeline for Marp
+markdown decks, agent-orchestrated by the DocuMind daemon. Already built and NOT re-researched: markdown
+indexing/lint/fix, chokidar watcher + cron scheduler, MCP tools, diagram registry, REST API.
 
 ## Feature Landscape
 
-### Table Stakes (Users/Agents Expect These)
+### Table Stakes (Users Expect These)
 
-"Users" here means Claude Code agents calling DocuMind MCP tools, and Dave querying via REST.
-Missing any of these makes the Kuzu migration feel like a lateral move with no benefit.
+Features any docs-as-code slide pipeline (translate → render → deploy) is assumed to have. Missing these = the pipeline feels broken or unsafe to trust as "single source of truth."
 
 | Feature | Why Expected | Complexity | Notes |
-| ------- | ------------ | ---------- | ----- |
-| Kuzu installed alongside SQLite (not replacing it) | SQLite FTS5 and the existing keyword/similarity tables stay; Kuzu owns only graph data. Mixed-storage is the correct architecture — Kuzu excels at graph traversal, SQLite at text search | LOW | `npm install kuzu`. Kuzu is an embedded in-process DB like SQLite — no server to spin up. Stores data in a directory (configurable via `KUZU_DB_PATH` env var). Dependency: `better-sqlite3` stays for FTS5, keyword, similarity, scan_runs tables. |
-| `doc_relationships` migrated from SQLite to Kuzu | If doc_relationships stays in SQLite, all graph queries still use CTE — Kuzu adds zero value | MEDIUM | Migration script reads all rows from SQLite `doc_relationships`, creates Kuzu node table (Document) and relationship tables (one per rel_type for typed edges). The 8 rel_types become 8 Kuzu edge tables, enabling per-type traversal filtering. Keep SQLite `doc_relationships` as read-only archive until v3.3 stabilizes. |
-| Reverse traversal query (`<-` direction in Cypher) | The most immediately valuable capability missing from the current forward-only CTE | LOW | `MATCH (a:Document)<-[r:IMPORTS]-(b:Document) WHERE a.path = $path RETURN b` — trivial in Cypher, currently requires a second REST call with source/target flipped in SQLite. Wire to existing `/graph` endpoint as `direction=reverse` query param. |
-| `/graph` REST endpoint queries Kuzu | If the REST API still hits SQLite, the migration is invisible to consumers | MEDIUM | Refactor `graph/queries.mjs` to emit Cypher instead of recursive CTEs. `db.query(cypher, params)` via Kuzu Node.js SDK. Response shape stays identical — path-breaking API changes deferred. |
-| `get_related` MCP tool queries Kuzu | Same as above — tool behavior unchanged, implementation backend swapped | LOW | Change the SQL query inside `get_related` handler to a Kuzu Cypher query. Same input/output contract. |
-| Bidirectional graph queries in `/graph` | "Show everything connected to this doc" is the natural query; forward-only is an artificial limitation of the SQLite backend | LOW | `direction=both` param on `/graph` endpoint. Cypher: `MATCH (a:Document)-[r]-(b:Document) WHERE a.id = $id` |
+| --------- | -------------- | ------------ | ------- |
+| Marp render to HTML/PDF/PPTX from one command | Every docs-as-code slide tool (Marp, reveal-md, Slidev) treats multi-format export as baseline; `marp-cli` supports `--pdf`, `--pptx`, `--html`, `--images` natively via CLI flags or `.marprc.yml` config | LOW | `marp-cli` is the whole point of the tool — no custom rendering logic needed, just flag orchestration in `slides:build` npm script |
+| `.marprc.yml` central config (theme paths, output dirs, allow-local-files) | Docs-as-code tools externalize build config so CI and local runs stay identical | LOW | One file, checked into repo; avoids CLI flag drift between manual runs and daemon-triggered runs |
+| Front-matter/directive preservation during translation | Marp decks use YAML front-matter (`marp: true`, `theme:`, `paginate:`, `style: \|` CSS block) and inline HTML-comment directives (`<!-- _class: hero -->`, `<!-- markdownlint-disable -->`) as **structural**, not prose — a naive full-text translation call will mangle or translate these and break rendering | MEDIUM-HIGH | This is the highest-risk table-stakes feature. See "Translation-Fidelity Expectations" below — DeepL has no native Markdown/Marp awareness (confirmed via `deepl-node` GitHub issue #26, still open) |
+| Code fence / inline code preservation | Fenced blocks (`` ```text ``, `` ```diagram ``) and inline code spans (`` `slides:build` ``) must survive translation byte-identical — DeepL's plain-text mode will translate code content or corrupt fence markers (community reports of ` ``` ` becoming ` `` ` after MT) | MEDIUM | Requires placeholder-swap strategy (extract → protect → translate → restore), not raw API passthrough |
+| Proper-noun / brand-term protection | Product and brand names (DVWDesign, Figma, Marp, DeepL, MCP, DocuMind, FigJam, PPTX) must never be auto-translated or transliterated | MEDIUM | DeepL glossary API (`POST /v3/glossaries`, `glossary_id` on translate calls) is purpose-built for this — confirmed official capability |
+| Table structure preservation (GFM pipes/separators) | DocuMind's own DVW001/DVW002 lint rules require no blank lines mid-table and minimal `\| - \|` separators — a translated table that reflows cell width or inserts a blank line breaks the deck AND fails the repo's own lint gate | MEDIUM | Only cell **text** should be translated; pipe/separator syntax is structural and must pass through untouched |
+| Incremental rebuild (skip unchanged decks) | Standard docs-as-code CI behavior — MkDocs `--dirty`, Hugo, and static-site pipelines all skip unchanged source to keep builds fast; DocuMind already has a `content_hash` pattern for markdown indexing that this can reuse | LOW-MEDIUM | Reuse existing `content_hash` column/pattern rather than inventing a new mechanism — hash the EN `.md` to decide whether to re-translate/re-render |
+| Deploy dry-run mode | Every FTP-deploy tool surveyed (`ftp-deploy`, `@samkirkland/ftp-deploy` GitHub Action) ships a dry-run flag that lists what *would* change without touching the remote — non-negotiable when creds don't exist yet | LOW | Matches the milestone's explicit gap (FTP creds pending) — dry-run must be the default until `.env` creds land |
+| Deploy manifest / state tracking | `@samkirkland/ftp-deploy` tracks a `.ftp-deploy-sync-state.json` so only diffed files upload on subsequent runs — avoids full-tree re-upload every deploy | MEDIUM | Needed for both correctness (avoid clobbering) and status reporting (what shipped, when) |
+| Status/log output per pipeline run | Any daemon-orchestrated multi-stage pipeline (translate → render → deploy) needs a per-stage pass/fail/skip record — otherwise silent partial failures (e.g., translate OK, deploy blocked on missing creds) are invisible | LOW-MEDIUM | DocuMind already has a `scan_runs` table pattern for scheduler jobs — reuse the same shape (run id, stage, status, timestamp, error) for pipeline runs |
+| Watcher loop protection | chokidar (already used by DocuMind's watcher) will re-trigger on its own generated output unless explicitly ignored — confirmed pattern from chokidar docs/issues: function-form `ignored`, `awaitWriteFinish`, and debounce | MEDIUM | Must ignore `*.fr.md`, `/dist`, `/html`, `/pdf`, `/pptx` output globs, or the daemon will translate→render→write→re-detect→re-translate forever |
 
-**Confidence:** HIGH — Kuzu Node.js SDK confirmed at docs.kuzudb.com; embedded no-server architecture
-confirmed from official Kuzu docs and multiple 2025 blog posts. Migration approach from Kuzu's own
-graph construction documentation.
+### Differentiators (Competitive Advantage)
 
----
-
-### Differentiators (New Capabilities Kuzu Unlocks)
-
-These are what make v3.3 a meaningful step beyond "SQLite with a migration." Each is grounded in the
-documentation domain — not generic graph theory.
+Not required to be "a working slides pipeline," but this is where the DocuMind-specific value shows: agent-orchestrated, single-user, ecosystem-integrated.
 
 | Feature | Value Proposition | Complexity | Notes |
 | ------- | ----------------- | ---------- | ----- |
-| PageRank over doc graph | Identifies the most-referenced documents in the ecosystem — candidates for canonicalization, most likely to be stale with high blast radius, most important to keep accurate | MEDIUM | Kuzu `algo` extension (pre-installed in v0.11.3+). `CALL algo.pagerank(...)` returns `(node, rank)`. Expose as `/graph/rank` REST endpoint and `graph_rank` MCP tool. Practical output: "CLAUDE.md has PageRank 0.34 — it's the hub. This undocumented file has PageRank 0.001 — orphan candidate." |
-| Betweenness centrality | Identifies bridge documents — docs that connect otherwise disconnected clusters. A bridge doc going stale can isolate entire sub-graphs of documentation | MEDIUM | Same algo extension. `CALL algo.betweenness_centrality(...)`. Most useful for multi-repo graphs where one shared doc connects two repos. Surface in `/graph/centrality` endpoint. |
-| Strongly Connected Components (SCC) / cycle detection | Detects circular dependency chains — e.g., doc A `supersedes` doc B which `supersedes` doc A. In a forward-only CTE world this query either loops infinitely or requires an anti-cycle guard that makes it expensive | MEDIUM | `CALL algo.scc(...)` returns component IDs. Nodes sharing a component ID form a cycle. New `graph_cycles` MCP tool returns cycle members + rel_types. Critical for `supersedes` and `depends_on` relationship types where cycles are logic errors. |
-| Weakly Connected Components (WCC) / orphan detection | Detects completely disconnected documents — docs with no relationships at all. At 8K+ documents, orphan detection is non-trivial without a graph DB | LOW | `CALL algo.wcc(...)`. Nodes in singleton components (component size = 1) are orphans. Expose as `/graph/orphans` endpoint. This is immediately actionable — orphans are candidates for deletion or manual linking. |
-| Louvain community detection | Groups documents into topical clusters based on relationship density — surfaces implicit documentation "modules" that may not align with repo structure | HIGH | `CALL algo.louvain(...)`. Useful but niche for DocuMind's current scale. Deferred to post-MVP. Operates on undirected version of graph (Kuzu limitation — directed edges treated as undirected for Louvain). |
-| K-Core decomposition | Identifies cohesive subgraphs where each node has at least k connections — surfaces the "core" of the doc ecosystem vs peripheral docs | MEDIUM | `CALL algo.kcore(...)`. Useful for understanding documentation density. Lower priority than PageRank and SCC for immediate value. |
-| Shortest path between two named docs | "What is the connection chain between ARCHITECTURE.md and this CLAUDE.md?" — an agent can now answer architecture provenance questions | MEDIUM | `MATCH (a:Document {path: $from})-[r* SHORTEST 1..10]->(b:Document {path: $to}) RETURN r`. New `graph_path` MCP tool with `from_path` and `to_path` params. |
-| LangChain KuzuQAChain text-to-Cypher | Agents (and humans via CLI) can ask natural language questions about the doc graph without writing Cypher. The LLM generates and executes the Cypher query, returns a natural language answer. | HIGH | `langchain-kuzu` Python package (PyPI, January 2025). **Important caveat:** this is a Python package — DocuMind is Node.js. Integration requires either: (a) a Python sidecar process called via spawn, or (b) reimplementing the text-to-Cypher bridge in the LangChain JS ecosystem. See dependency notes. |
-| Natural language graph queries via new MCP tool | "Which docs in the LibraryAssetManager repo depend on the most other documents?" answered without Cypher | HIGH | Wraps the text-to-Cypher bridge. New `graph_query` MCP tool accepts `question: string`, returns `{ cypher: string, result: any[], answer: string }`. The `cypher` field is returned for auditability — agents can see what query was generated. |
-
-**Confidence:** MEDIUM for LangChain KuzuGraph text-to-Cypher — the Python package is real and documented,
-but the Node.js/JS bridge is not directly supported by `langchain-kuzu`. The text-to-Cypher pattern works
-in the LangChain JS ecosystem via `GraphCypherQAChain` (confirmed in LangChain JS docs), but requires
-wiring to Kuzu's Node.js SDK directly rather than using the Python package. HIGH confidence for all
-algo extension features — documented at docs.kuzudb.com/extensions/algo/.
-
----
+| Daemon-orchestrated trigger (chokidar + cron, no manual CI) | Most docs-as-code slide setups rely on a human running `npm run build` or a GitHub Action on push. DocuMind already runs a persistent watcher + scheduler — wiring the pipeline into that means decks publish themselves the moment the EN source changes, with zero manual step | MEDIUM | Direct extension of existing `daemon/watcher.mjs` — this is the actual differentiator, everything else is standard tooling |
+| Glossary-backed DeepL translation (not just tag-handling) | Generic markdown-translator tools (md-translator, OpenL) protect syntax but don't guarantee brand-term consistency across every deck; a shared DeepL glossary (`glossary_id`) keeps "DocuMind," "MCP," "FigJam" etc. identical across all decks and re-translations, forever | LOW-MEDIUM | One-time glossary creation via DeepL API, referenced on every translate call — cheap to build, high consistency payoff |
+| ProductMarketing content updates arriving as RootDispatcher dispatches | Other repo agents can propose slide content changes without touching this repo directly or bypassing the "EN is the only hand-edited source" rule — dispatch lands as a diff/PR-like artifact into `docs/slides/`, pipeline picks it up automatically | MEDIUM | Depends on RootDispatcher dispatch mechanism (already built ecosystem-wide) — this repo just needs to treat `dispatches/pending/DocuMind/` as a trigger source, same as existing dispatch protocol |
+| Editable PPTX via LibreOffice (`soffice`) | Marp's own PPTX export is image-per-slide (uneditable) — confirmed via Marp CLI docs/community reports. Routing through `soffice --headless --convert-to pptx` (or `--pptx-editable` flag path) produces text-editable PowerPoint, which matters for a sales/pitch-deck use case where a human may want to tweak a slide post-export | MEDIUM-HIGH | Known prereq gap: `soffice` not on PATH — this differentiator is currently blocked, same class of gap as DeepL/FTP/Figma creds |
+| Figma Slides push as canonical "live" document | Official Figma MCP now ships a `figma-use-slides` skill (confirmed via `figma/mcp-server-guide` repo) that lets `use_figma` update a Slides deck against a template from markdown/content — turning the pipeline's terminal stage into a real, presentable Figma file instead of a static HTML page nobody visits live | HIGH | Currently blocked on Figma MCP auth per milestone context — ship as a documented runbook now, automate once auth unblocks. This is the single highest long-term differentiator (competitors stop at static HTML/PDF) |
+| AgentHub `publish_discovery` on successful deploy | Other repos/agents in the ecosystem learn "a new deck shipped" without polling — standard DVWDesign ecosystem pattern already used elsewhere, applied here for the first time to a content pipeline rather than code | LOW | Pure integration work — AgentHub publish call already exists as a pattern, just needs a deploy-stage hook |
+| Single `slides:build` command spanning EN+FR+all formats | Reduces the entire pipeline surface to one invocable command for both manual (`npm run slides:build`) and daemon-triggered paths — no drift between "what a human runs" and "what the watcher runs" | LOW | Straightforward npm script composition once render/translate stages exist independently |
 
 ### Anti-Features (Commonly Requested, Often Problematic)
 
 | Feature | Why Requested | Why Problematic | Alternative |
-| ------- | ------------- | --------------- | ----------- |
-| Replacing SQLite entirely with Kuzu | "One DB is cleaner than two" | Kuzu does not have FTS5. Full-text search across 8K+ markdown files is DocuMind's most-used feature. Migrating FTS5 to Kuzu would require either custom trigram matching or a vector search approach — both are v4+ work. Kuzu's vector search extension exists but is not a drop-in for FTS5 keyword matching. | Keep SQLite for FTS5, keywords, similarity, scan_runs. Kuzu owns only doc_relationships and graph query results. Two embedded DBs, no servers. |
-| Running Kuzu as a separate server process | "Neo4j runs as a server, so Kuzu should too" | Kuzu is explicitly designed as an embedded in-process DB (like SQLite, DuckDB). Running it as a server adds network latency, auth complexity, and a crash surface for zero architectural gain at DocuMind's scale. | `const db = new kuzu.Database(path)` — in-process, same Node.js process as the Express daemon. |
-| Louvain community detection in MVP | "It sounds like the most interesting algorithm" | Louvain operates on an undirected projection of the graph, losing edge direction information that is semantically meaningful in DocuMind (e.g., `supersedes` is directional). At 8K docs with sparse relationships, communities will be poorly defined. The algorithm requires significant parameter tuning. | Defer to post-MVP. Ship PageRank + SCC first — those have clear, immediately actionable outputs for the documentation domain. |
-| Semantic/vector graph queries via Kuzu vector extension | "Replace FTS5 with graph-aware vector search" | Kuzu has a vector search extension (confirmed 2025), but combining semantic similarity with graph traversal (GraphRAG) is a significant research-grade feature. It would require embedding generation for all 8K+ documents, an embedding model, and a hybrid retrieval pipeline. Out of scope for v3.3. | Explicitly deferred in PROJECT.md. FTS5 + TF-IDF is sufficient for current scale. |
-| Text-to-Cypher without auditability | "Just return the answer, hide the Cypher" | Generated Cypher queries can be wrong. LLMs hallucinate Cypher clauses, use wrong property names, or generate queries that scan the whole graph. Without returning the generated Cypher to the caller, there is no way to detect or debug failures. | `graph_query` MCP tool always returns `{ cypher, result, answer }`. The `cypher` field lets agents and Dave inspect what was actually run. |
-| Storing graph algorithm results persistently in DB | "Cache PageRank scores so queries are fast" | Algorithm scores go stale whenever relationships change. Cached scores create a consistency problem — a document's PageRank after a new `depends_on` edge is added is wrong until the cache is invalidated. At DocuMind's scale (~8K docs, sparse edges), PageRank runs in milliseconds — no caching needed. | Run algorithms on-demand per REST/MCP call. Accept sub-second latency. Cache only if profiling proves a bottleneck. |
-| Replacing the existing `get_related` MCP tool interface | "Kuzu enables richer output — change the response schema" | The existing `get_related` tool is registered across 16 DVWDesign repos' Claude Code configs. Changing the response schema breaks all of them silently — agents get unexpected shapes. | Keep `get_related` interface identical (same inputs, same outputs). Add new tools (`graph_rank`, `graph_cycles`, `graph_query`, `graph_path`) for new capabilities. Never modify existing tool contracts without coordinating across all 16 repos. |
-
----
+| ------- | ------------- | ---------------- | ----------- |
+| WYSIWYG / browser-based slide editor | "Let non-technical stakeholders edit slides directly" | Directly contradicts the milestone's core decision: EN Marp `.md` is the *only* hand-edited artifact. A WYSIWYG editor writing back to rendered HTML/PPTX creates a second source of truth and breaks the translate/render/deploy determinism the whole pipeline depends on | Edit the EN `.md` in any text editor / Claude Code; use Figma Slides (once live) as the presentation-layer editing surface for last-mile tweaks, never as the source |
+| Multi-language beyond French | "While we're translating, why not ES/DE/JA too?" | Milestone explicitly scopes to "French always required" — every additional language multiplies glossary maintenance, translation-fidelity test surface, and render/deploy matrix size for zero validated demand | Ship EN+FR pipeline first; if a second language is ever needed, the translation stage is already generalized (DeepL supports target-language param) — add it as its own future milestone, not scope creep now |
+| Real-time / live-reload slide preview server | Feels natural for a "docs-as-code" workflow (like Hugo/Vite dev servers) | Marp CLI already ships `marp -s` server mode for local preview — building a custom live-reload layer duplicates an existing tool for a single-user setup where `marp --preview` or the VS Code Marp extension already solves it | Use `marp-cli`'s built-in `--server`/`--preview` flag locally; no custom infra needed |
+| Continuous re-render on every keystroke/save | "Instant feedback while editing" | For a daemon-orchestrated pipeline (not a live dev server), firing translate+render+deploy on every keystroke would spam the DeepL API (metered/costly), hammer the FTP host, and risk the exact watcher loop this milestone explicitly calls out as needing protection | Debounce watcher events (chokidar `awaitWriteFinish` + short debounce window); trigger pipeline on settled file-save, not per-keystroke |
+| Auto-translating arbitrary repo docs through this pipeline | "We already have DeepL wired up, why not translate all 620+ docs?" | Scope explosion — this milestone is `docs/slides/` only. General doc translation has different fidelity requirements (no Marp directives, different table conventions) and belongs to a separate future milestone if ever pursued | Keep the translation stage scoped to `docs/slides/**/*.md`; if broader doc translation is wanted later, treat it as a new pipeline, not an extension of this one |
+| Allowing direct hand-edits to generated `.fr.md`, HTML, PDF, or PPTX outputs | "I just need to fix one typo in the French deck quickly" | Silently overwritten on the next EN-triggered pipeline run — creates a false sense of persistence and eventually a "why did my fix disappear" support burden | Fix the typo (or glossary entry) in the EN source or DeepL glossary; let the pipeline regenerate. If a typo is FR-only (bad translation), fix via glossary override, not manual `.fr.md` edit |
 
 ## Feature Dependencies
 
 ```text
-[Kuzu installed in-process]
-    └── is prerequisite for ──> [doc_relationships migration to Kuzu]
-    └── is prerequisite for ──> [all graph algorithm calls]
-    └── is prerequisite for ──> [Cypher query backend for /graph endpoint]
+Marp toolchain (marp-cli + .marprc.yml)
+    └──requires──> nothing new (pure devDependency + config)
 
-[doc_relationships migration to Kuzu]
-    └── is prerequisite for ──> [reverse traversal]
-    └── is prerequisite for ──> [bidirectional traversal]
-    └── is prerequisite for ──> [PageRank — needs edges in Kuzu to score nodes]
-    └── is prerequisite for ──> [SCC / cycle detection — needs all edge types in Kuzu]
-    └── is prerequisite for ──> [WCC / orphan detection]
-    └── is prerequisite for ──> [shortest path queries]
+DeepL translation stage (EN → .fr.md)
+    └──requires──> Marp toolchain (defines what "preserve directive" even means — need to parse front-matter/directives before protecting them)
+    └──requires──> DEEPL_API_KEY (known gap)
+    └──requires──> Glossary created in DeepL account (proper-noun protection)
 
-[/graph REST endpoint → Kuzu backend]
-    └── requires ──> [doc_relationships migration to Kuzu]
-    └── requires ──> [graph/queries.mjs refactored to Cypher]
-    └── enhances ──> [get_related MCP tool] (same backend, different interface)
+Render stage (EN + FR → HTML/PDF/PPTX)
+    └──requires──> Marp toolchain
+    └──requires (FR branch only)──> DeepL translation stage output (.fr.md must exist before FR render)
+    └──requires (editable PPTX)──> soffice on PATH (known gap)
 
-[graph_rank MCP tool (PageRank)]
-    └── requires ──> [Kuzu algo extension loaded]
-    └── requires ──> [doc_relationships in Kuzu]
+FTP deploy stage
+    └──requires──> Render stage output (HTML files to upload)
+    └──requires──> FTP credentials in .env (known gap)
+    └──enhances (dry-run)──> Deploy manifest (diff against previous state)
 
-[graph_cycles MCP tool (SCC)]
-    └── requires ──> [Kuzu algo extension loaded]
-    └── requires ──> [doc_relationships in Kuzu]
-    └── most valuable for ──> [supersedes + depends_on relationship types]
+Figma Slides push
+    └──requires──> Figma MCP auth unblocked (known gap — runbook only until then)
+    └──may require──> Render stage output OR raw EN/FR markdown (unconfirmed which figma-use-slides skill consumes — LOW confidence, verify during phase research)
 
-[graph_path MCP tool (shortest path)]
-    └── requires ──> [doc_relationships in Kuzu]
-    └── requires ──> [document nodes addressable by path, not just internal ID]
+Daemon watcher orchestration (trigger on deck change)
+    └──requires──> Existing chokidar watcher (daemon/watcher.mjs)
+    └──requires──> Watcher loop protection (ignore .fr.md, /dist, /html, /pdf, /pptx globs)
+    └──requires──> Incremental rebuild / content-hash check (avoid re-running unchanged decks)
+    └──enhances──> All four pipeline stages (translate/render/deploy/Figma) — this is the glue, not a stage itself
 
-[graph_query MCP tool (text-to-Cypher)]
-    └── requires ──> [Kuzu Node.js SDK]
-    └── requires ──> [LangChain JS GraphCypherQAChain OR Python sidecar]
-    └── requires ──> [LLM API key configured (OPENAI_API_KEY or equivalent)]
-    └── requires ──> [Kuzu schema exported for LLM context injection]
-    └── is independent of ──> [doc_relationships migration timing] (can be wired to any Kuzu schema)
+ProductMarketing dispatch → EN source updates
+    └──requires──> Existing RootDispatcher dispatch mechanism (ecosystem-wide, already built)
+    └──enhances──> Daemon watcher orchestration (dispatch-applied change is just another EN .md change that triggers the pipeline)
 
-[WCC orphan detection]
-    └── requires ──> [doc_relationships in Kuzu]
-    └── enhances ──> [existing stale document detection in SQLite] (orphan = no graph edges)
+AgentHub publish_discovery on deploy
+    └──requires──> FTP deploy stage (or Figma push) reaching a terminal success state
+    └──enhances──> Ecosystem awareness (not a hard pipeline dependency — pipeline works without it, just less visible)
 
-[Louvain community detection]
-    └── requires ──> [doc_relationships in Kuzu]
-    └── requires ──> [sufficient edge density — sparse graphs produce meaningless communities]
-    └── lower priority than ──> [PageRank + SCC]
+Deploy manifest / state tracking ──conflicts──> "always full re-upload" naive approach
+    (manifest-based diffing is strictly better once dry-run mode proves the diff logic is correct)
 ```
 
 ### Dependency Notes
 
-- **LangChain KuzuGraph is Python-only as of 2026-04-07.** The `langchain-kuzu` package on PyPI is the official integration. LangChain JS has `GraphCypherQAChain` which is the equivalent pattern, but requires manually wiring Kuzu's Node.js SDK as the graph backend. This is the highest-complexity feature in v3.3 and should be built last, after all other graph features are working. Confidence MEDIUM — no official LangChain JS + Kuzu Node.js integration example found; requires custom bridging.
+- **DeepL translation requires Marp toolchain first, not just DeepL API access:** you cannot design the placeholder-protection scheme (front-matter, directives, code fences) without first enumerating exactly which Marp syntax elements exist in the corpus — this argues for building/finalizing the Marp render stage's understanding of directives *before* writing the translation-preservation logic, even though translation logically "comes before" render in the pipeline order.
+- **FR render requires translation stage output:** the render stage is otherwise stage-order-agnostic (EN render has zero dependency on translation), so EN rendering can be built, tested, and shipped independently of DeepL entirely — useful sequencing if DeepL API key delivery is delayed.
+- **Watcher loop protection requires incremental rebuild (content-hash) to be reliable, not just glob-ignore:** glob-ignore alone (`ignored: '**/*.fr.md'`) prevents the watcher from *reacting* to generated files, but content-hash comparison is what prevents *needless re-translation* of an EN deck whose content hasn't actually changed (e.g., a `touch` or metadata-only save). Both are needed; glob-ignore is the safety net, content-hash is the efficiency layer.
+- **Figma Slides push dependency is genuinely uncertain (LOW confidence):** the `figma-use-slides` skill's actual input contract (rendered HTML? raw markdown? structured JSON?) wasn't confirmed from public sources during this research pass — flag for phase-specific research when the Figma MCP auth gap is resolved, since it determines whether Figma push depends on the render stage or can bypass it.
+- **AgentHub publish is a soft dependency, not a hard one:** deploy can succeed with FTP creds present and AgentHub notification omitted (e.g., AgentHub temporarily down) — treat as best-effort, non-blocking, not a pipeline gate.
 
-- **Schema injection is required for accurate Cypher generation.** The LLM must receive the Kuzu node/edge schema (table names, property names, relationship types) as context for every text-to-Cypher call. Without it, the LLM invents property names. DocuMind's schema is simple (Document nodes with path/repo/title properties, 8 edge types with weight/context properties) — schema injection is low-overhead.
+## Translation-Fidelity Expectations (What Must Survive Round-Trip Untouched)
 
-- **Kuzu algo extension is pre-installed in v0.11.3+.** No manual `INSTALL algo` step needed. Confirmed from Kuzu release notes for v0.11.3.
+Concrete, testable rules derived from the example deck (`docs/slides/external/2026-05-21-figma-ai-pitch-deck.md`) and DeepL's documented capabilities:
 
-- **Document nodes must use `path` as the natural key**, not internal Kuzu node IDs, so that MCP tools can accept human-readable paths as query parameters and return them in results without a secondary lookup.
-
----
+1. **YAML front-matter keys and structural values** — `marp: true`, `theme: default`, `paginate: true`, the entire `style: |` CSS block — must be byte-identical in `.fr.md`. Only genuinely human-facing string values inside front-matter (e.g., `footer: "DVWDesign — Figma AI Framework — 2026"`) are candidates for translation, and that's a product decision to make explicit (default recommendation: **do not translate footer/brand strings** — treat as proper-noun-adjacent, protect via glossary or placeholder).
+2. **Inline directive comments** — `<!-- _class: hero -->`, `<!-- markdownlint-disable MD025 MD024 MD036 -->` — pass through verbatim; these are not prose and DeepL's tag_handling has no awareness of Marp comment-directive syntax.
+3. **Fenced code blocks** (`` ```text ``, `` ```diagram ``, `` ```bash `` etc.) — content inside fences must not be sent through translation at all; extract-protect-restore, not tag_handling alone (confirmed risk: fence markers themselves have been reported corrupted by naive DeepL passthrough).
+4. **Inline code spans** (`` `slides:build` ``, `` `curate_diagram` ``) — preserved verbatim.
+5. **Proper nouns / brand and product terms** — DVWDesign, Figma, Figma Agent, Marp, MCP, DocuMind, FigJam, DeepL, PPTX, Claude Code, and any other product name appearing in the corpus — pinned via a DeepL glossary (`entries_format: tsv`, EN→FR pairs mapping each term to itself) so they're immune to future MT model drift, not just a one-time manual fix.
+6. **Email addresses and URLs** (`david@dvw.design`) — untouched; standard DeepL behavior for non-linguistic tokens, but should be explicitly tested, not assumed.
+7. **Numeric metrics and units** (`8×`, `620+`, `< 100ms`, `€3,500–6,000`) — the numbers/symbols themselves untouched; only surrounding prose translated. Currency symbols must not be localized (stay `€`, do not become alternate formatting).
+8. **GFM table syntax** — pipe/separator rows (`| - | - |`) untouched; only cell *text content* translated. Post-translation output must still pass DVW001/DVW002 lint (no blank lines inserted mid-table, no padding added) — this should be an automated check in the pipeline, not a manual review step.
+9. **Heading markers** (`#`, `##`) untouched; only text after the marker translated.
+10. **Slide-separator horizontal rules** (`---` used as Marp slide breaks) must never be reinterpreted as a second YAML front-matter boundary by the translation step — this is a parsing-order risk specific to Marp's dual use of `---`.
+11. **`.fr.md` is always fully regenerated, never diffed/patched** — because partial-patch translation of a multi-hundred-line deck risks context loss (DeepL's per-request context differs from a full-document translate), the safest default is: any EN change → full re-translation of that deck, not incremental sentence-level patching. This trades a bit of DeepL API cost for correctness; revisit only if API costs become a real constraint at current single-user scale.
 
 ## MVP Definition
 
-v3.3 MVP = Kuzu installed, doc_relationships migrated, `/graph` queries Cypher, reverse traversal works,
-PageRank and SCC exposed via new MCP tools. Text-to-Cypher is stretch goal, not MVP gate.
+### Launch With (v1 — matches milestone's "Active" scope)
 
-### Launch With (v3.3 core)
+- [ ] Marp toolchain (`marp-cli` devDependency, `.marprc.yml`, `slides:*` npm scripts) — foundation everything else builds on
+- [ ] DeepL translation stage with placeholder-protection for directives/code/proper nouns — the single highest-risk, highest-value piece; must be correct before anything downstream trusts `.fr.md`
+- [ ] Single `slides:build` rendering EN + FR → HTML/PDF/PPTX — proves the full local pipeline works end-to-end without deploy
+- [ ] FTP deploy stage in dry-run mode (real deploy activates once creds land) — ships the deploy *logic* now so it's a config flip, not a build project, once creds arrive
+- [ ] Daemon watcher trigger with debounce + loop protection (ignore generated globs, content-hash check) — this is the actual product differentiator per PROJECT.md, must not be deferred to "v1.x"
+- [ ] Deploy manifest / run-status tracking (reuse `scan_runs`-style table pattern) — needed from day one so dry-run output is inspectable, not just console noise
 
-- [ ] Kuzu installed (`npm install kuzu`), database initialized at startup alongside SQLite — foundation
-- [ ] Migration script: reads SQLite `doc_relationships`, creates Kuzu node + edge tables, inserts all rows — data layer
-- [ ] `graph/queries.mjs` refactored to emit Cypher via Kuzu Node.js SDK — backend swap
-- [ ] `/graph` endpoint: `direction=forward|reverse|both` param, all three using Kuzu — unblocks reverse traversal
-- [ ] `get_related` MCP tool: backend swapped to Kuzu, interface unchanged — transparent upgrade
-- [ ] `graph_rank` MCP tool: runs PageRank via algo extension, returns `(path, rank)` ranked list — new capability
-- [ ] `graph_cycles` MCP tool: runs SCC, returns cycle member lists with rel_types — cycle detection
-- [ ] `/graph/orphans` REST endpoint: runs WCC, returns docs with no relationships — orphan detection
+### Add After Validation (v1.x)
 
-### Add After Validation (v3.3.x)
+- [ ] Figma Slides live push automation via `use_figma` — trigger: Figma MCP auth unblocked
+- [ ] Editable PPTX via `soffice`/LibreOffice — trigger: `soffice` installed and on PATH
+- [ ] Real FTP deploy (flip dry-run off) — trigger: FTP creds land in `.env`
+- [ ] AgentHub `publish_discovery` on deploy — trigger: deploy stage proven reliable in dry-run for at least one full cycle
+- [ ] ProductMarketing dispatch → EN source auto-apply — trigger: at least one manual dispatch-to-slide-edit cycle validated by hand first
 
-- [ ] `graph_path` MCP tool: shortest path between two named docs — trigger: agents need provenance chains
-- [ ] `graph_query` MCP tool: text-to-Cypher via LangChain JS GraphCypherQAChain — trigger: natural language queries validated as useful in practice
-- [ ] K-Core decomposition endpoint — trigger: request for "core documentation" identification
+### Future Consideration (v2+)
 
-### Future Consideration (v4+)
-
-- [ ] Louvain community detection — needs denser graph; defer until doc count and edge count grow
-- [ ] GraphRAG (semantic + graph hybrid) — requires embedding model and vector search; out of scope without SaaS path
-- [ ] Kuzu vector search extension — only if FTS5 proves insufficient at larger scale
-
----
+- [ ] Additional target languages beyond FR — defer until a validated business need exists (explicitly out of current scope)
+- [ ] Onboarding other repos'/teams' decks onto this same pipeline — defer until DocuMind's own pipeline has run reliably through several real deploy cycles
+- [ ] Glossary self-service management (UI or MCP tool to add/edit DeepL glossary terms without touching DeepL dashboard) — defer until glossary size/change-frequency justifies tooling investment
 
 ## Feature Prioritization Matrix
 
 | Feature | User Value | Implementation Cost | Priority |
-| ------- | ---------- | ------------------- | -------- |
-| Kuzu install + initialization | HIGH (foundation for everything) | LOW | P1 |
-| Migration script (SQLite → Kuzu) | HIGH (nothing else works without it) | MEDIUM | P1 |
-| /graph → Cypher backend + reverse traversal | HIGH (immediately useful; forward-only is a known limitation) | MEDIUM | P1 |
-| get_related MCP tool → Kuzu backend | HIGH (transparent upgrade to existing users) | LOW | P1 |
-| graph_rank MCP tool (PageRank) | HIGH (doc importance ranking is immediately actionable) | MEDIUM | P1 |
-| graph_cycles MCP tool (SCC) | HIGH (cycle detection in supersedes/depends_on is a correctness check) | MEDIUM | P1 |
-| /graph/orphans (WCC orphan detection) | MEDIUM (useful for cleanup; not urgent) | LOW | P2 |
-| graph_path MCP tool (shortest path) | MEDIUM (useful for provenance; niche) | MEDIUM | P2 |
-| graph_query MCP tool (text-to-Cypher) | HIGH (natural language queries remove Cypher knowledge barrier) | HIGH (Node.js bridge required) | P2 |
-| K-Core decomposition | LOW (interesting but not immediately actionable) | MEDIUM | P3 |
-| Louvain community detection | LOW (needs denser graph to produce useful clusters) | HIGH | P3 |
+| ------- | ---------- | -------------------- | -------- |
+| Marp toolchain + `slides:build` | HIGH | LOW | P1 |
+| Translation-preservation (directives/code/proper nouns) | HIGH | HIGH | P1 |
+| Daemon watcher orchestration + loop protection | HIGH | MEDIUM | P1 |
+| FTP deploy dry-run + manifest | MEDIUM | MEDIUM | P1 |
+| Deploy/pipeline run-status tracking | MEDIUM | LOW | P1 |
+| DeepL glossary for proper nouns | HIGH | LOW | P1 |
+| Editable PPTX (`soffice`) | MEDIUM | MEDIUM | P2 |
+| Real FTP deploy (creds live) | HIGH | LOW (once creds exist) | P2 |
+| ProductMarketing dispatch → EN source | MEDIUM | MEDIUM | P2 |
+| AgentHub discovery on deploy | LOW-MEDIUM | LOW | P2 |
+| Figma Slides live push | HIGH (long-term) | HIGH | P2 (blocked → runbook now, automate later) |
+| Multi-language beyond FR | LOW (unvalidated demand) | HIGH | P3 |
 
 **Priority key:**
-- P1: Must have for v3.3 milestone completion
-- P2: Add once Kuzu backend is proven working
-- P3: Nice to have, future consideration
 
----
+- P1: Must have for v3.4 launch
+- P2: Should have, activates as external blockers (creds/auth/binaries) clear
+- P3: Nice to have, future consideration — not in current milestone
 
-## Natural Language Query Patterns (Text-to-Cypher)
+## Competitor / Reference Pattern Analysis
 
-What users/agents would actually ask — grounded in the documentation domain, not generic graph examples.
-These inform the schema injection context and example queries needed for accurate Cypher generation.
-
-| Natural Language Query | Generated Cypher Pattern | Practical Value |
-| ---------------------- | ------------------------ | --------------- |
-| "Which docs reference CLAUDE.md?" | `MATCH (a)-[:IMPORTS\|RELATED_TO]->(b {path:'...CLAUDE.md'}) RETURN a.path` | Reverse traversal — currently impossible |
-| "What are the most important docs in LibraryAssetManager?" | PageRank filtered by `repo = 'LibraryAssetManager'` | Doc triage, canonicalization candidates |
-| "Are there any circular dependencies in the dispatch chain?" | SCC on `DISPATCHED_TO` edge type | Correctness check for RootDispatcher |
-| "What is the shortest connection between ARCHITECTURE.md and REQUIREMENTS.md?" | Shortest path query | Provenance / traceability |
-| "Which docs have no relationships?" | WCC singleton filter | Orphan cleanup |
-| "What docs does this CLAUDE.md depend on, up to 4 hops?" | Variable-length traversal `[*1..4]` on `DEPENDS_ON` | Deep dependency analysis |
-| "Which docs are superseded by something but still referenced?" | Pattern: superseded AND has incoming `IMPORTS` edge | Stale reference detection |
-
----
+| Feature | Docusaurus i18n (+ MT tools) | MkDocs + static-i18n | DocuMind v3.4 Approach |
+| ------- | ----------------------------- | ---------------------- | ------------------------ |
+| Translation trigger | Manual export → drop into i18n folder, or CI step on PR | Manual `mkdocs build` per locale, plugin-assisted | Daemon watcher auto-triggers on EN deck save — no manual/CI step needed (single-user differentiator) |
+| Code/front-matter preservation | Third-party MT tools (md-translator, OpenL) use placeholder-swap; Docusaurus itself doesn't translate, just routes locale folders | Plugin-dependent, varies | Custom placeholder-swap tailored to Marp's specific directive/comment syntax (no off-the-shelf tool understands Marp specifically) |
+| Deploy | Git-push → CI → static host (Netlify/Vercel/GH Pages) | Same pattern, CI-driven | FTP push (older/simpler hosting model, matches existing DVWDesign web host) with dry-run gate |
+| "Live" presentation surface | None — static HTML only | None — static HTML only | Figma Slides push (unique to this pipeline — no docs-as-code competitor reference found targeting Figma Slides as a deploy target) |
+| Incremental rebuild | Framework-level (only changed MDX rebuilt) | `--dirty` flag, monorepo plugin | Content-hash reuse of existing DocuMind `content_hash` pattern — consistent with how the rest of the platform already avoids redundant work |
 
 ## Sources
 
-- Kuzu graph algorithms extension (official, HIGH confidence): [docs.kuzudb.com/extensions/algo/](https://docs.kuzudb.com/extensions/algo/)
-- Kuzu PageRank (official, HIGH confidence): [docs.kuzudb.com/extensions/algo/pagerank/](https://docs.kuzudb.com/extensions/algo/pagerank/)
-- Kuzu SCC (official, HIGH confidence): [docs.kuzudb.com/extensions/algo/scc/](https://docs.kuzudb.com/extensions/algo/scc/)
-- Kuzu WCC (official, HIGH confidence): [docs.kuzudb.com/extensions/algo/wcc/](https://docs.kuzudb.com/extensions/algo/wcc/)
-- Kuzu K-Core Decomposition (official, HIGH confidence): [kuzudb.github.io/docs/extensions/algo/kcore/](https://kuzudb.github.io/docs/extensions/algo/kcore/)
-- Kuzu Louvain (official, HIGH confidence): [kuzudb.github.io/docs/extensions/algo/louvain/](https://kuzudb.github.io/docs/extensions/algo/louvain/)
-- Kuzu variable-length patterns + shortest path (official, HIGH confidence): [docs.kuzudb.com/cypher/](https://docs.kuzudb.com/cypher/)
-- Kuzu differences from Neo4j (official, HIGH confidence): [docs.kuzudb.com/cypher/difference/](https://docs.kuzudb.com/cypher/difference/)
-- langchain-kuzu PyPI package (official, HIGH confidence): [pypi.org/project/langchain-kuzu/](https://pypi.org/project/langchain-kuzu/)
-- LangChain Kuzu integration docs (official, HIGH confidence): [docs.langchain.com/oss/python/integrations/graphs/kuzu_db](https://docs.langchain.com/oss/python/integrations/graphs/kuzu_db)
-- LangChain-Kuzu integration overview, Jan 2025 (MEDIUM confidence): [analyticsvidhya.com/blog/2025/01/langchain-kuzu-integration/](https://www.analyticsvidhya.com/blog/2025/01/langchain-kuzu-integration/)
-- Text2Cypher ACL 2025 paper (HIGH confidence): [aclanthology.org/2025.genaik-1.11.pdf](https://aclanthology.org/2025.genaik-1.11.pdf)
-- Kuzu v0.11.3 release notes — algo pre-installed (MEDIUM confidence): [github.com/kuzudb/kuzu/releases](https://github.com/kuzudb/kuzu/releases)
-- Cypher vs SQL recursive CTE comparison (MEDIUM confidence — multiple concordant sources): [transliterationapplication.readthedocs.io — cypher_vs_sql](https://transliterationapplication.readthedocs.io/en/latest/sources/articles/cypher_vs_sql.html)
-- Kuzu GitHub (HIGH confidence): [github.com/kuzudb/kuzu](https://github.com/kuzudb/kuzu)
+- [Marp CLI (marp-team/marp-cli) — GitHub](https://github.com/marp-team/marp-cli) — HIGH confidence, official repo
+- [Marp: Markdown Presentation Ecosystem](https://marp.app/) — HIGH confidence, official site
+- [Marpit Directives documentation](https://marpit.marp.app/directives) — HIGH confidence, official docs
+- [marp-team/marp directives.md](https://github.com/marp-team/marp/blob/main/website/docs/guide/directives.md) — HIGH confidence, official source
+- [DeepL API — XML and HTML handling](https://developers.deepl.com/docs/xml-and-html-handling/html) — HIGH confidence, official docs
+- [DeepL API — Multilingual Glossaries reference](https://developers.deepl.com/api-reference/multilingual-glossaries) — HIGH confidence, official docs
+- [DeepL Help Center — Use a glossary with DeepL API](https://support.deepl.com/hc/en-us/articles/4405021321746-Use-a-glossary-with-DeepL-API) — HIGH confidence, official support docs
+- [deepl-node GitHub Issue #26 — Feature Request: Markdown Handling](https://github.com/DeepLcom/deepl-node/issues/26) — MEDIUM confidence, confirms no native markdown support (open issue as of research date)
+- [md-translator — GitHub](https://github.com/rockbenben/md-translator) — MEDIUM confidence, community tool confirming placeholder-swap as the standard pattern for markdown+MT
+- [chokidar — GitHub](https://github.com/paulmillr/chokidar) — HIGH confidence, official repo (already a DocuMind dependency)
+- [ftp-deploy — npm](https://www.npmjs.com/package/ftp-deploy) — MEDIUM confidence, widely-used reference implementation
+- [SamKirkland/FTP-Deploy-Action — GitHub](https://github.com/SamKirkland/FTP-Deploy-Action) — MEDIUM confidence, confirms dry-run + manifest-state pattern
+- [figma/mcp-server-guide — figma-use-slides skill](https://github.com/figma/mcp-server-guide/blob/main/skills/figma-use-slides/SKILL.md) — MEDIUM confidence, official Figma repo but input-contract details not fully verified in this pass — flag for later phase research
+- [Docusaurus i18n Introduction](https://docusaurus.io/docs/i18n/introduction) — MEDIUM confidence, reference pattern comparison only
+- Project source examined directly: `docs/slides/external/2026-05-21-figma-ai-pitch-deck.md` (existing example deck — used to derive concrete translation-fidelity rules)
 
 ---
-
-*Feature research for: DocuMind v3.3 — Kuzu Graph DB + LangChain text-to-Cypher integration*
-*Researched: 2026-04-07*
+*Feature research for: DocuMind v3.4 Presentation Pipeline*
+*Researched: 2026-07-10*

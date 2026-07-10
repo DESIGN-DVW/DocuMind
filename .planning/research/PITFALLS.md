@@ -1,354 +1,367 @@
 # Pitfalls Research
 
-**Domain:** Adding Kuzu embedded graph DB + LangChain KuzuGraph to an existing Node.js production service (DocuMind v3.3)
-**Researched:** 2026-04-07
-**Confidence:** HIGH (project abandonment, native module behavior, LangChain gap) / MEDIUM (sync patterns, schema migration, performance) / LOW (specific Docker multi-arch Kuzu build details — require empirical verification)
-
----
+**Domain:** Adding a translate → render → deploy presentation pipeline (DeepL → Marp CLI → FTP → Figma Slides) to an existing chokidar/node-cron/PM2 file-watching daemon (DocuMind)
+**Researched:** 2026-07-10
+**Confidence:** MEDIUM-HIGH (grounded in current codebase inspection + official docs/GitHub issues for marp-cli, DeepL API, basic-ftp; LOW confidence flagged where DocuMind-specific behavior is inferred rather than tested)
 
 ## Critical Pitfalls
 
-### Pitfall 1: KuzuDB Was Archived in October 2025 — The Project Is Abandoned
+### Pitfall 1: Pipeline writes retrigger the watcher (feedback loop)
 
 **What goes wrong:**
-
-KuzuDB was archived by its corporate sponsor Kùzu Inc. on October 10, 2025. The GitHub repository is now read-only. The team announced they are "working on something new" but did not specify what. Active development, bug fixes, security patches, and new releases have stopped from the original team. Choosing the upstream `kuzu` npm package ties DocuMind to an abandoned dependency with no guaranteed path forward.
+`daemon/watcher.mjs` watches `**/*.md`, `**/*.pdf`, `**/*.docx`, `**/*.rtf` under the entire repos root (`REPOS_ROOT_RESOLVED`). The new pipeline will write `*.fr.md` next to the EN source, plus `.html`/`.pdf`/`.pptx` exports into `docs/slides/**`. `.fr.md` and `.pdf` both match existing watch globs. If the pipeline doesn't suppress these writes, chokidar fires `add`/`change`, `queueChange()` runs, `indexMarkdown()` re-indexes the generated file, and — once the orchestration step exists — a change to the FR file or a rendered PDF could re-enter the translate/render pipeline, or at minimum flood the index with junk.
 
 **Why it happens:**
-
-The abandonment was announced with minimal warning. Most integrations being written now (Q1-Q2 2026) treat Kuzu as if it is still actively maintained, because blog posts and tutorials from 2024-early 2025 show it as active. Developers do not check project health before starting integration.
+The existing watcher was designed for markdown *authoring* (docs get hand-edited, indexed, done). It has no concept of "generated artifact" vs "source artifact." The one loop-guard that exists (`writingNow` Set in `daemon/registry-lock.mjs`) is narrow: `relink-processor.mjs` adds a path to `writingNow` before writing, then `setTimeout(() => writingNow.delete(filePath), 3000)` after. This works today because registry rewrites are small, fast, single-file writes. The pipeline's writes are not: DeepL calls take seconds, Marp headless-Chrome boot + multi-format render (HTML+PDF+PPTX × EN+FR) can run well past 3000ms per file, and FTP upload happens after that. A `writingNow` guard sized for a single markdown rewrite will expire mid-pipeline, and the watcher's own `awaitWriteFinish` (`stabilityThreshold: 2000ms`) plus `DEBOUNCE_MS = 5000` compounds the timing risk — there is no guarantee the lock is still held when chokidar's debounce fires.
 
 **How to avoid:**
 
-Evaluate community forks before committing. As of October 2025 there are two active forks:
-
-- **Bighorn** (Kineviz) — community-maintained fork of Kuzu, API-compatible, available at `bighorndb` on GitHub
-- **Ladybug** — separately announced by Arun Sharma (ex-Facebook, ex-Google), independently funded, aims to be a full Kuzu replacement
-
-For v3.3: pin to the last stable upstream release (`kuzu` 0.11.x) and document this decision explicitly. Set a milestone review to evaluate whether to migrate to Bighorn or Ladybug before v3.4. Do not use `latest` in package.json. The file format changed to single-file in 0.11.0 (July 2025) — verify your version supports the format you create.
+- Don't reuse `writingNow` timing-lock semantics for this pipeline — they're a poor fit for multi-second, multi-file jobs.
+- Add explicit `ignored` globs to `IGNORE_PATTERNS` in `watcher.mjs` for every generated pattern: `**/*.fr.md`, `**/docs/slides/**/*.html`, `**/docs/slides/**/*.pdf`, `**/docs/slides/**/*.pptx`, and any FTP-staging temp dir. Generated files should never enter the watch set at all — this is more robust than a timing lock.
+- Only the **hand-edited EN `.md`** source should be watched for pipeline triggering; everything downstream is derived and explicitly excluded.
+- If PDF must still be indexed for search (existing `.pdf` case in `processPendingChanges` is a TODO stub today), index it via a separate, pipeline-driven call after deploy completes — not via the generic watcher path.
 
 **Warning signs:**
 
-- `npm install kuzu` resolves to a version released after October 2025 — this is from a fork, not the original team
-- Release notes for `kuzu` on npm reference a new organization name or team
-- GitHub issues/PRs are still open with no responses after November 2025
+- `[watcher] Indexed: .../*.fr.md` or `.../slides/**/*.pdf` appearing in daemon logs shortly after a deploy.
+- CPU/render spikes in PM2 (`pm2 monit`) with no corresponding human edit.
+- `scan_runs` / index growing with duplicate FR-derived entries.
 
 **Phase to address:**
-
-Phase 0 (Dependency Evaluation) — before writing any integration code. Pin the version, document the fork landscape, and choose a path.
+Orchestration/loop-protection phase — must land before the daemon-triggered pipeline goes live, not as a follow-up fix. Should be verified with a "touch a rendered file, assert no pipeline run" test.
 
 ---
 
-### Pitfall 2: LangChain KuzuGraph Is Python-Only — No Node.js Equivalent Exists
+### Pitfall 2: DeepL mangles Marp front-matter, directives, code fences, and proper nouns
 
 **What goes wrong:**
-
-The feature goal "LangChain KuzuGraph integration: text-to-Cypher natural language graph queries" assumes a LangChain.js equivalent of Python's `KuzuGraph` + `KuzuQAChain` exists. It does not. The `langchain-kuzu` package is published only to PyPI (`pip install langchain-kuzu`). LangChain.js (`langchain` npm package) has `GraphCypherQAChain` for Neo4j but no Kuzu graph wrapper. As of research date there is no `@langchain/kuzu` npm package and no open PR/issue in langchainjs to add one.
+DeepL's plain `translate_text` endpoint has no concept of Markdown. Sent a whole `.md` file, it treats YAML front-matter (`marp: true`, `theme:`, `class:`), HTML-comment local/spot directives (`<!-- _class: hero -->`, `<!-- _class: +lead -->`, `<!-- backgroundColor: white -->`), fenced code blocks, inline code, and image/link paths as ordinary prose — reordering words inside them, "translating" identifiers, or normalizing punctuation inside a comment that Marpit parses structurally. A translated `_class` value or a reworded YAML key silently breaks slide styling with no lint error (markdownlint doesn't understand Marpit's directive-in-comment convention).
 
 **Why it happens:**
-
-The feature was specified based on the Python LangChain ecosystem. LangChain Python and LangChain.js have a significant capability gap — many Python integrations exist only in Python. Developers assume the ecosystems are symmetric.
+`tag_handling` only has two real modes — `xml` and `html` — and both are designed for markup languages, not Markdown. There is no built-in Markdown-aware mode, and DeepL's own docs/community guidance is explicit that markdown structure (code fences especially) is not preserved automatically. Proper nouns (product names, "DocuMind", "DVWDesign", "Marp") aren't reliably preserved either without a glossary or `translate="no"`/placeholder protection.
 
 **How to avoid:**
 
-Implement the text-to-Cypher bridge in Node.js directly without the `KuzuGraph` abstraction. The pattern `KuzuGraph` implements is:
-
-1. Load the graph schema from the DB (node tables + relationship tables)
-2. Format the schema as a string for the LLM prompt context
-3. Ask the LLM (via `GraphCypherQAChain`-style prompt) to generate a Cypher query
-4. Execute the Cypher query against Kuzu using the native Node.js API
-5. Pass results back to the LLM for answer synthesis
-
-Steps 1, 2, 4 use the Kuzu Node.js API directly. Steps 3 and 5 use LangChain.js's `ChatOpenAI` / `ChatAnthropic` with a custom prompt. `GraphCypherQAChain` from LangChain.js can be used for the LLM pipeline, but you must supply it a custom graph object that adapts Kuzu's schema and query API to the expected interface.
-
-This is 100–150 lines of Node.js adapter code — not a blocker, but it must be scoped explicitly. Do not plan this feature as "just install langchain-kuzu."
+- Never send the raw `.md` file to DeepL as one blob. Pre-process: extract front-matter, fenced code blocks, inline code spans, and HTML-comment directive lines into placeholders (e.g., `⟦BLOCK_0⟧`) before calling the API, restore verbatim after translation. This is the standard community pattern (see `deepmark`, `md-translator`, `cmark-translate` prior art).
+- For inline directive comments (`<!-- _class: hero -->`), never send them to DeepL at all — they contain no translatable prose; strip and restore by exact position.
+- Use a DeepL glossary (EN→FR) for proper nouns that *do* appear in prose (e.g., "Figma", "DocuMind", "DVWDesign") so they're pinned even in translated sentences, rather than relying on placeholder-protecting every occurrence.
+- Set `tag_handling: html` with `split_sentences: nonewlines` only for the prose segments being sent (not the whole file) — this preserves internal newlines DeepL would otherwise be free to collapse.
+- Validate output: after translation, run `.fr.md` through the same front-matter/YAML parser and Marpit directive regex used for the EN source and diff the directive *set* (not text) against EN — mismatched counts of `<!-- _class -->` occurrences between EN and FR is a hard-fail signal.
 
 **Warning signs:**
 
-- `npm install langchain-kuzu` succeeds — this is a scam package or incorrect install (PyPI only)
-- Planning docs reference `KuzuGraph` from npm without a source URL
-- The LangChain.js changelog does not list a Kuzu integration
+- FR deck renders with wrong theme/background/layout on specific slides while EN renders fine.
+- FR front-matter fails YAML parse (translated `true`/`false` or reordered keys).
+- Diffing EN vs FR directive-comment count shows a mismatch.
 
 **Phase to address:**
-
-Phase 1 (Kuzu integration scaffold) — define the custom adapter interface before building the LLM pipeline.
+Translation stage phase — placeholder-protection and directive round-trip validation must be part of the initial DeepL integration, not bolted on after a bad deck ships.
 
 ---
 
-### Pitfall 3: Kuzu Is an Embedded Single-Writer DB — PM2 + Daemon + External Tool = Write Conflict
+### Pitfall 3: DeepL breaks GFM tables under DocuMind's strict table rules
 
 **What goes wrong:**
-
-Kuzu enforces single-writer semantics at the file level. Only one `READ_WRITE` Database object can open the Kuzu DB at a time. If two processes try to open the same Kuzu database in write mode simultaneously — e.g., the PM2 daemon and a separate CLI script run manually — the second process either throws an error or silently fails to acquire the write lock. On Docker, there is a known issue where file-level locking flags set by one process are not visible to another process in a different container or filesystem namespace.
-
-For DocuMind specifically: the Express daemon already holds the Kuzu database open. Running `npm run scan` in a separate terminal while the daemon is running will conflict if both attempt write access.
+This repo enforces (via DVW001/DVW002, per `CLAUDE.md`) that GFM tables must never have a blank line between rows and must use minimal, unpadded separators. DeepL's sentence-splitting and text-reflow behavior is not row-aware: sending a Markdown table as plain text risks the translation engine inserting a blank line, merging/splitting a row's cell text across a line break, or padding cell content — any of which either breaks GFM table parsing (blank line = table ends) or gets silently "fixed" (destructively) by the repo's own auto-fixer on the next lint pass, corrupting the FR deck.
 
 **Why it happens:**
-
-Developers carry the mental model from SQLite's WAL mode (which allows concurrent writers in the same process, and multiple readers across processes) onto Kuzu. Kuzu is fundamentally different: one Database object owns the file exclusively.
+Marp slides that include tables (e.g., a comparison slide) are exactly the content type DeepL is least equipped to round-trip, since its "tag handling" targets XML/HTML markup, not pipe-delimited table syntax, and it has zero awareness of the project's specific zero-blank-line convention.
 
 **How to avoid:**
 
-Establish one clear rule: the daemon owns the Kuzu database. All writes go through the daemon's API (REST endpoint or internal function). No CLI script or external tool opens Kuzu's database in write mode while the daemon is running.
-
-For maintenance tasks that need exclusive Kuzu access (migration, schema creation, initial import), require the daemon to be stopped first. Document this in `CLAUDE.md` and in the database init scripts.
-
-In code: open Kuzu with `bufferPoolSize` configured at startup in the daemon and never re-open it. Share the single `Database` instance across all Express route handlers and the MCP server.
+- Exclude table blocks from the DeepL translation payload the same way as code fences — placeholder-protect the entire table (including separator row) and only send individual cell text as small, isolated translation calls, or translate cell-by-cell with explicit `\n`-free strings.
+- After translation, re-assemble tables using the original separator/row structure (never let DeepL's output dictate table formatting), then run the existing markdownlint auto-fix pass on the FR file before it's considered final — but treat any auto-fix diff on a table block as a build failure requiring manual review, not a silent pass-through.
+- Add an explicit pipeline check: run `markdownlint-cli2` against generated `.fr.md` before rendering; if DVW001/DVW002 violations are found, fail the pipeline rather than rendering a broken table into the FR deck.
 
 **Warning signs:**
 
-- "Failed to open the database file" error when a second process tries to open Kuzu
-- Kuzu lock file (`.lock`) present in the DB directory that does not clear after the daemon restarts
-- Docker Kuzu Explorer running alongside the daemon — Explorer opens a second database connection from a different container
+- FR PDF/PPTX renders a table as literal pipe-and-dash text instead of a formatted table.
+- `markdownlint-cli2` reports DVW002 violations on `docs/slides/**/*.fr.md` post-generation.
 
 **Phase to address:**
-
-Phase 1 (Kuzu scaffold) — the database opening strategy must be established on day one. Centralize access in the daemon.
+Translation stage phase, in the same validation step as Pitfall 2 (directive round-trip). Lint-gate before render, not after.
 
 ---
 
-### Pitfall 4: Kuzu's Strict Schema Cannot Be Altered After Creation — No ALTER TABLE for Property Types
+### Pitfall 4: marp-cli headless Chrome flakiness under PM2/launchd
 
 **What goes wrong:**
-
-Kuzu uses a typed, declared schema. Node tables and relationship tables are defined with `CREATE NODE TABLE` / `CREATE REL TABLE` DDL statements. Once a property is added to a table with a specific type (e.g., `strength FLOAT`), you cannot change that type with an `ALTER TABLE` statement. Adding new properties is possible via `ALTER TABLE ADD`, but dropping properties or changing types requires EXPORT DATABASE → recreate schema → IMPORT DATABASE.
-
-The DocuMind SQLite `doc_relationships` table has 8 relationship types stored as a single `type` string column. Migrating this to Kuzu requires a design decision: one relationship table with a `type` property (flat model), or eight separate typed relationship tables (semantic model). Choosing the flat model first and realizing the semantic model is needed later requires the full EXPORT/IMPORT migration cycle, which is destructive if IMPORT fails.
-
-The IMPORT DATABASE command has a known issue: if it fails mid-way, automatic rollback is not supported. You must delete the partially-imported database and start over.
+`marp-cli` launches a real headless Chrome/Chromium via Puppeteer to render slides. Under a process manager (PM2) or a launchd-spawned daemon — as opposed to an interactive terminal — Chrome can fail to launch (sandbox errors, missing `DISPLAY`/GPU context, profile-lock collisions from concurrent renders) or hang, especially the first run after a macOS update changes Chrome's install path. In Docker/CI the same class of failure shows up as `--no-sandbox` requirements not being met.
 
 **Why it happens:**
-
-Developers prototype with a flat schema that mirrors the existing SQLite structure (easiest initial migration), then discover they need typed edges for graph algorithms that can be filtered by relationship type. Changing this after data is loaded requires the export/import cycle.
+Marp CLI does auto-detect containerized environments (via `is-inside-container`) and disable sandboxing automatically inside Docker, but PM2-on-macOS/launchd is not a container — it's a background daemon context that can still lack the permissions or environment (e.g., writable temp profile dir, correct `$PATH` for Chrome discovery) that an interactive shell has. There's also no built-in retry/backoff for a flaky browser launch; a single Puppeteer launch failure fails the whole render.
 
 **How to avoid:**
 
-Design the final Kuzu schema before loading any data. For DocuMind's 8 relationship types (`imports`, `parent_of`, `variant_of`, `supersedes`, `depends_on`, `related_to`, `generated_from`, `dispatched_to`): use separate relationship tables from the start.
-
-```cypher
-CREATE REL TABLE imports(FROM Document TO Document, strength FLOAT)
-CREATE REL TABLE parent_of(FROM Document TO Document)
-CREATE REL TABLE variant_of(FROM Document TO Document, similarity_score FLOAT)
--- etc.
-```
-
-This enables Kuzu's graph algorithms to be applied per-relationship-type and avoids schema migration later.
-
-Before initial data load, create the schema in a test database and verify all 8 relationship types survive a round-trip EXPORT/IMPORT.
+- Pin an explicit `--browser-path` (or `CHROME_PATH`/`PUPPETEER_EXECUTABLE_PATH`) in `.marprc.yml`/env rather than relying on auto-discovery, so PM2's restricted environment doesn't silently resolve to a different (or missing) Chrome than the one used in manual testing.
+- Set `CHROME_NO_SANDBOX=1` explicitly for the Docker image path (belt-and-suspenders alongside auto-detection) and verify manually on macOS/PM2 that no sandbox flag is needed there (it usually isn't outside containers, but don't assume — test under `pm2 start`, not just `node daemon/server.mjs`).
+- Wrap the render call with a bounded retry (e.g., 2 attempts with a short delay) specifically for browser-launch failures, distinct from content/translation errors, so a transient Chrome hiccup doesn't require a full pipeline re-run.
+- Ensure the render step runs single-flight per deck (no two Marp renders launching Chrome concurrently against the same profile dir) — see Pitfall 10.
 
 **Warning signs:**
 
-- Schema design starts with `CREATE REL TABLE doc_relationship(FROM Document TO Document, type STRING)` — this is the flat model that forecloses typed-edge optimizations
-- No schema design phase before initial data load
-- First Cypher query returns wrong results because edges are filtered by a string property match rather than type
+- `Error: Failed to launch the browser process` or a hang with no output in PM2 logs, especially after a macOS Chrome auto-update.
+- Renders succeed via `npm run slides:build` in an interactive shell but fail identically triggered by the daemon/PM2.
 
 **Phase to address:**
-
-Phase 1 (Kuzu scaffold) — schema is the first artifact. Freeze it before writing any import code.
+Marp toolchain setup phase — explicit browser path + sandbox flags should be part of initial `.marprc.yml` configuration, tested specifically via `pm2 start`/`pm2 restart`, not just CLI invocation.
 
 ---
 
-### Pitfall 5: Kuzu's Prebuilt Binaries Do Not Support Alpine Linux (musl libc)
+### Pitfall 5: `--pptx-editable` silently degrades when `soffice` is missing or misresolved
 
 **What goes wrong:**
-
-The `kuzu` npm package ships prebuilt binaries compiled against glibc (`manylinux_2_28` standard for Linux). Alpine Linux uses musl libc, not glibc. On an Alpine-based Docker image, npm will attempt to build Kuzu from source, which requires CMake >= 3.15, Python 3, and a C++20-compatible compiler — none of which are in `node:alpine` by default. The source build takes 5–15 minutes (Kuzu is a large C++ codebase) and may fail with C++20 standard errors on older Alpine gcc versions.
-
-DocuMind's existing Docker image already uses `node:22-bookworm-slim` (Debian) because of `better-sqlite3`. This constraint is compounded, not new, but must be explicitly verified for Kuzu as well.
+`--pptx-editable` requires both the headless browser *and* a working LibreOffice (`soffice`) install for the PPTX post-processing step. `PROJECT.md` already flags `soffice not on PATH` as a known prereq gap. If `soffice` can't be found (wrong PATH inside PM2's environment, or a Scoop/Homebrew-style non-standard install location marp-cli doesn't search), the documented failure is an explicit error ("LibreOffice soffice binary could not be found") — but the more dangerous failure mode is a **PM2-scoped `$PATH` that differs from the interactive shell's `$PATH`**: `soffice` might resolve fine when you run the render manually, then fail (or resolve to a stale/wrong binary) when the same command runs under the daemon's environment, because PM2/launchd processes don't inherit the same shell profile.
 
 **Why it happens:**
-
-Docker image maintainers sometimes experiment with Alpine to reduce image size after initial Dockerization is complete. Adding Kuzu to an Alpine image triggers the source-build failure.
+LibreOffice's location is highly platform/install-method dependent, and marp-cli's auto-discovery doesn't cover every install path (confirmed Scoop-on-Windows gap; Homebrew-on-macOS installs to `/Applications/LibreOffice.app/Contents/MacOS/soffice`, which is also not guaranteed to be on a daemon's `$PATH`). The experimental flag itself also warns of **lower slide reproducibility** than the browser-only export path and does not support presenter notes — a silent quality regression even when it "succeeds."
 
 **How to avoid:**
 
-Keep `node:22-bookworm-slim` as the base image. With two native addons (`better-sqlite3` + `kuzu`), the cost of switching to Alpine doubles. The Debian slim image is the correct choice and must not be changed without testing both addons.
-
-If image size optimization is needed later, use a multi-stage build where the builder stage (Debian) compiles native modules and the final stage copies `node_modules/` into a minimal runtime.
+- Set `SOFFICE_PATH` (or the equivalent marp-cli env var) explicitly in the daemon's environment/`.env`, not relied-upon PATH discovery — this must be set for PM2's process environment specifically, verified via `pm2 env <id>`, not just the interactive shell.
+- Add a pipeline pre-flight check: before attempting `--pptx-editable`, run `soffice --version` (or equivalent) programmatically and fail fast with a clear error if it's missing, rather than letting marp-cli's own error surface deep in a render call.
+- Given the known reproducibility/presenter-notes tradeoff, treat `--pptx-editable` as opt-in per-deck (e.g., only for decks that need PowerPoint editing) rather than a default on every render, and always also produce the standard (non-editable, browser-only) PPTX as the reliable fallback artifact.
 
 **Warning signs:**
 
-- Docker build shows "No prebuilt binaries found for kuzu — building from source"
-- Build stage fails with `cmake: command not found` or C++20 compiler errors
-- Image size suddenly increases by 500MB+ (build tools installed in Alpine to compile Kuzu)
+- Editable PPTX exports open in PowerPoint with missing/garbled layout compared to the PDF/HTML output.
+- Presenter notes present in the source deck are absent from the exported PPTX.
+- Render succeeds locally (interactive terminal) but fails under `pm2 restart` with a soffice-not-found error.
 
 **Phase to address:**
-
-Phase 1 (Kuzu scaffold) — verify npm install succeeds in the existing Docker image before writing any Kuzu application code.
+Marp toolchain setup phase, alongside Pitfall 4 — resolve the "prereq gap" from `PROJECT.md` explicitly (install + pin `SOFFICE_PATH`) before wiring `--pptx-editable` into any automated trigger.
 
 ---
 
-### Pitfall 6: Dual-DB Sync Between SQLite and Kuzu Has No Guaranteed Consistency Boundary
+### Pitfall 6: FTP deploy publishes half-rendered output or fails silently on protocol mismatch
 
 **What goes wrong:**
-
-The plan keeps SQLite as the FTS5 index and source of truth for document metadata, while Kuzu becomes the graph store. Every time a relationship is written to SQLite's `doc_relationships` table, it must also be written to Kuzu's relationship tables. These are two separate database writes with no cross-DB transaction. If the Kuzu write fails (connection error, write conflict, schema mismatch), the SQLite record exists but Kuzu does not have the corresponding edge. The two databases drift out of sync silently.
-
-The reverse is also true: if a Kuzu write succeeds but the SQLite write fails, Kuzu has an edge for documents that SQLite does not recognize.
+Two distinct failure modes: (1) uploading files one-by-one directly to their live path means a viewer hitting the site mid-deploy can see a stale HTML file referencing a not-yet-uploaded PDF, or a partially-written large PPTX (interrupted connection leaves a truncated file at the live path); (2) the deploy target may be assumed to be plain FTP when it's actually FTPS (explicit TLS) or SFTP (SSH-based, entirely different port/protocol/library) — `basic-ftp` speaks FTP/FTPS only, not SFTP, so pointing it at an SFTP-only host fails outright, and FTPS specifically requires correct passive-mode data-port handling that many firewalls silently drop (login succeeds, directory listing/upload then hangs or times out).
 
 **Why it happens:**
-
-Developers treat dual-DB writes as "fire and forget" — write to primary (SQLite), then write to secondary (Kuzu) and log any error. This approach creates a growing divergence that is expensive to detect and repair.
+FTP's dual-channel design (control + data) means "connected successfully" (control channel, e.g., port 21) doesn't guarantee the data channel (passive port range) is reachable — a firewall or NAT can allow login but block the actual transfer, producing a confusing partial-success. FTPS additionally requires the firewall to inspect an encrypted stream it can't see into, which frequently breaks passive-mode negotiation. Since deploy credentials are still pending (`.env` gap per `PROJECT.md`), the exact target protocol hasn't been validated yet — assuming plain/FTPS FTP without confirming with the hosting provider is a likely default mistake.
 
 **How to avoid:**
 
-Establish a canonical source and a sync strategy from day one:
-
-- **SQLite is the system of record for relationships.** The `doc_relationships` table in SQLite is authoritative. Kuzu is a derived, read-optimized index of that data.
-- **Kuzu is always rebuildable from SQLite.** Provide a `npm run graph:rebuild` command that clears Kuzu and re-imports all relationships from SQLite in a single batch.
-- **Writes go to SQLite first.** On success, enqueue or directly execute the Kuzu write. On Kuzu write failure, log the failure with the SQLite record ID, do not roll back SQLite, and rely on the rebuild command to repair the divergence.
-- **Health check endpoint reports sync status.** `GET /health` includes a `graph_sync: ok/diverged` field comparing `doc_relationships` count in SQLite vs. edge count in Kuzu.
-
-This is not ACID-distributed-transaction consistency — it is "eventually consistent with a fast repair path," which is correct for this use case.
+- Confirm with the hosting/FTP provider up front whether the target is FTP, FTPS, or actually SFTP — do not assume; `basic-ftp` (FTP/FTPS) and an SSH-based client (e.g., `ssh2-sftp-client`) are not interchangeable, and picking wrong means rewriting the deploy stage later.
+- Use `basic-ftp`'s explicit TLS mode if FTPS, and set passive mode explicitly; test the *transfer* path (not just login) from the actual daemon host/network, since passive-port firewall issues only show up on data transfer, not authentication.
+- Deploy atomically: upload every artifact for a given release to a temporary remote path/filename (e.g., `.part` suffix or a versioned staging directory), and only rename/move into the live path once **all** files for that deck (HTML+PDF+PPTX, EN+FR) have uploaded successfully. Never let a live directory contain a mix of old and new artifacts mid-deploy.
+- Build in a dry-run mode (already planned per `PROJECT.md` Active scope) that performs every step except the final rename/publish — use it as the default until credentials are confirmed and the atomic-rename path is verified end-to-end.
 
 **Warning signs:**
 
-- Graph query returns fewer results than expected from a search query
-- `SELECT COUNT(*) FROM doc_relationships` differs from `MATCH ()-[r]->() RETURN count(r)`
-- No `graph:rebuild` command exists
-- Kuzu write errors are silently swallowed in processor code
+- Deploy logs show successful login but the transfer step times out or hangs (classic passive-mode/firewall symptom).
+- Live site briefly serves a 404 or broken asset reference during a deploy window.
+- File size on the remote host doesn't match local file size after upload (truncated transfer).
 
 **Phase to address:**
-
-Phase 2 (SQLite → Kuzu migration and sync) — the sync strategy must be the first decision, before writing any relationship processor code.
+FTP deploy stage phase — atomic staged-then-rename upload pattern and protocol confirmation must be settled before removing dry-run mode as the default.
 
 ---
 
-### Pitfall 7: Kuzu's Graph Algorithm Extension Requires INSTALL/LOAD — Cannot Assume It Is Pre-Loaded
+### Pitfall 7: DeepL free/pro endpoint mismatch and mid-run quota exhaustion
 
 **What goes wrong:**
-
-PageRank, weakly connected components, and centrality algorithms are in Kuzu's `algo` extension, not built into the core engine. In Kuzu 0.11.3, the extension is pre-installed and pre-loaded, but in earlier versions it must be explicitly installed with `INSTALL algo` and loaded with `LOAD EXTENSION algo` before any graph algorithm can be called. If you are not on 0.11.3, calling `CALL algo.pagerank(...)` without loading the extension throws a "function not found" error that looks like a syntax error.
-
-The extension installation downloads binaries from Kuzu's extension server. In a Docker environment with no external network access, this download fails silently or errors out.
+DeepL Free and Pro keys use different base URLs (`api-free.deepl.com` vs `api.deepl.com`); hardcoding the wrong one for the key type fails every call outright. Separately, a Free-tier key has a hard 500,000-character monthly cap (`456 Quota Exceeded`); if the pipeline is translating multiple decks in one batch run and the quota is exhausted partway through, some slides/decks end up translated and others don't — with no automatic signal to the render stage that the `.fr.md` set is incomplete, risking a render/deploy of a half-translated FR deck.
 
 **Why it happens:**
-
-Tutorials and blog posts assume version 0.11.x behavior (pre-loaded extensions). Developers who pin to an earlier version for stability hit missing extension errors they did not expect. The error message ("function not found") does not mention the extension system.
+The SDK-level auto-detection (key suffix `:fx` → free endpoint) exists in some official clients, but only if the integration uses it correctly; a naive fetch/HTTP integration that hardcodes the endpoint won't get this for free. Quota exhaustion has no built-in "pause and resume" semantics — it's a hard error per call once the cap is hit mid-batch.
 
 **How to avoid:**
 
-Pin to Kuzu 0.11.3 or later (which bundles the algo extension). At daemon startup, verify the extension is available by running a no-op algorithm query and catching any error:
-
-```javascript
-try {
-  await conn.query('CALL algo.pagerank("Document", "related_to") RETURN *');
-} catch (e) {
-  // attempt LOAD EXTENSION algo
-  await conn.query('LOAD EXTENSION algo');
-}
-```
-
-For Docker: verify at image build time that the extension is present by running a test query as a Dockerfile `RUN` step. Do not rely on runtime extension downloading in production containers.
+- Use the official `deepl-node` client (not raw `fetch`) so free/pro endpoint selection and error typing (`DeepLError` subclasses) are handled correctly rather than reimplemented.
+- Before a batch translation run, call DeepL's usage endpoint to check remaining character quota against the estimated character count of the batch; if insufficient, fail the pipeline run before starting rather than partway through.
+- Make translation idempotent per-file: if a run is interrupted (quota or otherwise), the pipeline should be safely re-runnable and only translate files whose EN source content-hash changed since the last successful `.fr.md` generation (mirrors the existing `content_hash` incremental-scan pattern already used elsewhere in this daemon) — this bounds the blast radius of a mid-run failure to whatever wasn't yet translated, and avoids wasting quota re-translating unchanged decks.
+- Treat a partial `.fr.md` set as a pipeline failure state that blocks the render stage entirely (don't render EN + stale/missing FR) rather than rendering whatever's available.
 
 **Warning signs:**
 
-- "Function not found: algo.pagerank" error — extension not loaded
-- Extension loads in dev but not in Docker (network-restricted environment)
-- Algorithm query works in Kuzu CLI (which auto-loads extensions) but not in Node.js API
+- HTTP 403 with a wrong-endpoint message in DeepL API responses.
+- `456` errors appearing partway through a multi-deck batch, with some `.fr.md` files updated and others not.
 
 **Phase to address:**
+Translation stage phase — quota pre-check and idempotent per-file translation (content-hash gated) should be designed in from the start, not added after a partial-quota incident.
 
-Phase 3 (Graph algorithms) — verify extension availability as the first step of this phase.
+---
+
+### Pitfall 8: Stale committed rendered exports left in git, and mis-scoped `.gitignore`
+
+**What goes wrong:**
+The repo currently has `docs/slides/internal/2026-05-21-figma-ai-internal-deck.{md,html,pdf,pptx}` and `docs/slides/external/2026-05-21-figma-ai-pitch-deck.{md,html,pdf,pptx}` committed in full — including the ~5.4MB PPTX and other binaries, added in commit `3b09a685` (May 23). Once the pipeline goes live and rendered artifacts are gitignored going forward (per `PROJECT.md` Active scope: "Rendered outputs gitignored; stale committed binaries removed"), a naive `git rm` or blanket `.gitignore` addition either (a) deletes the working-tree copies too (data loss if not re-derivable, e.g., if translation/render isn't reproducible bit-for-bit or the pipeline isn't finished yet), or (b) leaves the binaries permanently in git history, still bloating every clone even after they're gitignored going forward.
+
+**Why it happens:**
+`.gitignore` only affects *future* additions — it does nothing to files already tracked. A rule added to `.gitignore` without also untracking the existing files leaves them committed and continuously diffed/re-added by accident (contributors' local `.pptx` changes will still show as tracked modifications since git already knows the file).
+
+**How to avoid:**
+
+- Use `git rm --cached` (not `git rm`) for each already-tracked generated file — this removes them from the index/future commits while leaving the local working-tree copy untouched, satisfying "removed without losing them locally."
+- Add the generated-file globs to `.gitignore` in the same change (e.g., `docs/slides/**/*.html`, `docs/slides/**/*.pdf`, `docs/slides/**/*.pptx`, `docs/slides/**/*.fr.md`) — but keep the EN `.md` source tracked (it's explicitly the single hand-edited artifact per the `PROJECT.md` Key Decisions table).
+- Note explicitly for the user: `git rm --cached` only stops future tracking — the binaries remain in git history/every existing clone unless a history rewrite (`git filter-repo`/BFG) is also run. Decide whether that's in scope for this milestone or deferred; don't silently assume history cleanup is included.
+- Re-run `npm run slides:build` locally after untracking to confirm the pipeline can regenerate byte-equivalent (or at least functionally equivalent) artifacts before treating the untracked originals as disposable.
+
+**Warning signs:**
+
+- `git status` shows the `.pptx`/`.pdf`/`.html` files as modified after every local render, even though they're "supposed to be" ignored.
+- Repo clone size doesn't shrink after adding `.gitignore` rules (confirms history still holds the blobs).
+
+**Phase to address:**
+Git hygiene phase (can run in parallel with/immediately after Marp toolchain setup, before orchestration goes live) — should be an explicit, isolated commit: untrack + gitignore, verified with `git status` clean after a fresh render.
+
+---
+
+### Pitfall 9: `.env` secrets baked into the Docker image
+
+**What goes wrong:**
+DocuMind already ships a Docker image (v3.2, published on GHCR). The new pipeline introduces its first real secrets in this repo — `DEEPL_API_KEY` and FTP credentials — landing in `.env`. If the Dockerfile's build context isn't scoped with a `.dockerignore` entry for `.env`, a `COPY . .` (or similar broad copy) can pull `.env` into an image layer. Even if a later layer deletes it, the secret persists permanently in that layer's history and is extractable from the published image on GHCR — which is a public-facing artifact.
+
+**Why it happens:**
+`.dockerignore` is easy to forget to update when new secret-bearing files are introduced, especially when the existing `.gitignore` already excludes `.env` (which only affects git, not the separate Docker build context) — the two ignore mechanisms are commonly and incorrectly assumed to be the same thing.
+
+**How to avoid:**
+
+- Confirm `.env` is listed in `.dockerignore` (separate file from `.gitignore` — verify it exists and is current) before this milestone adds any new secret-bearing env vars.
+- Pass `DEEPL_API_KEY`/FTP credentials into the container at **runtime** (`docker run -e` / `docker-compose` env / PM2 env) rather than at build time; never use a Dockerfile `ARG`/`ENV` for these values, since both are visible in `docker history`.
+- Add an explicit check to CI/build scripts (or a pre-publish manual step) that greps the built image's layer history for known secret patterns before pushing to GHCR — cheap insurance given the image is public.
+- Document required runtime env vars in `.env.example` (already the pattern per this repo's `CLAUDE.md`) without real values, so the Docker consumer path is obvious.
+
+**Warning signs:**
+
+- `docker history <image> --no-trunc` shows a `COPY .env` or `ENV DEEPL_API_KEY=...` layer.
+- Image size or layer count unexpectedly includes `.env`-sized content.
+
+**Phase to address:**
+Should be verified as part of whichever phase first adds real credentials to `.env` (translation stage or FTP deploy stage) — treat it as a release gate before any image containing pipeline code is pushed to GHCR, not a separate later cleanup task.
+
+---
+
+### Pitfall 10: Overlapping/queued pipeline runs corrupt output ordering
+
+**What goes wrong:**
+The existing watcher design uses one global `debounceTimer` and one shared `pendingChanges` Set across *all* watched files in *all* repos — a burst of unrelated markdown edits elsewhere in the ecosystem and a slide-deck edit can land in the same debounce window and get processed together, serially, in `processPendingChanges()`. There is no per-pipeline lock: if a slide source is edited twice in quick succession (each edit outside the 5s debounce window, e.g., two edits 10s apart), two independent pipeline runs (translate → render → deploy) can overlap. A slower first run (real Chrome render + FTP upload can take much longer than a doc index) can finish *after* a faster second run and overwrite the live deploy with stale content — a classic "last-writer-wins-by-accident" bug, not "last-edit-wins."
+
+**Why it happens:**
+`processPendingChanges` has no concurrency guard of its own beyond the single `debounceTimer` reference — nothing stops a new debounce cycle from starting (and calling `processPendingChanges` again) while a previous invocation's async work (particularly anything the pipeline kicks off, which will run far longer than existing indexing operations) is still in flight, since `processPendingChanges` is `async` but its caller (`setTimeout`) doesn't await or track prior runs.
+
+**How to avoid:**
+
+- Give the presentation pipeline its own dedicated run-lock keyed by deck path (e.g., a `Map<deckPath, Promise>` or a simple `Set` of in-flight deck paths), independent of the generic doc-indexing debounce — a new trigger for a deck already mid-pipeline should either be coalesced (cancel/supersede) or queued strictly behind the current run, never run concurrently against the same deck.
+- Stamp each pipeline run with the EN source's `content_hash`/mtime at trigger time; before the final FTP publish step, re-check that the source hasn't changed to a *newer* hash than what was translated/rendered — if it has, abort the publish for this run (a newer run is already in flight or about to be) rather than deploy stale content over fresh content.
+- Keep the deploy stage's atomic rename (Pitfall 6) as the last line of defense: even if two runs somehow both reach the publish step, the one that renames-in last should be the one that "wins" only if it's also the most recent source hash — add that check at the rename step specifically.
+
+**Warning signs:**
+
+- Live deployed deck doesn't match the latest local `.md` source despite the pipeline having "succeeded" (no errors) — check the deploy timestamp against edit timestamp.
+- PM2 logs show two `[pipeline] Starting run for <deck>` lines for the same deck with overlapping timestamps.
+
+**Phase to address:**
+Orchestration/loop-protection phase — same phase as Pitfall 1, since both stem from the daemon's existing debounce design not anticipating long-running, stateful pipeline work.
 
 ---
 
 ## Technical Debt Patterns
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-| -------- | ----------------- | -------------- | --------------- |
-| Flat `doc_relationship` node with `type` property instead of typed edge tables | Quick initial migration from SQLite schema | Cannot use per-type graph algorithms; full EXPORT/IMPORT required to change; performance worse | Never — design typed edge tables from day one |
-| Writing to SQLite and Kuzu in the same `try/catch` block without divergence tracking | Simple code | Silent divergence; no repair path when Kuzu write fails | Only for prototyping; never in production merge |
-| Using `kuzu@latest` | Gets newest features | Tracks the abandoned upstream OR an unverified fork; version may change file format | Never — pin to a specific version, document fork status |
-| Calling LangChain Python via `child_process.exec()` sidecar | Gets `KuzuGraph` without reimplementing | Adds Python runtime dependency to a Node.js service; fragile IPC; breaks Docker image | Unacceptable for production — implement the Node.js adapter directly |
-| Skipping the schema freeze step and iterating the Kuzu schema during development | Fast iteration | Each schema change requires EXPORT/IMPORT with no rollback; corrupts data in partial failure | Only acceptable in the first day of development before any real data is loaded |
-| Rebuilding Kuzu from SQLite on every daemon startup | Ensures sync on restart | Rebuild of 8K+ relationships takes measurable seconds; blocks daemon startup | Only acceptable if rebuild time < 1 second; measure before shipping |
+| - | - | - | - |
+| Send whole `.md` file to DeepL without placeholder-protection | Fast to implement, works on prose-only slides | Silently corrupts directives/tables/code on any slide using them (Pitfalls 2, 3) | Never — even an MVP deck usually has a code sample or table |
+| Skip the FTP dry-run and deploy straight to live path | One less flag to wire up | Half-rendered/partial publishes visible to external viewers (Pitfall 6) | Never for the `docs/slides/external` audience; borderline acceptable for `internal` only, with explicit user sign-off |
+| Rely on marp-cli's browser/soffice auto-discovery instead of pinning explicit paths | No extra config | Works in dev shell, breaks silently under PM2 (Pitfalls 4, 5) | Never once the trigger is daemon-driven — acceptable only for a one-off manual `npm run slides:build` invocation |
+| Reuse the existing `writingNow` 3000ms timeout lock for pipeline writes instead of excluding generated globs from the watcher | Reuses existing code, less to build | Timing race under real render/upload durations reopens the feedback loop (Pitfall 1) | Never — the exclude-glob approach is not meaningfully more work and removes the race entirely |
+| Translate every deck on every EN edit, no content-hash gating | Simpler pipeline logic | Burns DeepL quota re-translating unchanged decks, masks real quota exhaustion (Pitfall 7) | Acceptable only while quota is unlimited/irrelevant during initial dev with a throwaway free key |
 
 ## Integration Gotchas
 
 | Integration | Common Mistake | Correct Approach |
-| ----------- | -------------- | ---------------- |
-| kuzu npm + ESM (.mjs) | `import kuzu from 'kuzu'` fails with "package subpath not exported" | Check Kuzu's package.json exports field; use `createRequire` from `module` as fallback if ESM import fails; report to the fork maintainers |
-| kuzu + Docker | Using Alpine base image | Keep `node:22-bookworm-slim`; Kuzu prebuilts are glibc-only, same as better-sqlite3 |
-| kuzu + better-sqlite3 | Assuming both native addons build for the same Node.js ABI | Both must be compiled against the same Node.js version; verify with `node -e "require('kuzu'); require('better-sqlite3')"` |
-| LangChain KuzuGraph | `npm install langchain-kuzu` | Does not exist; implement custom Node.js adapter using Kuzu's Node.js API + LangChain.js's ChatModel |
-| Kuzu concurrency | Opening a second `Database(path, {readOnly: false})` instance | Kuzu throws or silently fails; share one `Database` instance across all connections in the daemon |
-| Kuzu + Kuzu Explorer (Docker) | Running Explorer container alongside daemon container pointing at same DB file | File lock flags not propagated across Docker containers; Explorer will fail to open or corrupt the lock state; run Explorer only with daemon stopped |
-| Kuzu graph algorithms | Calling `algo.pagerank()` on Kuzu < 0.11.3 without LOAD EXTENSION | "Function not found" error; verify extension is loaded at startup |
-| SQLite → Kuzu initial import | Migrating `doc_relationships` rows one-by-one via the Node.js API | Extremely slow for 8K+ rows; use Kuzu's `COPY FROM` with a CSV or Parquet file generated from SQLite for bulk import |
+| - | - | - |
+| DeepL API | Sending raw Markdown as one translation call | Placeholder-protect front-matter/directives/code/tables; translate prose segments only; validate directive-count round-trip |
+| DeepL API | Hardcoding `api.deepl.com` regardless of key type | Use official `deepl-node` client for automatic free/pro endpoint + typed error handling |
+| DeepL Glossary | Assuming any language pair supports glossaries | Confirm EN→FR is in the supported pair list via the glossary-language-pairs endpoint before wiring glossary use into the pipeline |
+| marp-cli | Relying on Chrome/soffice PATH auto-discovery | Pin `--browser-path`/`CHROME_PATH` and `SOFFICE_PATH` explicitly in the daemon's PM2 environment; verify with `pm2 env` |
+| marp-cli `--pptx-editable` | Treating it as a drop-in replacement for standard PPTX export | Known lower reproducibility, no presenter notes — always also produce the standard PPTX as fallback |
+| FTP (basic-ftp) | Assuming the target is plain FTP without confirming protocol | Confirm FTP vs FTPS vs SFTP with the host provider; `basic-ftp` does not speak SFTP at all |
+| FTP deploy | Uploading directly to the live path file-by-file | Stage to a temp path/filename, atomic rename only once every artifact for the release has uploaded |
+| Figma Slides (`use_figma` MCP) | Assuming push works the same as regular Figma file writes | Follow the `/figma-use` skill precondition before calling `use_figma`; currently blocked on auth per `PROJECT.md` — treat as a manual runbook step until unblocked, not an automated trigger |
+| Docker (GHCR image) | `.env` excluded from `.gitignore` assumed to also exclude it from Docker build context | Separately verify `.dockerignore` includes `.env`; pass secrets at runtime, never build time |
 
 ## Performance Traps
 
 | Trap | Symptoms | Prevention | When It Breaks |
-| ---- | -------- | ---------- | -------------- |
-| One Kuzu write per document during scan (8K+ sequential writes) | Scan takes 10x longer than before Kuzu was added | Batch all relationship writes per scan run; use a single transaction wrapping all `CREATE` statements | Any corpus > 1K documents |
-| Kuzu PageRank on the full graph every time `/graph` is called | API response latency > 1 second | Cache PageRank scores; recompute on daily cron, not on request | Corpus > 5K edges |
-| Running SQLite → Kuzu sync inline in the request path | MCP tool calls become slow when Kuzu write is slow | Kuzu writes are async and non-blocking; if they fail, log for batch repair; never block the SQLite commit on the Kuzu write |  Any load > 10 requests/min |
-| Kuzu buffer pool default size in a memory-constrained Docker container | OOM kill or container restart | Set `bufferPoolSize` explicitly in the `Database` constructor; start with 256MB for DocuMind's corpus size | Container memory limit < 512MB |
-| Returning entire Cypher query result set from `/graph` endpoint | Response payload grows unboundedly with corpus | Add `LIMIT` clauses to all graph traversal queries; paginate or stream results | Corpus > 10K edges |
+| - | - | - | - |
+| Single global chokidar debounce timer shared by doc-indexing and pipeline triggers | Unrelated repo edits delay pipeline start; pipeline start delays unrelated doc re-indexing | Give the pipeline trigger its own debounce/queue, separate from the generic `pendingChanges` Set | As soon as a slide edit and any other ecosystem doc edit land within the same 5s window |
+| Headless Chrome cold-start on every render (EN+FR x HTML/PDF/PPTX = 6 renders per deck) | Full pipeline run takes noticeably longer than a single manual `marp` invocation | Consider a single marp-cli invocation per format across both languages where the CLI supports batch input, or reuse a warm Chrome instance if marp-cli's engine option allows it | Once decks are edited frequently enough that render latency becomes a visible bottleneck (e.g., multiple decks/day) |
+| Re-translating unchanged decks on every scheduled/triggered run | DeepL quota consumed disproportionately to actual content changes | Content-hash gate per deck before calling DeepL (mirrors existing incremental-scan `content_hash` pattern) | As soon as more than a couple of decks exist and are rarely all edited simultaneously |
 
 ## Security Mistakes
 
 | Mistake | Risk | Prevention |
-| ------- | ---- | ---------- |
-| Passing raw user input directly into Cypher query string (text-to-Cypher MCP tool) | Cypher injection — malicious queries delete nodes, enumerate all data, or run expensive algorithms (DoS) | Always use parameterized queries for properties; validate LLM-generated Cypher against an allowlist of operations (MATCH/RETURN allowed; DELETE/MERGE/CREATE from LLM output blocked) |
-| Logging raw Cypher queries that include document path strings | Log exposure of internal file paths to any log aggregator | Sanitize Cypher queries in log output; hash or truncate node IDs in logs |
-| No rate limiting on graph_query MCP tool | LLM agent loops calling graph_query in a tight loop; exhausts Kuzu connection and memory | Rate-limit MCP tool calls per session in the MCP server layer |
+| - | - | - |
+| `.env` copied into Docker build context / image layer | DeepL/FTP credentials permanently extractable from a public GHCR image | `.dockerignore` entry for `.env`; secrets injected at container runtime only |
+| FTP credentials logged in plaintext during debug/dry-run output | Credentials leak into PM2 logs, which may be less tightly access-controlled than `.env` | Redact credential values in all log statements; dry-run mode should log actions taken, not the connection string/password used |
+| FTPS used without certificate validation (common quick-fix for cert errors) | Man-in-the-middle risk on the deploy channel, defeating the point of using FTPS over plain FTP | Never disable TLS certificate verification to "fix" a connection error; diagnose the actual cert/passive-mode issue instead |
+| Figma Slides push credentials/tokens handled outside the standard `use_figma` MCP auth flow | Ad-hoc token handling for a "just get it working" push script | Wait for Figma MCP auth to unblock per `PROJECT.md`; don't hand-roll a separate Figma API credential path for this one feature |
+
+## UX Pitfalls
+
+| Pitfall | User Impact | Better Approach |
+| - | - | - |
+| Pipeline fails deep in the FTP stage after translation+render already succeeded, with no partial-success signal | User has to re-run the entire pipeline (re-translating, burning DeepL quota) just to retry a network hiccup at the last step | Make each stage independently resumable/re-runnable — cache translated/rendered artifacts keyed by content-hash so a deploy retry doesn't re-translate or re-render |
+| Silent `--pptx-editable` degradation when soffice is missing (produces a non-editable PPTX or errors deep in a stack trace) | User discovers the deck isn't editable only when opening it in PowerPoint days later | Explicit pre-flight check with a clear, early error message naming the missing dependency and how to fix it |
+| Dry-run mode that doesn't clearly report *what would have been uploaded/overwritten* | User can't tell if credentials/paths are actually correct before flipping dry-run off | Dry-run output should list exact remote paths + file sizes that would be written, not just "OK" |
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Kuzu version pinned:** `package.json` shows a specific version, not `"latest"` or `"*"` — verify with `cat package.json | jq '.dependencies.kuzu'`
-- [ ] **ESM import works:** `node --input-type=module <<< 'import kuzu from "kuzu"; console.log("ok")'` exits 0 in the project's Node.js version
-- [ ] **Schema frozen before data load:** Kuzu DDL statements exist in a versioned file (`scripts/db/kuzu-schema.cypher`); no schema changes after first relationship row loaded
-- [ ] **algo extension available:** `CALL algo.pagerank("Document", "related_to") RETURN node, rank LIMIT 1` returns a result (not "function not found")
-- [ ] **Sync divergence detectable:** `GET /health` reports count comparison between SQLite `doc_relationships` and Kuzu edge count
-- [ ] **graph:rebuild command exists:** `npm run graph:rebuild` drops and re-imports all Kuzu relationships from SQLite in a single run; completes without error
-- [ ] **LLM-generated Cypher sanitized:** The text-to-Cypher pipeline rejects any Cypher containing `DELETE`, `DETACH DELETE`, `MERGE`, or `DROP TABLE` before execution
-- [ ] **Kuzu DB not opened twice:** `grep -r "new kuzu.Database" daemon/ processors/` returns exactly one occurrence
-- [ ] **Docker build succeeds:** `docker build` completes without "build from source" messages for kuzu; both `require('kuzu')` and `require('better-sqlite3')` exit 0 in the container
+- [ ] **DeepL translation stage:** Often missing table/code/directive round-trip validation — verify by diffing directive-comment counts and running markdownlint (DVW001/DVW002) against every generated `.fr.md`, not just spot-checking rendered output visually.
+- [ ] **Marp render (`--pptx-editable`):** Often missing a soffice pre-flight check — verify by intentionally unsetting `SOFFICE_PATH` in a test run and confirming the pipeline fails fast with a clear error, not a silent lower-quality PPTX.
+- [ ] **FTP deploy:** Often missing atomic staging — verify by killing the deploy process mid-upload (in a test/dry-run environment) and confirming the live path is unaffected, not left half-written.
+- [ ] **Watcher loop protection:** Often verified only by "it didn't loop in my quick manual test" — verify by watching PM2 logs for at least one full debounce+render+deploy cycle and confirming zero new watcher events fire from the pipeline's own writes.
+- [ ] **Git hygiene:** Often "fixed" by just adding `.gitignore` rules — verify with `git status` after a real render that no generated file shows as untracked-but-present-in-diff, and confirm history size implications are documented (not silently assumed cleaned).
+- [ ] **Docker secrets:** Often assumed safe because `.gitignore` excludes `.env` — verify independently that `.dockerignore` also excludes it, and check `docker history` on the actual built image before any GHCR push.
 
 ## Recovery Strategies
 
 | Pitfall | Recovery Cost | Recovery Steps |
-| ------- | ------------- | -------------- |
-| Kuzu DB corrupted or out of sync | LOW | Stop daemon; delete Kuzu DB directory; run `npm run graph:rebuild` to re-import all relationships from SQLite; restart daemon |
-| Wrong Kuzu schema (flat type instead of typed edges) | HIGH | EXPORT DATABASE to CSV; drop Kuzu DB; define new schema with typed edge tables; IMPORT DATABASE from CSVs; verify edge counts |
-| LangChain Python adapter approach chosen, then abandoned | MEDIUM | Remove Python sidecar; implement Node.js adapter (~100-150 lines); update MCP tool to call adapter directly |
-| Kuzu upstream abandoned, need to migrate to fork | MEDIUM | Update `package.json` to fork package name (Bighorn or Ladybug); run full test suite; verify Kuzu file format is compatible or EXPORT/IMPORT to new format |
-| algo extension not loading in Docker | LOW | Pin to kuzu 0.11.3+ (pre-bundled extensions); rebuild Docker image; verify with test query in container |
-| SQLite → Kuzu divergence detected | LOW | Run `npm run graph:rebuild`; compare counts again; if still diverged, check for failed writes in daemon logs |
+| - | - | - |
+| Watcher feedback loop already shipped and looping in production | MEDIUM | `pm2 stop documind`; identify the offending generated-file glob from logs; add to `IGNORE_PATTERNS`; clear any bad index rows for the generated paths; restart |
+| Half-rendered deck already deployed live | LOW | Re-run the deploy stage's atomic-rename step manually once a known-good build completes; if atomic staging wasn't implemented yet, manually re-upload the full known-good artifact set |
+| DeepL quota exhausted mid-batch, partial `.fr.md` set exists | LOW | Wait for monthly reset (Free) or raise Cost Control limit (Pro); re-run pipeline — content-hash gating (if implemented) ensures only the untranslated decks are retried |
+| Stale binaries discovered still in git history after `git rm --cached` | MEDIUM-HIGH | Decide explicitly whether history rewrite (`git filter-repo`/BFG) is in scope; if so, coordinate a force-push window with the user since it rewrites shared history |
+| Secret discovered baked into a already-published GHCR image layer | HIGH | Rotate the leaked credential immediately (DeepL key / FTP password) regardless of whether the image is deleted; delete/re-tag the image; fix `.dockerignore`; rebuild and republish |
 
 ## Pitfall-to-Phase Mapping
 
 | Pitfall | Prevention Phase | Verification |
-| ------- | ---------------- | ------------ |
-| KuzuDB abandoned — fork decision | Phase 0: Dependency evaluation | `package.json` pins specific version; DECISIONS.md documents fork landscape |
-| LangChain KuzuGraph Python-only | Phase 1: Kuzu scaffold | Node.js adapter file exists; no Python runtime in package.json dependencies |
-| Single-writer conflict (daemon + CLI) | Phase 1: Kuzu scaffold | One `new kuzu.Database` call in codebase; docs state daemon must be stopped for maintenance |
-| Schema cannot be altered after creation | Phase 1: Kuzu scaffold (schema freeze) | `kuzu-schema.cypher` committed before any data load; typed edge tables used |
-| Alpine / Kuzu prebuilt failure | Phase 1: Kuzu scaffold | `docker build` succeeds; `require('kuzu')` exits 0 in container |
-| Dual-DB sync divergence | Phase 2: SQLite → Kuzu sync | `graph:rebuild` command exists; `/health` reports sync status |
-| algo extension not loaded | Phase 3: Graph algorithms | Test query succeeds at daemon startup; fails loudly if extension missing |
-| Cypher injection via LLM output | Phase 4: LangChain text-to-Cypher | Cypher sanitizer blocks DELETE/MERGE/DROP; unit test with adversarial inputs |
+| - | - | - |
+| Watcher feedback loop (1) | Orchestration / loop-protection phase | PM2 logs show zero watcher events triggered by pipeline's own writes across a full run |
+| DeepL mangles directives/code/proper nouns (2) | Translation stage phase | Directive-comment count diff EN vs FR == 0 mismatches on a deck exercising all directive types |
+| DeepL breaks GFM tables (3) | Translation stage phase | `markdownlint-cli2` (DVW001/DVW002) passes on generated `.fr.md` containing a table slide |
+| marp-cli headless Chrome flakiness (4) | Marp toolchain setup phase | Render succeeds via `pm2 start`/`pm2 restart` trigger, not just interactive CLI |
+| `--pptx-editable` soffice dependency (5) | Marp toolchain setup phase | Pre-flight check fails fast and clearly when `SOFFICE_PATH` is unset/wrong |
+| FTP half-rendered/protocol mismatch (6) | FTP deploy stage phase | Kill mid-upload in test env; live path unaffected; protocol confirmed with host provider in writing |
+| DeepL endpoint/quota mid-run (7) | Translation stage phase | Quota pre-check blocks a run estimated to exceed remaining characters; partial runs are resumable via content-hash |
+| Stale committed binaries / gitignore scope (8) | Git hygiene phase | `git status` clean after fresh render; `.gitignore` covers all generated globs under `docs/slides/**` |
+| `.env` baked into Docker image (9) | Whichever phase first adds real credentials | `docker history` on built image shows no `.env`/secret content |
+| Overlapping pipeline runs (10) | Orchestration / loop-protection phase | Two rapid successive source edits result in exactly one final deployed state matching the latest edit, verified by timestamp/hash check at publish |
 
 ## Sources
 
-- KuzuDB abandonment: [The Register — KuzuDB abandoned, community mulls options](https://www.theregister.com/2025/10/14/kuzudb_abandoned/) — HIGH confidence; news report October 2025
-- KuzuDB abandonment: [Hacker News — We will no longer be actively supporting KuzuDB](https://news.ycombinator.com/item?id=45560036) — HIGH confidence; primary source discussion
-- KuzuDB forks (Bighorn, Ladybug): [The Weekly Edge — Kuzu Forks, DuckDB Goes Graph, Cypher 25](https://gdotv.com/blog/weekly-edge-kuzu-forks-duckdb-graph-cypher-24-october-2025/) — MEDIUM confidence; community report
-- LangChain KuzuGraph Python-only: [langchain-kuzu PyPI](https://pypi.org/project/langchain-kuzu/) — HIGH confidence; PyPI listing confirms Python only
-- LangChain.js graph QA: [GraphCypherQAChain LangChain.js](https://v03.api.js.langchain.com/classes/langchain.chains_graph_qa_cypher.GraphCypherQAChain.html) — HIGH confidence; official LangChain.js docs; no Kuzu equivalent listed
-- Kuzu concurrency (single writer): [Kuzu Connections & Concurrency docs](https://docs.kuzudb.com/concurrency/) — HIGH confidence; official documentation
-- Kuzu schema strict typing: [Transforming your data to graphs — Kuzu blog](https://blog.kuzudb.com/post/transforming-your-data-to-graphs-1/) — HIGH confidence; official blog
-- Kuzu ALTER TABLE gap: [GitHub Discussion #1715 — ALTER TABLE equivalent](https://github.com/kuzudb/kuzu/discussions/1715) — HIGH confidence; official GitHub
-- Kuzu migration (EXPORT/IMPORT): [Kuzu migrate docs](https://docs.kuzudb.com/migrate/) — HIGH confidence; official docs; no rollback on failed IMPORT confirmed
-- Kuzu IMPORT failure no rollback: [GitHub Issue #5727 — Import does not support parallel=false](https://github.com/kuzudb/kuzu/issues/5727) — MEDIUM confidence; GitHub issue confirms fragility
-- Kuzu prebuilt binaries (manylinux_2_28): WebSearch result from docs.kuzudb.com/system-requirements/ — MEDIUM confidence (page returned 403 on direct fetch; confirmed via search snippet)
-- Kuzu algo extension pre-bundled in 0.11.3: [Kuzu 0.10.0 release blog](https://blog.kuzudb.com/post/kuzu-0.10.0-release/) + search result snippet — MEDIUM confidence
-- Kuzu ESM issue (kuzu-wasm): [GitHub Issue #5517 — ECMAScript Module Syntax not supported](https://github.com/kuzudb/kuzu/issues/5517) — HIGH confidence; active bug report on the Kuzu repo
-- Kuzu Node.js API (prebuilt binaries bundled): [GitHub kuzudb/kuzu nodejs_api/README.md](https://github.com/kuzudb/kuzu/blob/master/tools/nodejs_api/README.md) — HIGH confidence; official source states "All prebuilt binaries are shipped inside the package"
+- [marp-team/marp-cli README](https://github.com/marp-team/marp-cli/blob/main/README.md) — `--browser-path`, `--pptx-editable` behavior and warnings, Docker image support
+- [marp-team/marp-cli Issue #671 — custom Puppeteer launch arguments](https://github.com/marp-team/marp-cli/issues/671) — Lambda/sandboxed-environment Chrome launch flags
+- [marp-team/marp-cli Issue #631 — LibreOffice detection via Scoop](https://github.com/marp-team/marp-cli/issues/631) — soffice PATH discovery gaps, `SOFFICE_PATH` workaround
+- [marp-team/marp-cli Issue #673 — Cannot Convert to editable PPTX](https://github.com/marp-team/marp-cli/issues/673)
+- [marp-team Discussion #82 — Exported PPTX cannot re-edit (FAQ)](https://github.com/orgs/marp-team/discussions/82)
+- [Marp CLI Docker Hub image](https://hub.docker.com/r/marpteam/marp-cli/) and [Dockerfile](https://github.com/marp-team/marp-cli/blob/main/Dockerfile) — `IS_DOCKER`/container auto-detection, `CHROME_NO_SANDBOX`
+- [DeepL API — XML/HTML tag handling docs](https://developers.deepl.com/docs/xml-and-html-handling/html) — `translate="no"`, `class="notranslate"`, `split_sentences` defaults
+- [DeepL API — Placeholder tags guide](https://developers.deepl.com/docs/resources/examples-and-guides/placeholder-tags)
+- [DeepL API — Multilingual Glossaries reference](https://developers.deepl.com/api-reference/multilingual-glossaries) — language-pair constraints, size/content limits
+- [DeepL — Error handling docs](https://developers.deepl.com/docs/best-practices/error-handling) — `456` quota exceeded, endpoint differences
+- [DeepLcom/deepl-node Issue #26 — Feature Request: Markdown Handling](https://github.com/DeepLcom/deepl-node/issues/26)
+- [izznat/deepmark](https://github.com/izznat/deepmark), [rockbenben/md-translator](https://github.com/rockbenben/md-translator), [hanabu/cmark-translate](https://github.com/hanabu/cmark-translate) — prior art for placeholder-protected Markdown translation via DeepL
+- [patrickjuchli/basic-ftp](https://github.com/patrickjuchli/basic-ftp) — FTP/FTPS-only client, atomic-rename upload pattern
+- [ExaVault — FTP vs FTPS vs SFTP](https://www.exavault.com/blog/difference-between-ftp-ftps-and-sftp) and [Active vs Passive FTP](https://www.exavault.com/blog/active-vs-passive-ftp) — protocol/firewall confusion
+- [Xygeni — Dockerfile Secrets: Why Layers Keep Your Data Forever](https://xygeni.io/blog/dockerfile-secrets-why-layers-keep-your-sensitive-data-forever/)
+- [Tim Nelke — Stop Baking Secrets into Your Docker Image](https://timnelke.com/blog/stop-secrets-in-docker-images)
+- [node-cron (community) — overlap prevention / `execution:overlap` event](https://github.com/node-cron/node-cron)
+- Direct codebase inspection: `daemon/watcher.mjs` (debounce/watch-pattern design), `daemon/registry-lock.mjs` + `processors/relink-processor.mjs` (existing `writingNow` lock pattern, 3000ms timeout), `.gitignore`, `docs/slides/**` (confirmed committed `.pptx`/`.pdf`/`.html` binaries from commit `3b09a685`, May 23 2026), `.planning/PROJECT.md` (known prereq gaps: `DEEPL_API_KEY`, FTP creds, Figma MCP auth, soffice PATH)
 
 ---
-
-*Pitfalls research for: DocuMind v3.3 — Kuzu embedded graph DB + LangChain text-to-Cypher integration into existing Node.js production service*
-*Researched: 2026-04-07*
+*Pitfalls research for: DocuMind v3.4 Presentation Pipeline (DeepL → Marp → FTP → Figma Slides)*
+*Researched: 2026-07-10*

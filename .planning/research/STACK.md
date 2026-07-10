@@ -1,161 +1,115 @@
 # Stack Research
 
-**Domain:** Kuzu Graph DB + LangChain text-to-Cypher integration for DocuMind (Node.js)
-**Researched:** 2026-04-07
-**Confidence:** MEDIUM — Kuzu npm package version and N-API approach verified via search; LangChain JS/Kuzu gap confirmed via multiple independent sources; Kuzu archival confirmed (The Register + GitHub issue + community posts); fork npm availability confirmed absent
+**Domain:** Automated slide-deck publishing pipeline (Marp render → DeepL translate → FTP deploy) bolted onto an existing Node 20 ESM documentation daemon
+**Researched:** 2026-07-10
+**Confidence:** HIGH (all three core packages verified directly against the npm registry; behavioral details verified against official READMEs/GitHub issues; DeepL markdown-handling gap confirmed by community consensus + official issue tracker)
 
----
+This document covers ONLY the v3.4 additions. Everything already validated (SQLite FTS5, chokidar, node-cron, Express 5, MCP server, markdownlint toolchain, mammoth/turndown/pdf-parse) is out of scope — see `.planning/PROJECT.md` "Validated" section. This file supersedes the prior (2026-04-07) Kuzu/LangChain stack research, which is obsolete now that Kuzu has been retired per ADR-001.
 
-## Critical Pre-Read: Kuzu Was Archived October 2025
+## Recommended Stack
 
-**KuzuDB (`kuzudb/kuzu`) was archived on October 10, 2025.** The GitHub repo is now read-only. Kùzu Inc quietly abandoned the project. The npm package (`kuzu@0.11.3`) remains installable and functional — existing releases are not broken — but no new versions will ship from the original maintainer.
+### Core Technologies
 
-Three community forks have emerged:
+| Technology | Version | Purpose | Why Recommended |
+| ------------ | --------- | --------- | ----------------- |
+| `@marp-team/marp-cli` | `^4.4.1` (latest, published May 2026; requires Node >=18) | Renders Marp Markdown decks to HTML/PDF/PPTX/PNG | Official Marp CLI, the only actively maintained renderer for the format. It shells out to a real browser via `puppeteer-core` (not a bundled one) for PDF/PPTX/image conversion — matches the project's existing "CLI as devDependency, invoked via npm script" pattern already used for `markdownlint-cli2` and `@mermaid-js/mermaid-cli`. |
+| `deepl-node` | `^1.27.0` (latest, published ~2 months ago; Node 12-24 officially supported) | EN→FR translation of deck Markdown via the DeepL API | Official DeepL Node SDK, actively maintained (44 releases). Ships `tagHandling: 'xml'` with `ignoreTags`/`nonSplittingTags`/`preserveFormatting`, and the new v3 multilingual glossary API — the building blocks needed to protect Marp syntax and proper nouns during translation (see Patterns below). |
+| `basic-ftp` | `^6.0.1` (latest, published May 2026; Node >=10) | FTP/FTPS deploy of rendered decks to the hosting target | Promise-based, ESM-friendly (`import { Client } from 'basic-ftp'`), zero runtime dependencies, supports FTPS-over-TLS. Already present as a `pnpm.overrides` entry in this repo's `package.json` (transitively pulled in already), so promoting it to a direct runtime dependency adds nothing new to the tree. At 25.5M weekly downloads vs `ssh2-sftp-client`'s 1.9M it is by far the dominant Node FTP client — use it unless the deploy target turns out to require SFTP only (see Alternatives). |
 
-- **LadybugDB** — community-driven fork by ex-Facebook/Google engineer Arun Sharma, targeting regulated industries. Website exists (`ladybugdb.com`). No npm package published yet.
-- **Bighorn** — Kineviz fork, integrated into GraphXR, pledged open source. No npm package published yet.
-- **Vela-Engineering/kuzu** — fork with concurrent multi-writer support. No npm package published yet.
+### Supporting Libraries
 
-**Decision:** Use `kuzu@0.11.3`. It is the final official release (~June 2025), ships with bundled `algo`, `fts`, `json`, and `vector` extensions, and is a frozen-but-functional dependency. The embedded property graph model, Cypher support, and Node.js N-API binary are complete and stable. Revisit in 6 months to see if a fork reaches npm.
+No new supporting libraries are required. Reuse what's already installed:
 
----
+| Library (already installed) | Purpose in the new pipeline | When to Use |
+| --- | --- | --- |
+| `gray-matter` | Strip/restore Marp YAML front-matter (`marp: true`, `theme:`, `paginate:`) before/after sending deck body to DeepL | Every translation pass — front-matter must never be sent to the translator |
+| `markdown-it` | Tokenize the deck to locate fenced code blocks and HTML-comment directives (`<!-- _class: lead -->`, `<!-- paginate: skip -->`) that must be masked before translation | Building the translation pre/post-processor |
+| `chokidar` | Watch the EN `.md` deck source for changes to trigger translate→render→deploy | Daemon orchestration stage (already the watcher tech) |
+| `node-cron` | Optional scheduled re-render/re-deploy fallback if watcher-driven triggers are debounced/missed | Scheduler wiring, same pattern as existing hourly/daily jobs |
+| `puppeteer` (devDependency, already installed) | Supplies a bundled, pre-downloaded Chromium for `marp-cli`'s `--browser-path` | Resolve via `puppeteer.executablePath()` at render time — see Dev Tools below |
 
-## Critical Pre-Read: LangChain KuzuGraph Does Not Exist in JavaScript
+**Do not add** a markdown-AST translation library (see What NOT to Use) — the masking approach only needs regex/tokenizing, which `markdown-it` already provides.
 
-**`KuzuGraph` and `KuzuQAChain` do not exist in `@langchain/community` (npm).** They exist only in the Python `langchain-community` and `langchain-kuzu` PyPI packages. Every LangChain-Kuzu integration article, notebook, and tutorial is Python. Searching for a JS equivalent returns only Python documentation.
+### Development Tools
 
-LangChain.js (`@langchain/community`) does have `GraphCypherQAChain`, but it is wired exclusively to `Neo4jGraph`. There is no `KuzuGraph` class in the JS package as of April 2026.
-
-**Decision:** The text-to-Cypher bridge must be implemented as a custom Node.js class using:
-
-1. The `kuzu` npm package for Cypher execution
-2. `@langchain/openai` or `@langchain/anthropic` for the LLM call that generates Cypher
-3. A custom `KuzuGraphChain` class modeled on the Python `KuzuQAChain` pattern
-
-This is approximately 150-200 lines of TypeScript — not a blocker, but it means the milestone scope includes building this adapter, not wiring a published package.
-
----
-
-## Recommended Stack: New Packages Only
-
-These are net-new additions to `package.json`. Do not remove or version-bump existing dependencies (`better-sqlite3`, `express`, `@modelcontextprotocol/sdk`, `zod`, etc.).
-
-### Core Technologies (New)
-
-| Technology          | Version  | Purpose                                                               | Why Recommended                                                                                                                                                                                                                                                                                                                   |
-| :------------------ | :------- | :-------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `kuzu`              | `0.11.3` | Embedded property graph DB with Cypher query language                 | Only embedded graph DB with a first-class Node.js N-API binary that ships prebuilt for Node 20/22; no server process required; runs in-process alongside SQLite; Cypher is the industry-standard property graph query language; v0.11.3 bundles algo/fts/json/vector extensions; supports both ESM (`import`) and CJS (`require`) |
-| `@langchain/core`   | `^0.3.x` | LangChain base primitives (prompts, chains, messages, output parsers) | Required peer for all LangChain packages; provides `ChatPromptTemplate`, `StringOutputParser`, chain composition; keeps the LLM abstraction layer stable if you swap OpenAI for Anthropic later                                                                                                                                   |
-| `@langchain/openai` | `^0.5.x` | OpenAI LLM adapter for text-to-Cypher generation                      | Provides `ChatOpenAI` with structured tool calling; use `model: "gpt-4o-mini"` for Cypher generation (fast, cheap, accurate enough for Cypher); swappable with `@langchain/anthropic` via shared `@langchain/core` interface                                                                                                      |
-
-### Supporting Libraries (New, Optional)
-
-| Library                | Version  | Purpose                  | When to Use                                                                                                                                        |
-| :--------------------- | :------- | :----------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@langchain/anthropic` | `^0.3.x` | Anthropic Claude adapter | Use instead of `@langchain/openai` if a Claude API key is preferred for Cypher generation; the custom `KuzuGraphChain` accepts any `BaseChatModel` |
-
-### Existing Dependencies — No Changes
-
-| Existing                    | Current Version | Note                                                        |
-| :-------------------------- | :-------------- | :---------------------------------------------------------- |
-| `better-sqlite3`            | `^12.6.2`       | Stays; FTS5 search remains in SQLite                        |
-| `@modelcontextprotocol/sdk` | `^1.27.1`       | Stays; new graph MCP tools use existing server scaffold     |
-| `express`                   | `^5.2.1`        | Stays; `/graph` endpoint is updated, not replaced           |
-| `zod`                       | `^3.25.0`       | Stays; use for MCP tool input validation on new graph tools |
-
----
+| Tool | Purpose | Notes |
+| ------ | --------- | ------- |
+| LibreOffice (system install, NOT an npm package) | Required by `marp --pptx --pptx-editable` to convert the pre-rendered PPTX into an editable one | On macOS, default install path is `/Applications/LibreOffice.app/Contents/MacOS/soffice`. marp-cli does not search `PATH` reliably for non-standard installs (confirmed via [marp-cli#631](https://github.com/marp-team/marp-cli/issues/631)) — set `SOFFICE_PATH=/Applications/LibreOffice.app/Contents/MacOS/soffice` in `.env` rather than relying on auto-detection. Confirm the app is actually present (`ls /Applications/LibreOffice.app`) before wiring this in — PROJECT.md notes soffice is "not on PATH" but doesn't confirm the app itself is installed. |
+| A Chromium-flavored browser or Firefox (for `marp-cli` PDF/PPTX/PNG export) | `marp-cli` uses `puppeteer-core`, which does **not** bundle its own Chromium — it needs one already present on the machine, found via `--browser` (`chrome,edge,firefox`, default `auto`) or explicit `--browser-path` | **Reuse, don't reinstall**: `puppeteer@24.40.0` is already a devDependency (transitively pulled in by `@mermaid-js/mermaid-cli`, and `pnpm.onlyBuiltDependencies: ["puppeteer"]` already forces its Chromium download at install). Resolve the path at runtime with `puppeteer.executablePath()` and pass it via `--browser-path` / the `browserPath` key in `marp.config.mjs`. This avoids a second ~200MB Chromium download and avoids depending on a system-level Chrome install — important for Docker portability, since this repo already ships a Dockerfile (v3.2). |
+| `.marprc.yml` or `marp.config.mjs` | Central Marp CLI config: `browser`, `browserPath`, `pptx`, `pptxEditable`, `themeSet`, `allowLocalFiles`, output dirs | Config is loaded via `cosmiconfig` (a direct `marp-cli` dependency) — supports `.marprc` (JSON/YAML), `marp.config.{js,mjs,cjs}`, and a `"marp"` key in `package.json`. **Precedence: CLI flags > Markdown front-matter directives > config file.** Prefer `marp.config.mjs` over `.marprc.yml` if the browser/soffice paths need to be computed dynamically at load time (e.g., calling `puppeteer.executablePath()`), since `.marprc.yml` is static data only. |
 
 ## Installation
 
 ```bash
-# Core graph DB — pin exact version (project is archived, no future minor updates)
-npm install kuzu@0.11.3
+# Core — DeepL translation + FTP deploy are runtime dependencies (imported by daemon code)
+pnpm add deepl-node basic-ftp
 
-# LangChain primitives + LLM adapter
-npm install @langchain/core @langchain/openai
+# Dev dependency — Marp CLI is invoked as a shelled-out binary via npm scripts, same pattern
+# as markdownlint-cli2 and @mermaid-js/mermaid-cli (never imported as a library)
+pnpm add -D @marp-team/marp-cli
 
-# Optional: Claude as Cypher-generation LLM instead of OpenAI
-npm install @langchain/anthropic
+# System prerequisite (NOT npm) — only needed for --pptx-editable, install manually
+brew install --cask libreoffice
 ```
 
----
-
-## Architecture Pattern: Custom KuzuGraphChain
-
-Because no JS LangChain-Kuzu wrapper exists, build this structure under `graph/`:
-
-```text
-graph/
-  kuzu-db.mjs          # DB singleton: open/close Kuzu, execute raw Cypher, return results
-  kuzu-schema.mjs      # Schema introspection: queries CALL table_info() to return node/edge types
-  kuzu-chain.mjs       # KuzuGraphChain: NL query -> schema-augmented prompt -> LLM -> Cypher -> execute -> LLM -> answer
-  kuzu-migrate.mjs     # One-time migration: read doc_relationships from SQLite, write to Kuzu
-```
-
-The chain flow mirrors Python's `KuzuQAChain`:
-
-1. `kuzu-schema.mjs` introspects the Kuzu schema (node tables, relationship tables, property types)
-2. `kuzu-chain.mjs` builds a prompt: `[schema context] + [natural language question] -> generate valid Cypher for Kùzu`
-3. `ChatOpenAI` (or `ChatAnthropic`) returns a Cypher statement
-4. Execute Cypher via `kuzu-db.mjs` using `kuzu.Connection.execute()`
-5. Second LLM call synthesizes a natural language answer from the query results
-
-Kuzu stores its data in a **directory** (not a single file like SQLite). Add `data/kuzu/` as the Kuzu data directory alongside `data/documind.db`. Add `DOCUMIND_KUZU_DIR` to the environment config table.
-
----
-
-## What NOT to Use
-
-| Avoid                                 | Why                                                                                                                                                                                                                                        | Use Instead                                        |
-| :------------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------- |
-| `langchain-kuzu` (PyPI)               | Python-only; no npm equivalent exists as of April 2026                                                                                                                                                                                     | Custom `KuzuGraphChain` in Node.js (150-200 lines) |
-| `@kuzu/kuzu-wasm`                     | Browser/WASM build; lacks full persistent storage and N-API surface needed for a daemon                                                                                                                                                    | `kuzu` (native N-API binary)                       |
-| `neo4j-driver`                        | Requires an external server process; wrong architecture for an embedded in-process graph DB                                                                                                                                                | `kuzu`                                             |
-| `falkordb` + `@falkordb/langchain-ts` | Redis-based server; requires Docker sidecar; not embedded. `@falkordb/langchain-ts` does provide a first-class JS LangChain integration, but the server-process dependency is incompatible with DocuMind's single-process PM2 architecture | `kuzu` if embedded is the requirement              |
-| `@langchain/langgraph`                | Stateful agent/workflow orchestration; not needed for a simple text-to-Cypher QA chain                                                                                                                                                     | `@langchain/core` + direct chain composition       |
-| `langchain` (full package)            | Installs the entire LangChain monolith; `GraphCypherQAChain` from it targets Neo4j only; unnecessary weight                                                                                                                                | `@langchain/core` + `@langchain/openai`            |
-
----
-
-## Version Compatibility
-
-| Package                | Compatible With             | Notes                                                                                                                                                                                                                                                                                          |
-| :--------------------- | :-------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `kuzu@0.11.3`          | Node.js >= 14.15.0          | Uses Node-API (N-API) v5; ABI-stable across Node versions. Node 20 and 22 confirmed compatible. Prebuilt binaries ship inside the npm package (prebuildify approach) — no download step, no compile step on standard platforms. Falls back to source build if no prebuilt binary for platform. |
-| `kuzu@0.11.3`          | `better-sqlite3@^12.6.2`    | No conflict; both are N-API modules but operate on independent files (`data/documind.db` vs `data/kuzu/`). Can be loaded in the same Node.js process without issues.                                                                                                                           |
-| `kuzu@0.11.3`          | ES modules (`.mjs`)         | Both `import` (ESM) and `require` (CJS) are fully supported per Kuzu Node.js docs.                                                                                                                                                                                                             |
-| `@langchain/core@^0.3` | `@langchain/openai@^0.5`    | Must use compatible major versions; LangChain 0.3.x requires Node >= 18                                                                                                                                                                                                                        |
-| `@langchain/core@^0.3` | `@langchain/anthropic@^0.3` | Same major version requirement                                                                                                                                                                                                                                                                 |
-| `@langchain/core@^0.3` | Node.js >= 18               | LangChain 0.3.x minimum requirement; DocuMind runs Node 20+ so no issue                                                                                                                                                                                                                        |
-
----
+No change needed to the `puppeteer` devDependency — it's already present and its bundled Chromium is reusable for Marp's `--browser-path`.
 
 ## Alternatives Considered
 
-| Recommended             | Alternative                   | Why Not                                                                                                                                                                                                          |
-| :---------------------- | :---------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `kuzu@0.11.3`           | LadybugDB / Bighorn forks     | Neither has a published npm package as of April 2026. Cannot install via npm. Monitor for future releases.                                                                                                       |
-| `kuzu@0.11.3`           | `neo4j-driver`                | Requires external Neo4j server process; breaks the in-process embedded architecture. Over-engineered for DocuMind's scale.                                                                                       |
-| `kuzu@0.11.3`           | `falkordb`                    | Redis-based server; `@falkordb/langchain-ts` gives first-class JS LangChain integration, making it the only viable alternative IF the embedded architecture were relaxed. It is not currently relaxed.           |
-| Custom `KuzuGraphChain` | Python LangChain-Kuzu sidecar | A Python FastAPI microservice wrapping `langchain-kuzu` would work but introduces a second runtime, two deployment processes, and a network call for every NL query. Not appropriate for a single-tenant daemon. |
-| `@langchain/openai`     | Raw `openai` SDK              | LangChain's `BaseChatModel` abstraction allows swapping LLMs (OpenAI → Claude → Mistral) without rewriting the chain. Worth the thin overhead when the custom chain is already being built.                      |
+| Recommended | Alternative | When to Use Alternative |
+| ------------- | ------------- | ------------------------- |
+| `basic-ftp` | `ssh2-sftp-client` | If the deploy target's hosting only exposes SSH/SFTP (no FTP/FTPS port open) — common for modern managed hosting. Confirm with the hosting provider before creds land in `.env`; if SFTP-only, swap the deploy processor's client — the `dry-run` design pattern (list-then-diff-then-transfer) stays identical either way. |
+| `@marp-team/marp-cli` | `marp-core` + custom Puppeteer script | Only if programmatic control finer than the CLI exposes is needed (e.g., custom per-slide DOM post-processing before PDF capture). Not needed here — the CLI covers HTML/PDF/PPTX/PPTX-editable via flags and the milestone scope is "render, don't customize." |
+| `deepl-node` official SDK + custom masking layer | `deepmark` (community DeepL+Markdown wrapper) | Never for this project — see What NOT to Use. Reconsider only if DeepL ships first-party Markdown `tag_handling` support (tracked at [deepl-node#26](https://github.com/DeepLcom/deepl-node/issues/26), open, no ETA). |
+| DeepL Free tier via `DEEPL_AUTH_KEY` ending `:fx` | DeepL Pro (`api.deepl.com`) | Once deck volume approaches the Free tier's 500,000 chars/month cap, or when EN+FR decks across ProductMarketing exceed that in aggregate. `deepl-node`'s `serverUrl` option lets you override the auto-selected endpoint once a Pro key is provisioned — no code change needed, only the key format changes. |
 
----
+## What NOT to Use
+
+| Avoid | Why | Use Instead |
+| ------- | ----- | -------------- |
+| `deepmark` (npm) | Last published 2022 (abandoned, ~100 downloads/month), pins `better-sqlite3@^7` which directly conflicts with this repo's `better-sqlite3@^12.6.2`, and is an MDX/blog-oriented CLI tool — not designed for embedding in a daemon pipeline or for Marp's HTML-comment directive syntax. | A small custom pre/post-processor (regex + `gray-matter` + `markdown-it`, both already dependencies) that wraps fenced code blocks, HTML-comment directives, and front-matter in placeholder tags, calls `deeplClient.translateText(text, 'en', 'fr', { tagHandling: 'xml', ignoreTags: ['ignore'] })`, then unwraps. |
+| Raw `translateText()` on the full deck body with no masking | DeepL's translation endpoint has **no native Markdown awareness** — it does not understand Marp directives, code fences, or YAML front-matter, and will happily "translate" code identifiers, class names, or directive keywords, corrupting the deck. Confirmed: DeepL offers `tag_handling` only for `html`/`xml`, not markdown, and community workarounds (deepmark, cmark-translate, babeldown) all exist specifically to cover this gap. | Use the masking pattern above: strip front-matter first (`gray-matter`), protect code fences/HTML comments with `ignoreTags`, then translate the remaining prose only. |
+| The deprecated `Translator` class pattern seen in older `deepl-node` blog posts/tutorials | `deepl-node`'s current main class is `DeepLClient`, which supports the v3 multilingual glossary API (`createMultilingualGlossary()`, etc.) alongside the legacy v2 monolingual glossary methods still exposed on the same client. Code written against `new deepl.Translator(authKey)` patterns from older tutorials is stale. | `import * as deepl from 'deepl-node'; const client = new deepl.DeepLClient(authKey)` |
+| `PUPPETEER_EXECUTABLE_PATH` / `CHROME_PATH` env vars as a way to point marp-cli at a browser | marp-cli's README does not document reading these env vars — it only respects `--browser-path` (CLI) / `browserPath` (config file/programmatic config). Setting the env vars alone will silently do nothing for marp-cli's own browser search. | Resolve the path explicitly (e.g. `puppeteer.executablePath()`) and pass it via `--browser-path` or `browserPath` in `marp.config.mjs`. |
+| Treating `--pptx-editable` as a pipeline-guaranteed artifact | marp-cli's own README flags this as EXPERIMENTAL: "lower slide reproducibility... presenter notes are not supported... may throw an error or output the incomplete result" with complex themes. | Generate regular (non-editable, image-baked) `--pptx` for the automated deploy pipeline; treat `--pptx-editable` as a manually-triggered, best-effort convenience output. |
+
+## Stack Patterns by Variant
+
+**If running the pipeline inside Docker (per the existing v3.2 Dockerfile/docker-compose):**
+
+- Do not install a second full Chrome/Chromium in the image just for marp-cli — reuse `puppeteer`'s already-downloaded Chromium (same `pnpm.onlyBuiltDependencies: ["puppeteer"]` mechanism already forces this at `pnpm install`) and point `--browser-path` at `puppeteer.executablePath()`.
+- Because LibreOffice is a ~600MB system package, do not bake it into the daemon's always-on container image just for an experimental flag. If `--pptx-editable` is genuinely needed in CI/containers, use the official `marpteam/marp-cli` Docker image (which bundles Chrome) as a separate one-shot job, not inside the daemon container.
+- Set `DEEPL_SERVER_URL` explicitly only if testing against a DeepL mock/staging server; otherwise let auto-detection from the key's `:fx` suffix pick Free vs Pro.
+
+**If running on the macOS host via PM2 (the primary/native mode for this repo):**
+
+- `SOFFICE_PATH=/Applications/LibreOffice.app/Contents/MacOS/soffice` goes in `.env`.
+- Reuse the same `puppeteer.executablePath()` resolution as Docker for consistency — do not special-case "use system Chrome on macOS," since that adds an untracked variable (which Chrome version is installed) that can silently change PDF rendering output between machines.
+
+**If DeepL Free tier's 500K chars/month is exceeded:**
+
+- Upgrade the API key to Pro (`serverUrl` auto-switches based on key format — no code change), and add a monthly usage check via `deeplClient.getUsage()` (part of the SDK) to the daemon's daily cron so exhaustion is visible before it silently blocks a deploy.
+
+## Version Compatibility
+
+| Package A | Compatible With | Notes |
+| ----------- | ----------------- | ------- |
+| `@marp-team/marp-cli@4.4.1` | Node >=18 (repo requires >=20 — satisfied) | Depends on `puppeteer-core@^24.43.1` — close to but not identical to the repo's existing `puppeteer@24.40.0`; both are within the same major (24.x) Chrome-for-Testing protocol generation, so the shared Chromium binary should be protocol-compatible. Verify with a smoke test (`marp --browser-path <path> test.md -o test.pdf`) after wiring, since minor CDP protocol drift between puppeteer-core minor versions is the most likely failure mode. |
+| `deepl-node@1.27.0` | Node 12/14/16/17/18/20/22/24 officially tested | Fully compatible with repo's Node >=20 requirement. |
+| `basic-ftp@6.0.1` | Node >=10 | No conflicts; ESM import works natively under `"type": "module"` (already set in `package.json`). |
+| `deepl-node` glossary API | v3 (multilingual) vs v2 (monolingual, still supported) | Use v3 (`createMultilingualGlossary()`) for new EN→FR glossary entries (proper nouns, brand terms) — v2 methods remain on the client only for backward compatibility with existing v2 glossaries, not recommended for new integrations. |
 
 ## Sources
 
-- [kuzu - npm](https://www.npmjs.com/package/kuzu) — latest version 0.11.3 confirmed; Node-API prebuildify approach; ESM/CJS support (MEDIUM confidence — npm page returned 403; confirmed via search result summaries)
-- [Kuzu Node.js API docs](https://docs.kuzudb.com/client-apis/nodejs/) — N-API v5, Node >= 14.15.0, sync + async API (MEDIUM confidence — confirmed via search summaries)
-- [KuzuDB abandoned — The Register, Oct 2025](https://www.theregister.com/2025/10/14/kuzudb_abandoned/) — archive confirmed October 10, 2025 (HIGH confidence — established trade publication)
-- [Kuzu Forks — Graph Weekly Edge, Oct 2025](https://gdotv.com/blog/weekly-edge-kuzu-forks-duckdb-graph-cypher-24-october-2025/) — Ladybug and Bighorn fork status; no npm packages (MEDIUM confidence)
-- [Kuzu is archived — getzep/graphiti Issue #1132](https://github.com/getzep/graphiti/issues/1132) — community confirmation of archival impact (HIGH confidence — GitHub issue thread)
-- [langchain-kuzu PyPI](https://pypi.org/project/langchain-kuzu/) — Python-only; `pip install langchain-kuzu` confirms not in npm (HIGH confidence)
-- [LangChain docs — Kuzu integration](https://docs.langchain.com/oss/python/integrations/graphs/kuzu_db) — Python-only; no JS equivalent page exists (HIGH confidence)
-- [GraphCypherQAChain LangChain.js](https://v03.api.js.langchain.com/classes/langchain.chains_graph_qa_cypher.GraphCypherQAChain.html) — JS chain exists; targets Neo4j; no Kuzu graph parameter (HIGH confidence — official LangChain.js API reference)
-- [@langchain/community npm](https://www.npmjs.com/package/@langchain/community) — latest 1.1.27; Python `KuzuGraph` has no JS counterpart in this package (MEDIUM confidence — search result)
-- [FalkorDB LangChain JS/TS integration](https://www.falkordb.com/blog/falkordb-langchain-js-ts-integration/) — `@falkordb/langchain-ts` confirmed as the only first-class JS graph LangChain integration; server-based (HIGH confidence — official FalkorDB announcement)
+- npm registry direct (`npm view`) — `@marp-team/marp-cli@4.4.1`, `deepl-node@1.27.0`, `basic-ftp@6.0.1`, engines fields, dependency trees — HIGH confidence, authoritative
+- [marp-cli GitHub README](https://github.com/marp-team/marp-cli/blob/main/README.md) — `--browser`, `--browser-path`, `--browser-protocol`, `--pptx-editable`, config file precedence (cosmiconfig) — HIGH confidence, official docs
+- [marp-cli issue #631](https://github.com/marp-team/marp-cli/issues/631) — `SOFFICE_PATH` env var for non-standard LibreOffice install locations — MEDIUM confidence (community-confirmed workaround, not in main README, but directly from the official repo's issue tracker)
+- [DeepLcom/deepl-node GitHub](https://github.com/DeepLcom/deepl-node) — `DeepLClient` API, `tagHandling`/`ignoreTags`/`preserveFormatting`, `serverUrl` free/pro auto-selection, v2 vs v3 glossary API, Node engine support — HIGH confidence, official SDK repo
+- [DeepLcom/deepl-node issue #26 "Feature Request: Markdown Handling"](https://github.com/DeepLcom/deepl-node/issues/26) — confirms no native markdown `tag_handling` exists as of research date — HIGH confidence, official repo issue tracker
+- npmjs.org download stats API (`api.npmjs.org/downloads/point/last-week`) — `basic-ftp` 25.5M/week vs `ssh2-sftp-client` 1.9M/week — HIGH confidence, authoritative usage data
+- `pnpm-lock.yaml` (this repo) — confirms `puppeteer@24.40.0` already resolved as a build dependency of `@mermaid-js/mermaid-cli@11.12.0` — HIGH confidence, direct repo inspection
+- WebSearch (deepmark package status, general FTP-vs-SFTP framing) — MEDIUM confidence, cross-checked against npm registry directly for the numbers that mattered (version dates, download counts)
 
 ---
-
-*Stack research for: DocuMind v3.3 — Kuzu Graph Intelligence*
-*Researched: 2026-04-07*
+*Stack research for: Marp render + DeepL translate + FTP deploy pipeline (DocuMind v3.4 Presentation Pipeline)*
+*Researched: 2026-07-10*

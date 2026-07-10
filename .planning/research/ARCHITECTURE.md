@@ -1,534 +1,353 @@
-# Architecture Research
+# Architecture Research — v3.4 Presentation Pipeline
 
-**Domain:** Documentation Intelligence Platform — Kuzu Graph DB + LangChain Text-to-Cypher Integration
-**Researched:** 2026-04-07
-**Confidence:** HIGH (codebase inspected directly; Kuzu Node.js API confirmed via official docs and npm; LangChain.js GraphCypherQAChain confirmed; algo extension limitations confirmed from official docs)
+**Domain:** Daemon-orchestrated document pipeline (translate → render → deploy) bolted onto an existing chokidar/cron/SQLite service
+**Researched:** 2026-07-10
+**Confidence:** HIGH (integration points read directly from current source: `daemon/watcher.mjs`, `daemon/scheduler.mjs`, `config/env.mjs`, `scripts/db/schema.sql`, `daemon/server.mjs`, `daemon/mcp-server.mjs`, `daemon/registry-lock.mjs`, plus sibling repo `AgentHub/src/index.ts`) — MEDIUM on exact marp-cli multi-format CLI invocation (see note in Pattern 2)
 
----
-
-## Context: What This Milestone Adds
-
-DocuMind v3.3 adds a second embedded database alongside the existing SQLite. SQLite keeps FTS5 full-text search, metadata, linting, keywords, and all non-graph tables. Kuzu takes over graph operations: typed edge storage, Cypher queries, graph algorithms (PageRank, centrality, cycle detection), and natural-language graph queries via LangChain.
-
-### Critical design constraint
-
-Kuzu enforces a single-writer ownership rule: only one `Database` object pointing to a given path may be open at a time across the entire process (and across all processes). A READ_WRITE instance blocks all other READ_WRITE or READ_ONLY instances on the same path. This means the single `server.mjs` process owns the Kuzu `Database` object for its lifetime, and all other callers (MCP tools, REST endpoints) share connections from that same object — they do not create their own `Database` instances.
-
----
+**Supersedes:** the previous version of this file (Kuzu dual-DB architecture for v3.3) — Kuzu was retired per ADR-001 (2026-07); that research is obsolete and has been replaced below.
 
 ## Standard Architecture
 
-### System Overview: Dual-DB Architecture (v3.3 Target)
+### System Overview
 
 ```text
-┌─────────────────────────────────────────────────────────────────────┐
-│                   DocuMind Process (PM2 / Docker)                    │
-│                                                                      │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │  daemon/server.mjs  — Express :9000                          │   │
-│  │                                                              │   │
-│  │  db (better-sqlite3)    kuzuDb (kuzu.Database)               │   │
-│  │       ↓                        ↓                            │   │
-│  │  FTS5 search            Graph operations                     │   │
-│  │  Metadata               Cypher queries                       │   │
-│  │  Keywords               PageRank / centrality                │   │
-│  │  Linting issues         Cycle detection                      │   │
-│  │  Diagrams               Natural language queries             │   │
-│  └───────────┬─────────────────────┬────────────────────────────┘   │
-│              │                     │                                 │
-│  ┌───────────▼──────┐  ┌───────────▼───────────────────────────┐   │
-│  │ data/documind.db │  │ data/documind.kuzu/  (directory)       │   │
-│  │ (SQLite WAL)     │  │ (Kuzu on-disk store)                   │   │
-│  └──────────────────┘  └───────────────────────────────────────┘   │
-│                                                                      │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │  Sync Bridge  graph/kuzu-sync.mjs                            │   │
-│  │  Reads doc_relationships from SQLite                         │   │
-│  │  Upserts Document nodes + typed edges into Kuzu              │   │
-│  │  Called at: startup, after buildRelationships(), on demand   │   │
-│  └──────────────────────────────────────────────────────────────┘   │
-│                                                                      │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │  graph/kuzu-queries.mjs  — all Cypher operations             │   │
-│  │  Wraps kuzu.Connection, returns plain JS objects             │   │
-│  │  Used by: REST /graph, MCP tools, LangChain bridge           │   │
-│  └──────────────────────────────────────────────────────────────┘   │
-│                                                                      │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │  graph/langchain-bridge.mjs  — text-to-Cypher                │   │
-│  │  GraphCypherQAChain (LangChain.js) + KuzuGraphAdapter        │   │
-│  │  Runs in-process (no subprocess)                             │   │
-│  │  Requires OPENAI_API_KEY (or other LLM provider)             │   │
-│  └──────────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│ TRIGGER SOURCES                                                          │
+│  Human edit (docs/slides/**/*.md)  │  RootDispatcher dispatch applied    │
+│  (Claude Code agent writes the same EN .md file — no special-case path)  │
+└───────────────────────────────────┬──────────────────────────────────────┘
+                                     ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│ WATCHER LAYER — daemon/watcher.mjs (MODIFIED)                            │
+│  chokidar → queueChange() → pendingChanges Set (5s debounce, dedup)      │
+│  → processPendingChanges() .md branch:                                   │
+│     if isSlidesEnSource(path)  → slidesProcessor.enqueue(path)  [NEW]    │
+│     else                       → indexMarkdown()                 [as-is]│
+└───────────────────────────────────┬──────────────────────────────────────┘
+                                     ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│ PIPELINE LAYER — processors/slides-processor.mjs (NEW)                   │
+│  per-deck in-flight Map (Marp renders take seconds; coalesce reruns)     │
+│  1. translateDeck()  — DeepL → writes  <name>.fr.md                      │
+│  2. renderDeck()     — marp-cli subprocess → .html/.pdf/.pptx per locale │
+│  3. deployDeck()     — basic-ftp upload (dry-run unless creds present)   │
+│  4. recordRun()      — writes slide_pipeline_runs row (ledger)           │
+│  5. notifyAgentHub() — HTTP POST to AgentHub REST API on success         │
+│  Every generated-file write wraps writingNow.add()/delete() (reused      │
+│  from daemon/registry-lock.mjs) so the watcher ignores its own writes.   │
+└───────────────────────────────────┬──────────────────────────────────────┘
+                                     ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│ DATA LAYER — SQLite (better-sqlite3)                                     │
+│  slide_pipeline_runs (NEW table)  │  documents (.fr.md indexed as-is)    │
+└──────────────────────────────────────────────────────────────────────────┘
+
+Parallel entry points (both call the same processors/slides-processor.mjs):
+  scripts/publish-slides.mjs   — CLI: npm run slides:build / slides:deploy
+  daemon/server.mjs            — POST /slides/publish, GET /slides/runs
+  daemon/mcp-server.mjs        — get_slide_runs (read), publish_slides (write)
 ```
 
 ### Component Responsibilities
 
-| Component | Status | Responsibility | Communicates With |
-| --- | --- | --- | --- |
-| `daemon/server.mjs` | MODIFIED | Initializes both `db` (SQLite) and `kuzuDb` (Kuzu); passes both to routes/scheduler; updated `/graph` endpoint | SQLite, Kuzu, scheduler, processors |
-| `daemon/mcp-server.mjs` | MODIFIED | Receives `kuzuDb` alongside `db`; new tools: `graph_query`, `graph_rank`, `graph_cycles` | kuzu-queries.mjs, langchain-bridge.mjs |
-| `daemon/scheduler.mjs` | MODIFIED | After `buildRelationships()` in daily/weekly crons, calls `syncRelationshipsToKuzu()` | kuzu-sync.mjs |
-| `graph/relations.mjs` | UNCHANGED | Still writes to SQLite `doc_relationships`. Remains the source of truth for edge writes. | SQLite only |
-| `graph/kuzu-sync.mjs` | NEW | Reads `doc_relationships` from SQLite; upserts into Kuzu. Idempotent. Handles schema creation on first run. | SQLite (read), Kuzu (write) |
-| `graph/kuzu-queries.mjs` | NEW | All Cypher read queries: traversal, reverse traversal, PageRank, centrality, cycle detection | Kuzu (read), kuzu-sync.mjs |
-| `graph/langchain-bridge.mjs` | NEW | `GraphCypherQAChain` wired to KuzuGraphAdapter. Accepts natural language, returns structured result | kuzu-queries.mjs, LLM API |
-| `config/env.mjs` | MODIFIED | Add `KUZU_DB_PATH`, `KUZU_SYNC_ON_STARTUP`, `OPENAI_API_KEY` (or `LANGCHAIN_LLM_PROVIDER`) | All consumers |
-| `data/documind.kuzu/` | NEW (data dir) | Kuzu on-disk store directory (not a single file like SQLite) | Kuzu Database object only |
+| Component | Responsibility | Status |
+| ----------- | ---------------- | -------- |
+| `daemon/watcher.mjs` | Detect EN deck changes, dedup/debounce, dispatch to pipeline vs. normal index | MODIFIED |
+| `processors/slides-processor.mjs` | Own the translate→render→deploy chain, ledger writes, loop guards | NEW |
+| `scripts/publish-slides.mjs` | Thin CLI wrapper (manual/CI runs), mirrors `scripts/fix-markdown.mjs` convention | NEW |
+| `scripts/db/migrations/00X-slide-pipeline-runs.sql` | Ledger table schema | NEW |
+| `config/env.mjs` | Centralize `DEEPL_API_KEY`, `SLIDES_FTP_*`, `SLIDES_SOFFICE_PATH` | MODIFIED |
+| `daemon/registry-lock.mjs` (`writingNow` Set) | Loop-protection primitive — reused, not duplicated | REUSED |
+| `daemon/scheduler.mjs` | Optional nightly drift check (stale render vs. EN hash) | MODIFIED (later phase, optional) |
+| `daemon/server.mjs` | Manual trigger + ledger read endpoints | MODIFIED |
+| `daemon/mcp-server.mjs` | Agent-facing read/write tools over the ledger | MODIFIED |
+| `.marprc.yml` | Shared Marp render config (theme defaults, output flags) | NEW |
+| `docs/slides/**` | EN `.md` (hand-edited) + generated `.fr.md`/`.html`/`.pdf`/`.pptx` (gitignored) | EXISTING (2 decks already present as E2E fixtures) |
+| AgentHub (`/api/discoveries`, port 3004) | Ecosystem discovery feed | EXTERNAL — REST, not MCP (see Anti-Pattern 3) |
 
----
+## Recommended Project Structure
 
-## Recommended Project Structure Changes
+This is an addition to an existing codebase, not a greenfield layout — shown as a diff against the current tree read in `daemon/`, `processors/`, `scripts/`, `config/`:
 
 ```text
 DocuMind/
 ├── daemon/
-│   ├── server.mjs          MODIFIED — init kuzuDb alongside db; pass to all routes
-│   ├── mcp-server.mjs      MODIFIED — add 3 new graph intelligence tools
-│   └── scheduler.mjs       MODIFIED — call syncRelationshipsToKuzu after buildRelationships
-│
-├── graph/
-│   ├── relations.mjs       UNCHANGED — SQLite edge writer (source of truth)
-│   ├── kuzu-sync.mjs       NEW — SQLite → Kuzu bridge (sync/upsert)
-│   ├── kuzu-queries.mjs    NEW — all Cypher queries (traversal, algorithms, cycle)
-│   └── langchain-bridge.mjs NEW — text-to-Cypher via GraphCypherQAChain
-│
+│   ├── watcher.mjs                       # MODIFIED: isSlidesEnSource() predicate + dispatch
+│   ├── scheduler.mjs                     # MODIFIED (later): optional drift-check cron
+│   ├── server.mjs                        # MODIFIED: POST /slides/publish, GET /slides/runs
+│   ├── mcp-server.mjs                    # MODIFIED: get_slide_runs, publish_slides tools
+│   └── registry-lock.mjs                 # UNCHANGED — writingNow reused as-is
+├── processors/
+│   └── slides-processor.mjs              # NEW — translateDeck/renderDeck/deployDeck/recordRun
+├── scripts/
+│   ├── publish-slides.mjs                # NEW — CLI entry, flags: --translate/--render/--deploy/--dry-run
+│   └── db/migrations/
+│       └── 006-slide-pipeline-runs.sql   # NEW — ledger table
 ├── config/
-│   └── env.mjs             MODIFIED — KUZU_DB_PATH, KUZU_SYNC_ON_STARTUP, LLM config
-│
-└── data/
-    ├── documind.db          UNCHANGED — SQLite (FTS5, metadata, keywords, etc.)
-    └── documind.kuzu/       NEW — Kuzu on-disk store (directory, not a file)
+│   └── env.mjs                           # MODIFIED — DEEPL_API_KEY, SLIDES_FTP_*, SLIDES_SOFFICE_PATH
+├── .marprc.yml                           # NEW — shared marp-cli config (theme, allowLocalFiles)
+├── docs/slides/
+│   ├── internal/2026-05-21-figma-ai-internal-deck.md       # EN source (hand-edited, tracked)
+│   ├── internal/2026-05-21-figma-ai-internal-deck.fr.md    # generated (tracked or ignored — see decision below)
+│   ├── internal/2026-05-21-figma-ai-internal-deck.{html,pdf,pptx}  # generated, GITIGNORED
+│   └── external/... (same pattern)
+├── .gitignore                            # MODIFIED — add docs/slides/**/*.{html,pdf,pptx}
+└── package.json                          # MODIFIED — marp-cli (dev), deepl-node, basic-ftp deps + slides:* scripts
 ```
 
-### Why Kuzu gets its own directory (not a .db file)
+### Structure Rationale
 
-Kuzu stores its data as a directory containing multiple column files, WAL, and catalog files — not as a single `.db` file like SQLite. The path passed to `new kuzu.Database(path)` must point to a directory. This directory must be listed in `.dockerignore` and `.gitignore` alongside `data/documind.db`.
+- **`processors/slides-processor.mjs` as one module, not three:** matches the existing `processors/relink-processor.mjs` convention — one processor per *concern* (diagram relink), exporting several composable functions (`relinkDiagram`, `propagateRelinkAllRepos`, `syncRegistryFromDb`, `reverseSyncFromRegistry`). The slides pipeline is a single concern (publish a deck) with a linear stage sequence, so `translateDeck`/`renderDeck`/`deployDeck`/`recordRun` live together and are individually unit-testable and individually callable from the CLI script (`--render` only, `--deploy` only, etc.) without duplicating orchestration logic.
+- **`scripts/publish-slides.mjs` stays thin:** every existing `scripts/*.mjs` file in this repo is a CLI wrapper around a processor/orchestrator (`scripts/index-markdown.mjs` → `processors/markdown-processor.mjs`, `scripts/fix-markdown.mjs` → fix logic). Keeping the pipeline logic in `processors/` means the daemon (watcher), the CLI, the REST endpoint, and the MCP tool all call the exact same functions — no drift between "what the watcher does" and "what `npm run slides:build` does."
+- **New migration file, not a schema.sql edit:** `scripts/db/schema.sql` documents itself as reflecting "migrations through 005-remove-check-constraints" — the established pattern is additive migration files under `scripts/db/migrations/`, applied via `npm run db:migrate`. Follow that, don't hand-edit `schema.sql` directly (update it afterward to stay in sync, as the header comment implies).
+- **`.fr.md` tracked-vs-ignored is a real decision point:** `PROJECT.md` already commits to "EN Marp `.md` = only hand-edited artifact; FR/HTML/PDF/PPTX are generated, never edited." The render outputs are decided (gitignored). The `.fr.md` is ambiguous — recommend **tracking it in git** (it's markdown, diffable, reviewable, and DocuMind's FTS5 index benefits from having it as a real `documents` row) while still gitignoring the binary/HTML renders. Flag this as a decision the roadmap phase should confirm.
 
----
+## Architectural Patterns
 
-## Kuzu Node.js API — Confirmed Patterns
+### Pattern 1: Filename-convention + `writingNow` + content-hash triple guard (loop protection)
 
-Confidence: HIGH (official docs, npm package confirmed, ES module support confirmed)
+**What:** Three independent, cheap checks stacked so no single failure mode causes a translate/render loop.
 
-### Installation
+1. **Filename convention (primary, cheapest):** the watcher's slides-dispatch branch only fires for `docs/slides/**/*.md` paths that do **not** end in `.fr.md`. This is checked before anything else — a generated French deck can never re-trigger translation, even if `writingNow` or hashing fail.
+2. **`writingNow` Set (existing primitive, reused):** `daemon/registry-lock.mjs` already exports `writingNow = new Set()`, and `watcher.mjs`'s `queueChange()` already does `if (writingNow.has(filePath)) return;` before queuing. Every write the pipeline makes (`.fr.md`, `.html`, `.pdf`, `.pptx`) should `writingNow.add(path)` immediately before the write and `writingNow.delete(path)` after — held through chokidar's `awaitWriteFinish.stabilityThreshold` (2000ms) window, not just the write() call, since the fs event can arrive up to ~2s after the write completes.
+3. **Content-hash idempotency (defense-in-depth, matches `documents.content_hash` pattern already in schema):** `slide_pipeline_runs` stores the SHA-256 of the EN source at trigger time. Before running, compare against the hash from the last **successful** run for that deck; skip if unchanged. This catches cases where guard #2's timing window is missed (daemon restart mid-render, clock skew, etc.) and gives the pipeline a "did the EN content actually change" answer independent of mtime/fs-event noise.
 
-```bash
-npm install kuzu
-```
+**When to use:** Any daemon feature where the watcher's own output could re-enter its own watch scope — this same pattern is worth generalizing later if more generate-and-watch features are added.
 
-The `kuzu` npm package ships pre-built native binaries. No node-gyp rebuild required (unlike better-sqlite3). Supports ES module imports in Node.js.
+**Trade-offs:** Three checks is more code than one, but each is O(1)/cheap, and the combination is why the diagram-registry reverse-sync feature (which has the identical "our own write must not re-trigger us" problem) hasn't had loop bugs — reuse its proven primitive rather than inventing a new one.
 
-### Initialization (ES module, async API)
+**Example (watcher predicate):**
 
 ```javascript
-import { Database, Connection } from 'kuzu';
+// daemon/watcher.mjs — new helper, used inside the existing '.md' case
+const FR_SUFFIX_RE = /\.fr\.md$/i;
 
-// In server.mjs startup
-const kuzuDb = new Database(KUZU_DB_PATH);          // opens/creates directory
-const kuzuConn = new Connection(kuzuDb);             // single shared connection for standard queries
-await kuzuConn.query(`...`);                         // async, returns QueryResult
-const rows = await result.getAll();                  // Array of plain objects
+function isSlidesEnSource(filePath) {
+  return filePath.includes('/docs/slides/') && !FR_SUFFIX_RE.test(filePath);
+}
+
+// inside processPendingChanges(), '.md' case, before the DIAGRAM-REGISTRY check:
+if (isSlidesEnSource(change.path)) {
+  console.log(`[watcher] EN slide deck changed: ${change.path} — dispatching pipeline`);
+  slidesProcessor.enqueuePipelineRun(db, change.path, repoMatch, CTX, { trigger: 'watcher' });
+  // still index it — it's a real document too
+}
+await indexMarkdown(db, change.path, repoMatch, CTX);
 ```
 
-### Sync API (for graph algorithm projected graphs)
+### Pattern 2: Subprocess execution via `execFile`, not npm scripts, not `npm run`
 
-Kuzu provides both async and sync APIs. The async API uses a connection pool internally. The **critical limitation**: projected graphs (required for PageRank and other algo extension algorithms) are bound to a specific connection instance. The async API's connection pool may route queries to different connections, making the projected graph unavailable.
+**What:** `daemon/scheduler.mjs` already establishes the pattern for daemon-invoked subprocesses: `execFileAsync('npx', ['markdownlint-cli2', '--fix', '**/*.md'], { cwd, timeout })`. The slides pipeline should follow this exactly — `execFileAsync('npx', ['marp', enDeckPath, '--pdf', '--output', outPath], { cwd: ROOT, timeout: 120_000 })` — rather than shelling out to `npm run slides:build` (extra process layer, harder error propagation, npm's own stdout noise mixed into the pipeline's logs).
 
-**Workaround:** For algorithm queries, use the sync `Connection` API or a dedicated single `Connection` object held for the duration of the algorithm run. The algo extension (PageRank, Connected Components, Louvain) is pre-installed in Kuzu >= 0.11.3.
+**When to use:** Any daemon-triggered subprocess. `npm run` scripts remain useful as the **human-facing** entry points (`slides:build`, `slides:deploy` in `package.json`), but they should be thin aliases to `node scripts/publish-slides.mjs ...`, and the daemon calls the underlying binary/script directly via `execFile`, never through `npm run`.
+
+**Trade-offs / open question (MEDIUM confidence):** marp-cli's documented behavior is **one output format per invocation** driven by `--pdf` / `--pptx` / default-HTML flags — the README does not show a single command producing all three outputs simultaneously; the config file (`.marprc.yml`) does support setting `pdf: true`, `pptx: true`, etc. as **defaults** for CLI flags, but this needs a quick spike to confirm whether combining them in one invocation actually emits three files or just changes which single default applies. **Recommend building the render stage as three sequential (or `Promise.all`'d) `execFile` calls — one per format — as the safe, verified-correct baseline**, and only collapse to one config-driven call if a spike proves it works. Either way, `--pptx-editable` requires LibreOffice's `soffice` on `PATH` (confirmed gap in `.planning/STATE.md`) and marp-cli's PDF/PPTX/image conversion requires a Chromium-family browser — note `puppeteer` is **already a devDependency** here (for `@mermaid-js/mermaid-cli`), so a Chromium binary is likely already resolvable on this machine; point `--browser-path` at it if marp-cli's own browser auto-detection fails, rather than installing a second Chromium.
+
+### Pattern 3: Daemon-to-daemon integration is REST, not MCP
+
+**What:** MCP tools (`mcp__agenthub__publish_discovery`) are invoked by an **LLM agent host** (Claude Code) that decides to call a tool mid-conversation. `daemon/watcher.mjs` runs as a plain Node process under PM2 with no LLM in the loop — it cannot "call an MCP tool." AgentHub is *also* a PM2-managed Express daemon (port 3004, confirmed in global CLAUDE.md service registry) with a plain REST surface: `POST /api/discoveries` accepting `{ repo_source, title, content, discovery_type, topics }` (read directly from `AgentHub/src/index.ts`). The DocuMind daemon should call that HTTP endpoint directly with `fetch()`, exactly the same way it would call any other internal service — not attempt to invoke an MCP tool from a headless process.
+
+**When to use:** Any daemon-initiated cross-repo notification. If a *Claude Code agent session* (not the daemon) is the one publishing (e.g., a `/gsd` command or CRON-triggered agent per the existing `docs/proposals/2026-05-21-figma-ai-presentation-preplan.md` meeting-spec pattern), MCP is correct there instead — the distinction is "who/what is making the call," not "which feature."
+
+**Trade-offs:** One more env var to manage (`AGENTHUB_URL`, default `http://localhost:3004`), and a soft dependency on AgentHub being up — treat as non-fatal (`try/catch`, log-and-continue) so a down AgentHub never fails a slide deploy.
+
+**Example:**
 
 ```javascript
-// Projected graph + PageRank (use dedicated connection, not pool)
-const algoConn = new Connection(kuzuDb);  // dedicated connection for algorithm runs
-await algoConn.query(`CALL PROJECT_GRAPH('DocGraph', ['Document'], ['RELATES_TO', 'IMPORTS', 'SUPERSEDES'])`);
-const result = await algoConn.query(`CALL page_rank('DocGraph') RETURN node.path, rank ORDER BY rank DESC LIMIT 20`);
-```
-
-### Kuzu schema for DocuMind documents
-
-```text
-Node table:  Document { id: INT64, path: STRING, repository: STRING, filename: STRING, category: STRING }
-Edge tables: IMPORTS    (Document → Document) { weight: DOUBLE, link_text: STRING }
-             DISPATCHED_TO (Document → Document) { target_repo: STRING }
-             SUPERSEDES (Document → Document) { confidence: DOUBLE }
-             RELATED_TO (Document → Document) { reason: STRING, weight: DOUBLE }
-             PARENT_OF  (Document → Document)
-             VARIANT_OF (Document → Document)
-             DEPENDS_ON (Document → Document)
-             GENERATED_FROM (Document → Document)
-```
-
-This mirrors the 8 relationship types in SQLite's `doc_relationships` table.
-
----
-
-## Data Flow: SQLite → Kuzu Sync
-
-The sync is unidirectional. SQLite remains the write source. Kuzu is a read-optimized graph projection of the same data.
-
-### Sync trigger points
-
-```text
-1. Startup sync (conditional):
-   server.mjs starts
-       ↓
-   if (KUZU_SYNC_ON_STARTUP) syncRelationshipsToKuzu(db, kuzuDb)
-       ↓ (reads all doc_relationships from SQLite, upserts to Kuzu)
-   Express server starts accepting requests
-
-2. Post-relationship-build sync (daily + weekly crons):
-   scheduler.mjs: CRON_DAILY fires
-       ↓
-   runScan(db, ctx, { mode: 'full' })
-       ↓  (existing path — builds all relationships in SQLite)
-   buildRelationships(db)   [graph/relations.mjs — UNCHANGED]
-       ↓
-   syncRelationshipsToKuzu(db, kuzuDb)   [NEW — graph/kuzu-sync.mjs]
-       ↓
-   Kuzu graph reflects current SQLite edge state
-
-3. On-demand sync (via REST or MCP):
-   POST /graph/sync
-       ↓
-   syncRelationshipsToKuzu(db, kuzuDb)
-   → useful during development or after manual edge manipulation
-```
-
-### What kuzu-sync.mjs does
-
-```text
-1. Ensure Kuzu schema exists (CREATE NODE TABLE IF NOT EXISTS, etc.)
-2. DELETE all existing Document nodes (CASCADE deletes edges)
-   - Simpler than incremental upsert; graph is rebuilt from SQLite
-   - Full rebuild takes < 1 second for 8K documents / ~50K edges (benchmark estimate)
-3. Batch-insert all documents as Kuzu nodes
-4. Batch-insert all doc_relationships rows as typed Kuzu edges
-   - Maps relationship_type string → correct Kuzu edge table
-5. Return { nodes: N, edges: M, durationMs: X }
-```
-
-Full rebuild is preferred over incremental upsert because:
-
-- Kuzu does not support MERGE/upsert with the same ergonomics as SQLite's INSERT OR IGNORE
-- The graph is rebuilt from SQLite after every full scan anyway (idempotent by design)
-- At 8K nodes / 50K edges, a full Kuzu rebuild completes in well under one second
-
----
-
-## LangChain Text-to-Cypher: Architecture Decision
-
-### The gap: LangChain.js has no Kuzu adapter
-
-The Python `langchain-kuzu` package provides `KuzuQAChain` but no equivalent exists in LangChain.js. LangChain.js has `GraphCypherQAChain` which works with Neo4j via the `Neo4jGraph` class. `GraphCypherQAChain` accepts any graph object that implements `getSchema()` and `query()`.
-
-**Decision:** Implement a minimal `KuzuGraphAdapter` class that satisfies the `GraphCypherQAChain` interface. This is ~50 lines of code and avoids a Python subprocess dependency.
-
-Confidence: MEDIUM (GraphCypherQAChain interface confirmed in LangChain.js docs; custom adapter pattern inferred from interface contract — not an officially documented pattern but structurally sound)
-
-### KuzuGraphAdapter interface
-
-```javascript
-// graph/langchain-bridge.mjs
-
-class KuzuGraphAdapter {
-  constructor(conn, schemaString) {
-    this.conn = conn;
-    this.schema = schemaString;  // static — generated at startup from Kuzu schema
-  }
-
-  getSchema() {
-    return this.schema;
-  }
-
-  async query(cypherQuery) {
-    const result = await this.conn.query(cypherQuery);
-    return result.getAll();  // returns Array<plain object>
+// processors/slides-processor.mjs
+async function notifyAgentHub(deckPath, deployTargets) {
+  try {
+    await fetch(`${AGENTHUB_URL}/api/discoveries`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        repo_source: 'DocuMind',
+        title: `Slides published: ${path.basename(deckPath)}`,
+        content: `Deployed to ${deployTargets.join(', ')}`,
+        discovery_type: 'pattern',
+        topics: ['slides', 'presentation-pipeline'],
+      }),
+    });
+  } catch (err) {
+    console.error('[slides-processor] AgentHub notify failed (non-fatal):', err.message);
   }
 }
 ```
 
-### GraphCypherQAChain wiring
+## Data Flow
 
-```javascript
-import { GraphCypherQAChain } from 'langchain/chains/graph_qa/cypher';
-import { ChatOpenAI } from '@langchain/openai';  // or anthropic, etc.
-
-const llm = new ChatOpenAI({ modelName: 'gpt-4o-mini' });
-const adapter = new KuzuGraphAdapter(kuzuConn, buildSchemaString());
-const chain = GraphCypherQAChain.fromLLM({ llm, graph: adapter });
-
-// Usage:
-const result = await chain.invoke({ query: 'Which documents are most referenced?' });
-```
-
-### In-process vs subprocess
-
-LangChain.js runs in-process in the same Node.js process as the daemon. No Python subprocess is spawned. The LLM calls are outbound HTTP to the LLM API (OpenAI, Anthropic, etc.).
-
-**Why in-process:** The LLM call is already the bottleneck (network latency). Running LangChain.js in-process avoids IPC serialization overhead and keeps the architecture simple.
-
-**Dependency:** LangChain text-to-Cypher requires an LLM API key. The `graph_query` MCP tool must return a graceful error (not crash) when no LLM key is configured. Standard queries that don't require LLM (direct Cypher via `graph_rank`, `graph_cycles`) must work without any LLM key.
-
----
-
-## New Components: File-by-File
-
-### graph/kuzu-sync.mjs (NEW)
+### Pipeline Run Flow
 
 ```text
-Exports:
-  syncRelationshipsToKuzu(db, kuzuDb) → Promise<{ nodes, edges, durationMs }>
-  initKuzuSchema(kuzuDb) → Promise<void>  (called once at startup)
-
-Reads from:  SQLite — documents + doc_relationships
-Writes to:   Kuzu — Document nodes, all 8 edge tables
-Pattern:     Full rebuild (DELETE all → batch insert)
+[EN deck saved]  (human, or agent applying a RootDispatcher dispatch)
+    ↓
+[chokidar 'change' event] → queueChange() → writingNow check → pendingChanges.add()
+    ↓ (5s debounce, per-file dedup via existing Set<JSON string>)
+[processPendingChanges()] → isSlidesEnSource(path)?
+    ↓ yes                                    ↓ no
+[slidesProcessor.enqueue(path)]      [indexMarkdown() only, as today]
+    ↓
+[per-deck in-flight guard] — already running for this path?
+    ↓ no                                    ↓ yes
+[run pipeline now]                  [mark pendingRerun=true, return —
+    ↓                                 re-invoke once when current run finishes]
+[recordRun: INSERT slide_pipeline_runs, status='running', source_hash=sha256(EN)]
+    ↓
+[compare source_hash to last SUCCESSFUL run's hash] — unchanged? → mark 'skipped', done
+    ↓ changed
+[translateDeck()] — DeepL, skip gracefully if DEEPL_API_KEY unset (log + continue EN-only)
+    ↓ writingNow.add(fr.md) → write → hold ~2.5s → writingNow.delete(fr.md)
+[renderDeck()] — marp-cli execFile per {EN, FR} × {html, pdf, pptx[-editable]}
+    ↓ writingNow.add(each output) → write → hold ~2.5s → writingNow.delete(each output)
+[deployDeck()] — basic-ftp; DRY RUN if SLIDES_FTP_HOST unset, else real upload
+    ↓
+[recordRun: UPDATE slide_pipeline_runs, status='completed'|'failed', stages JSON, duration_ms]
+    ↓ (only on full success)
+[notifyAgentHub()] — POST /api/discoveries (non-fatal on failure)
 ```
 
-### graph/kuzu-queries.mjs (NEW)
+### Key Data Flows
 
-```text
-Exports:
-  traverseFrom(conn, docId, hops)     → replaces findRelated() for graph ops
-  reverseTraversal(conn, docId, hops) → who links TO this doc (not possible with SQLite CTE easily)
-  pageRankTop(conn, limit)            → top N docs by PageRank score
-  centralityTop(conn, limit)          → top N by betweenness centrality
-  detectCycles(conn)                  → returns cycle paths in the graph
-  runCypherQuery(conn, cypher)        → raw Cypher passthrough (for LangChain bridge)
+1. **Cross-agent content flow:** ProductMarketing's edits never touch DocuMind directly — they land as a RootDispatcher dispatch in `RootDispatcher/dispatches/pending/DocuMind/`, a Claude Code agent applies it (edits the EN `.md` file on disk per the standard dispatch-application protocol already in this repo's `CLAUDE.md`), and that file write is indistinguishable from a human edit to the watcher. No DocuMind-specific RootDispatcher integration code is needed — the filesystem + existing watcher is the integration.
+2. **Ledger as single source of truth for pipeline state:** `GET /slides/runs` (REST), `get_slide_runs` (MCP), and any future dashboard widget all read the same `slide_pipeline_runs` table — no separate in-memory status tracking that could drift from the DB (mirrors how `diagrams` table is already documented as "single source of truth" for the diagram registry in `global-rules.md`).
+3. **FR deck is both an output and an input:** the `.fr.md` written by `translateDeck()` is a pipeline *output*, but it also gets indexed into `documents` by the normal `indexMarkdown()` call the watcher already makes on every `.md` change — so French decks become full-text searchable via the existing FTS5 index for free, without special-casing.
 
-Each function:
-  - accepts a kuzu.Connection (caller manages lifecycle)
-  - returns plain JS arrays/objects (no Kuzu-specific types leaked)
-  - handles async properly (Kuzu Node.js async API)
+## Data Model — `slide_pipeline_runs` (NEW)
+
+Reasoning for a new table instead of reusing `conversions`: `conversions.source_format` has a `CHECK` constraint limited to `docx|rtf|pdf|html|txt` (no `markdown`→`markdown` case for DeepL translation), and semantically `conversions` logs **one** file-format conversion event, while a slide-publish run is a **multi-stage orchestration** (translate + N renders + deploy) that needs stage-level status and a single row to query "is this deck's last run green." Overloading `conversions` would require weakening its constraint and losing the one-row-per-run query shape.
+
+```sql
+CREATE TABLE IF NOT EXISTS slide_pipeline_runs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  deck_path TEXT NOT NULL,              -- EN source path (the ledger key)
+  repository TEXT NOT NULL,
+  trigger TEXT NOT NULL CHECK (trigger IN ('watcher', 'manual', 'dispatch', 'scheduler')),
+  source_hash TEXT NOT NULL,            -- SHA-256 of EN content at trigger time
+  status TEXT NOT NULL CHECK (status IN ('running', 'completed', 'failed', 'skipped')),
+  stages TEXT,                          -- JSON: { translate: {status,ms,error?}, render: {...}, deploy: {...} }
+  outputs TEXT,                         -- JSON: { fr_md, html, pdf, pptx, pptx_editable } paths
+  deploy_target TEXT,                   -- FTP remote path, or 'dry-run'
+  agenthub_notified BOOLEAN DEFAULT 0,
+  started_at TEXT NOT NULL,
+  completed_at TEXT,
+  duration_ms INTEGER,
+  error TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_slide_runs_deck ON slide_pipeline_runs(deck_path);
+CREATE INDEX IF NOT EXISTS idx_slide_runs_status ON slide_pipeline_runs(status);
+CREATE INDEX IF NOT EXISTS idx_slide_runs_started ON slide_pipeline_runs(started_at DESC);
+
+-- Mirrors the existing `stale_diagrams` view pattern for a "last known good" lookup
+CREATE VIEW IF NOT EXISTS latest_slide_runs AS
+SELECT sr.*
+FROM slide_pipeline_runs sr
+INNER JOIN (
+  SELECT deck_path, MAX(started_at) AS max_started
+  FROM slide_pipeline_runs
+  GROUP BY deck_path
+) latest ON sr.deck_path = latest.deck_path AND sr.started_at = latest.max_started;
 ```
-
-### graph/langchain-bridge.mjs (NEW)
-
-```text
-Exports:
-  createGraphQAChain(kuzuDb) → GraphCypherQAChain (or null if no LLM key)
-  queryGraph(chain, naturalLanguageQuery) → Promise<string>
-
-Internals:
-  KuzuGraphAdapter class (implements getSchema + query)
-  buildSchemaString(kuzuDb) → generates schema description from Kuzu catalog
-```
-
----
-
-## Modified Components: What Changes
-
-### daemon/server.mjs
-
-```text
-Changes:
-1. Import Database from 'kuzu'
-2. const kuzuDb = new kuzu.Database(KUZU_DB_PATH) after SQLite init
-3. Pass kuzuDb to: initScheduler(), route handlers for /graph
-4. On startup: await initKuzuSchema(kuzuDb), optionally syncRelationshipsToKuzu()
-5. Update GET /graph endpoint to query Kuzu instead of SQLite document_graph view
-6. Add POST /graph/sync endpoint (on-demand sync trigger)
-7. On SIGTERM: close kuzuDb connection before process.exit (Kuzu flushes WAL on close)
-```
-
-### daemon/mcp-server.mjs
-
-```text
-Changes:
-1. Accept kuzuDb parameter (or import shared kuzuDb singleton)
-2. New tool: graph_query — text-to-Cypher via langchain-bridge.mjs
-3. New tool: graph_rank  — PageRank top-N, returns ranked document list
-4. New tool: graph_cycles — returns detected cycles (for editorial review)
-5. Existing tool: get_related — keep as-is (still works from SQLite via findRelated)
-   OR: migrate get_related to kuzu-queries.traverseFrom() for consistency
-```
-
-The decision on `get_related` migration: keep it on SQLite for v3.3. The new Kuzu tools are additive. Migrating `get_related` is a follow-on cleanup.
-
-### daemon/scheduler.mjs
-
-```text
-Changes:
-1. Accept kuzuDb parameter
-2. In CRON_DAILY handler: after runScan() completes, call syncRelationshipsToKuzu(db, kuzuDb)
-3. In CRON_WEEKLY handler: same — sync after deep scan
-4. Hourly cron does NOT sync (too frequent; relationships only rebuild on full/deep scans)
-```
-
-### config/env.mjs
-
-```text
-New exports:
-  KUZU_DB_PATH       — path.resolve(ROOT, process.env.DOCUMIND_KUZU_DB ?? 'data/documind.kuzu')
-  KUZU_SYNC_ON_STARTUP — process.env.KUZU_SYNC_ON_STARTUP !== 'false'  (default: true)
-  LLM_API_KEY        — process.env.OPENAI_API_KEY ?? process.env.ANTHROPIC_API_KEY ?? null
-  LLM_MODEL          — process.env.DOCUMIND_LLM_MODEL ?? 'gpt-4o-mini'
-```
-
----
-
-## Suggested Build Order
-
-Dependencies drive this order. Each phase is independently testable before the next begins.
-
-```text
-Phase 1: Install + schema bootstrap
-  - npm install kuzu
-  - Write graph/kuzu-sync.mjs (initKuzuSchema only — no sync yet)
-  - Add KUZU_DB_PATH to config/env.mjs
-  - Modify server.mjs: open kuzuDb, call initKuzuSchema on startup
-  - Verify: server starts, data/documind.kuzu/ directory created, /health still returns 200
-  - Why first: Every other phase requires a live Kuzu database with schema
-
-Phase 2: SQLite → Kuzu sync bridge
-  - Complete graph/kuzu-sync.mjs (syncRelationshipsToKuzu full rebuild logic)
-  - Add POST /graph/sync endpoint to server.mjs
-  - Wire KUZU_SYNC_ON_STARTUP in server.mjs startup sequence
-  - Verify: curl -X POST localhost:9000/graph/sync returns { nodes: N, edges: M }
-  - Check: data/documind.kuzu/ grows in size; Kuzu explorer confirms nodes/edges
-  - Why second: All graph queries depend on data being in Kuzu
-
-Phase 3: Cypher query layer + updated /graph endpoint
-  - Write graph/kuzu-queries.mjs (traverseFrom, reverseTraversal, pageRankTop, centralityTop, detectCycles)
-  - Note: pageRankTop and centralityTop require dedicated Connection (projected graph limitation)
-  - Update GET /graph in server.mjs to use kuzu-queries instead of document_graph SQLite view
-  - Verify: GET /graph returns same shape as before (backwards compatible response)
-  - Verify: GET /graph?algo=pagerank returns ranked docs
-  - Why third: Validates the sync data is queryable before wiring into MCP
-
-Phase 4: Scheduler integration
-  - Modify scheduler.mjs: pass kuzuDb, call syncRelationshipsToKuzu after daily/weekly scans
-  - Verify: trigger a manual scan, confirm Kuzu edge count increases to match new relationships
-  - Why fourth: Sync is already proven (Phase 2); scheduler just adds the automated trigger
-
-Phase 5: New MCP tools (graph_rank + graph_cycles)
-  - Modify mcp-server.mjs: add graph_rank and graph_cycles tools
-  - Tools call kuzu-queries.pageRankTop() and kuzu-queries.detectCycles()
-  - Verify: call tools from Claude Code, confirm structured output
-  - Why fifth: Tools depend on kuzu-queries being stable (Phase 3)
-
-Phase 6: LangChain text-to-Cypher (graph_query MCP tool)
-  - npm install langchain @langchain/openai (or @langchain/anthropic)
-  - Write graph/langchain-bridge.mjs (KuzuGraphAdapter + GraphCypherQAChain wiring)
-  - Add graph_query MCP tool to mcp-server.mjs
-  - Requires: LLM_API_KEY in environment
-  - Graceful degradation: if no LLM key, graph_query returns instructive error
-  - Verify: natural language query returns plausible Cypher + results
-  - Why last: Highest complexity, external dependency (LLM API). All graph infrastructure
-    must be stable before adding the LLM layer.
-```
-
----
-
-## Integration Points
-
-### Kuzu + SQLite coexistence in the same Node.js process
-
-No conflict. SQLite (via better-sqlite3) is synchronous and operates on `.db` files. Kuzu (via the `kuzu` npm package) is async and operates on a directory. They use separate file handles, separate memory buffers, and separate locking mechanisms. Both can be open simultaneously without interference.
-
-The only coordination needed: the sync bridge reads from SQLite and writes to Kuzu in sequence. No transaction spanning both databases is attempted (not possible, not needed — Kuzu is a read projection of SQLite data).
-
-### Kuzu Database object lifecycle
-
-```text
-server.mjs owns the single kuzu.Database instance.
-All modules that need Kuzu receive kuzuDb (the Database object) as a parameter.
-They create their own Connection objects locally as needed.
-Connection objects are lightweight and can be created/destroyed per query.
-Exception: algo queries (PageRank) require a Connection held for the projected graph's lifetime
-  → kuzu-queries.mjs manages a dedicated algoConn for the duration of each algo call.
-```
-
-### Docker / data volume
-
-Kuzu's data directory (`data/documind.kuzu/`) must be in the same named volume as the SQLite file. Both live under `data/`:
-
-```text
-Named volume documind_data → /app/data/
-  /app/data/documind.db          (SQLite)
-  /app/data/documind.kuzu/       (Kuzu directory)
-```
-
-No Dockerfile change needed — the existing `documind_data` volume already mounts `/app/data`. Add `data/documind.kuzu/` to `.gitignore`.
-
-### better-sqlite3 native binaries + Kuzu native binaries in Alpine Docker
-
-Kuzu ships pre-built binaries via npm (no node-gyp). In Alpine Docker, the Dockerfile's existing `npm ci --omit=dev` in the deps stage will download the correct pre-built Kuzu binary for Linux musl. This is simpler than better-sqlite3 (which does require rebuild). No Dockerfile changes required for Kuzu.
-
----
-
-## Anti-Patterns
-
-### Anti-Pattern 1: Creating multiple kuzu.Database instances
-
-**What people do:** Each module that needs Kuzu creates `new kuzu.Database(path)` independently (mirroring the SQLite pattern in express routes).
-
-**Why it's wrong:** Kuzu enforces a single READ_WRITE Database object per path. A second `new Database(path)` while the first is open will either throw or corrupt. The error happens silently in some configurations.
-
-**Do this instead:** Create one `kuzuDb` instance in `server.mjs` at startup. Pass it as a parameter to all consumers. Never instantiate `Database` in any module other than `server.mjs`.
-
-### Anti-Pattern 2: Running projected graph queries through the async connection pool
-
-**What people do:** Use the standard async `Connection` for PageRank/centrality queries (same as traversal queries).
-
-**Why it's wrong:** Projected graphs are bound to a specific connection. The async API uses a connection pool. The pool may route subsequent queries to a different connection, making the projected graph "not found."
-
-**Do this instead:** In `kuzu-queries.mjs`, create a dedicated `Connection` object for algorithm queries. Run `PROJECT_GRAPH` and the algorithm query on the same connection object. Destroy the connection after the algorithm completes.
-
-### Anti-Pattern 3: Writing graph edges directly to Kuzu (bypassing SQLite)
-
-**What people do:** Modify `relations.mjs` to write edges to Kuzu instead of (or in addition to) SQLite.
-
-**Why it's wrong:** SQLite `doc_relationships` is the source of truth for all downstream processors (deviation analysis, linting, etc.). Splitting the write path creates two sources of truth. The sync model is unidirectional for a reason.
-
-**Do this instead:** Keep all writes in `relations.mjs` → SQLite. Sync to Kuzu is always a read projection via `kuzu-sync.mjs`. If real-time Kuzu writes become necessary later, implement a change-event queue between the two.
-
-### Anti-Pattern 4: Calling `syncRelationshipsToKuzu` on every incremental scan
-
-**What people do:** Wire the sync into the hourly incremental scan cron.
-
-**Why it's wrong:** Incremental scans update documents and keywords, but they do NOT call `buildRelationships()`. Kuzu would re-sync the same relationship data every hour with no benefit. A full rebuild for 50K edges takes < 1 second — the waste is in the unnecessary scheduling overhead and log noise.
-
-**Do this instead:** Sync only after `buildRelationships()` is called — which is daily and weekly scans only. The hourly cron skips relationship building and therefore skips Kuzu sync.
-
-### Anti-Pattern 5: Making graph_query (LangChain) a blocking MCP tool
-
-**What people do:** Implement `graph_query` as a synchronous-style MCP tool that awaits the LLM call before returning.
-
-**Why it's wrong:** LLM API calls can take 5-30 seconds. MCP tools timeout. The Express event loop stalls for other requests during the await.
-
-**Do this instead:** LangChain.js is already async (`await chain.invoke()`). The MCP tool handler is `async` by convention — the event loop is not blocked. Confirm the MCP SDK tool handler accepts async functions (it does in `@modelcontextprotocol/sdk` >= 1.0). Add a timeout: `Promise.race([chain.invoke(q), timeout(30_000)])`.
-
----
 
 ## Scaling Considerations
 
-This milestone targets the same solo-user, single-process deployment as all prior v3.x work.
+This is a solo-user internal tool (per `PROJECT.md` constraints: "no auth needed, just Dave"), so classic user-count scaling doesn't apply. The realistic axes are **deck count**, **render frequency**, and **external API limits**:
 
-| Scale                  | Architecture                                                                                                                                                                                                       |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Solo / PM2 (current)   | Both DBs in same process. No changes needed.                                                                                                                                                                       |
-| Docker (volume mount)  | data/documind.kuzu/ in named volume alongside documind.db. Works as-is.                                                                                                                                            |
-| Docker (git-clone)     | Same as volume mount — /app/data holds both DB stores.                                                                                                                                                             |
-| Multi-process (future) | Kuzu's single-writer constraint means the Express process must own the Database object. If a second process needs graph queries, proxy them through the REST /graph endpoint — do not open a second kuzu.Database. |
+| Concern | Today (2 decks) | Growth (10-20 decks) | Heavy use (frequent edits/day) |
+| --------- | ------------------ | ------------------------ | ---------------------------------- |
+| Marp render time | Seconds per format, fine synchronously | Still fine — per-deck in-flight guard prevents pile-up | Debounce (5s) + coalesce-on-rerun already absorbs rapid-save bursts |
+| DeepL API | Free/low tier likely sufficient | Watch character-count quota; glossary calls are cheap, cached per deck | Consider caching: skip translation if only non-text directives changed (future optimization, not MVP) |
+| FTP deploy | Dry-run only (no creds yet) | One deploy per successful pipeline run — fine | If deploys become frequent, consider only uploading files whose local hash changed vs. last successful deploy (avoid redundant transfer) |
+| SQLite ledger | Negligible | Negligible — same order of magnitude as `scan_history` | `slide_pipeline_runs` grows unbounded like `scan_history` already does; no pruning exists for that table either — not a new problem to solve here |
 
-**First bottleneck for Kuzu:** Graph algorithm queries (PageRank) are CPU-bound and block the event loop for the duration of the algorithm. At 8K nodes / 50K edges this is fast (< 500ms estimated). If node count grows to 100K+, algorithm queries should move to a Worker Thread to avoid blocking Express request handling.
+### Scaling Priorities
 
----
+1. **First real bottleneck:** DeepL glossary/character quota if many decks are edited frequently — mitigate later by hashing per-slide content and only re-translating changed sections (not needed for MVP; the whole-deck retranslate is simplest and correct).
+2. **Second:** concurrent renders if two different decks are edited within the same debounce window — the per-deck in-flight Map naturally supports this (different keys, no contention), so this is already handled by the design, not a future risk.
+
+## Anti-Patterns
+
+### Anti-Pattern 1: Trigger the pipeline from the generic `.md` watcher branch without the `.fr.md` exclusion
+
+**What people do:** Add "if a `.md` file changed under `docs/slides/`, run the pipeline" without excluding the pipeline's own translation output.
+**Why it's wrong:** `translateDeck()` writing `deck.fr.md` is itself a `.md` change under `docs/slides/` — without the suffix exclusion this immediately loops (translate → write .fr.md → watcher sees .md change → translate the French text back into "French" → write → loop), even with `writingNow` guarding the synchronous window, because the loop would resume once `writingNow` clears.
+**Do this instead:** The filename-convention check (`isSlidesEnSource`) must be the first, unconditional gate — not just a hash/lock check. See Pattern 1.
+
+### Anti-Pattern 2: Overload the `conversions` table for pipeline audit history
+
+**What people do:** Reuse the existing `conversions` table (already has `status`, `error`, `metadata` columns) to avoid a migration.
+**Why it's wrong:** `conversions.source_format` CHECK constraint doesn't include `markdown`, and the table models "one format conversion," not "a multi-stage pipeline run" — you'd end up needing 4+ rows per pipeline run (translate, render-html, render-pdf, render-pptx, deploy) with no natural way to query "what's the current state of deck X's last publish" without a self-join, which is exactly what `slide_pipeline_runs` + `latest_slide_runs` give you directly.
+**Instead:** New table (see Data Model section above) — small, additive, matches the existing `scan_history` row-per-run pattern already used for scheduler jobs.
+
+### Anti-Pattern 3: Call MCP tools from the daemon process
+
+**What people do:** Because `mcp__agenthub__publish_discovery` is documented as "pre-approved, call directly," it's tempting to wire the daemon to call it after a successful deploy.
+**Why it's wrong:** MCP tools exist inside an agent's tool-call loop; `daemon/watcher.mjs` and `processors/*.mjs` run as plain Node code with no MCP client and no LLM host attached. There is nothing to "call" — the tool only exists in a Claude Code session's context.
+**Instead:** Call AgentHub's REST endpoint directly (`POST http://localhost:3004/api/discoveries`) — see Pattern 3.
+
+### Anti-Pattern 4: Block the watcher's debounce callback on a synchronous multi-format render
+
+**What people do:** Run render stages in a tight `for` loop with `execFileSync`, inside the same tick as `processPendingChanges()`.
+**Why it's wrong:** `processPendingChanges()` already handles multiple queued changes (markdown indexing, diagram reverse-sync) in the same batch — a slow synchronous Marp render (which can take several seconds per format, longer with `--pptx-editable`) would stall indexing of unrelated files queued in the same debounce window.
+**Instead:** Use `execFileAsync` (already the established pattern via `promisify(execFile)` in `scheduler.mjs`) so the render stage yields the event loop; keep the per-deck in-flight Map so a slow render doesn't get double-triggered, but don't let it block processing of other queued file changes.
+
+## Integration Points
+
+### External Services
+
+| Service | Integration Pattern | Notes |
+| --------- | --------------------- | ------- |
+| DeepL API | `deepl-node` client (NEW dependency), `DEEPL_API_KEY` from `config/env.mjs` | Missing key today (confirmed gap in `.planning/STATE.md`) — pipeline must degrade gracefully (skip translate stage, log, continue render EN-only) rather than fail the whole run |
+| marp-cli | `execFileAsync('npx', ['marp', ...])` subprocess (NEW devDependency `@marp-team/marp-cli`) | Requires a Chromium-family browser for PDF/PPTX/image output — `puppeteer` already a devDependency here (for `@mermaid-js/mermaid-cli`), likely reusable via `--browser-path` |
+| LibreOffice (`soffice`) | Shelled out to by marp-cli itself for `--pptx-editable`, not called directly by DocuMind | Confirmed not on `PATH` (`.planning/STATE.md`); resolve via `SLIDES_SOFFICE_PATH` env pointing at `/Applications/LibreOffice.app/Contents/MacOS/soffice`, or skip `--pptx-editable` gracefully if unresolvable |
+| FTP host | `basic-ftp` client (already present as a `pnpm.overrides` security-patch entry in `package.json` — promote to a real `dependencies` entry) | Dry-run by default (no `SLIDES_FTP_HOST` set); real upload only when host/user/pass all present |
+| AgentHub REST API (port 3004) | Plain `fetch()` `POST /api/discoveries` | NOT via MCP — see Pattern 3/Anti-Pattern 3. Non-fatal on failure. |
+| Figma Slides (`use_figma` MCP) | Manual runbook / slash-command, NOT part of the daemon loop | Blocked on Figma MCP auth per `PROJECT.md`; MCP tools require an agent session, so this can never be daemon-automated the way translate/render/deploy are — design it as an agent-invoked follow-up step, not a pipeline stage |
+| RootDispatcher | No code integration — dispatch application is a file write, indistinguishable from a human edit | See "Key Data Flows" #1 |
+
+### Internal Boundaries
+
+| Boundary | Communication | Notes |
+| ---------- | --------------- | ------- |
+| `watcher.mjs` ↔ `slides-processor.mjs` | Direct function call (`enqueuePipelineRun(db, path, repo, ctx, opts)`) | Same pattern as `watcher.mjs` ↔ `relink-processor.mjs` today |
+| `slides-processor.mjs` ↔ SQLite | Direct `better-sqlite3` calls, same `db` handle passed down from `server.mjs` | No new DB connection — reuse the singleton |
+| `scripts/publish-slides.mjs` ↔ `slides-processor.mjs` | Direct import, opens its own short-lived `db` handle (matches `scripts/index-markdown.mjs` convention for standalone CLI runs) | Needed so `npm run slides:build` works without the daemon running |
+| `server.mjs` (`POST /slides/publish`) ↔ `slides-processor.mjs` | Direct call, manual-trigger REST parity with `POST /scan` | For dashboard/manual re-run use |
+| `mcp-server.mjs` (`get_slide_runs`, `publish_slides`) ↔ SQLite / `slides-processor.mjs` | Same dual pattern as existing `get_diagrams`/`register_diagram` read+write tool pairs | Agent-facing surface for Claude Code sessions |
+| `slides-processor.mjs` ↔ AgentHub | HTTP `fetch()`, non-fatal | See Pattern 3 |
+
+## Suggested Build Order
+
+Dependency-ordered — each phase's tools are needed by the phase after it:
+
+1. **Foundation:** `slide_pipeline_runs` migration + `config/env.mjs` additions (`DEEPL_API_KEY`, `SLIDES_FTP_*`, `SLIDES_SOFFICE_PATH`) + `.marprc.yml` + `.gitignore` rules for rendered outputs + remove the stale May-21 committed binaries. Everything downstream needs config and a place to record runs.
+2. **Render stage in isolation:** `renderDeck()` callable from `scripts/publish-slides.mjs --render-only` against the two existing fixture decks, no watcher/translate/deploy involved yet. Proves the `execFile`/marp-cli subprocess pattern and resolves the multi-format-invocation question flagged in Pattern 2 (spike before committing to one-call-vs-three-calls).
+3. **Translate stage:** `translateDeck()` with graceful no-key skip, writes `.fr.md`. Independently testable via CLI flag; unblocked even before `DEEPL_API_KEY` lands (skip path is the default state today).
+4. **Ledger wiring:** `recordRun()` around stages 2+3, `latest_slide_runs` view. Needed before watcher integration so a bad trigger is debuggable via the DB rather than only console logs.
+5. **Watcher integration:** `isSlidesEnSource()` + per-deck in-flight Map + `writingNow` guards wired into `daemon/watcher.mjs`, calling the already-proven stage functions. This is where loop-protection is proven end-to-end — test by editing a fixture deck and confirming exactly one pipeline run fires, `.fr.md`'s own write does not re-trigger, and a second rapid edit coalesces rather than double-runs.
+6. **Deploy stage:** `deployDeck()` via `basic-ftp`, dry-run-by-default. Independent of translate/render logic but naturally consumes their output paths — build after 2/3 so there's something real to deploy.
+7. **AgentHub notification:** `notifyAgentHub()` call after a successful deploy. Trivial once 6 exists; low risk, build last of the core loop.
+8. **Surface area:** `POST /slides/publish` + `GET /slides/runs` on `server.mjs`, `get_slide_runs`/`publish_slides` on `mcp-server.mjs`. Depends on 1 (ledger) and 5/6 (callable pipeline) already existing.
+9. **Figma Slides runbook:** documented as an agent-invoked manual step (slash command or `docs/` runbook), explicitly decoupled from the automated loop — build whenever Figma MCP auth is resolved; not a blocker for 1-8.
+10. **Optional hardening (future):** nightly drift-check cron in `scheduler.mjs` comparing EN `source_hash` to `latest_slide_runs`, flagging decks whose render/deploy is behind their source — same shape as the existing `stale_diagrams` view, deferred until the core loop has run in production for a while.
 
 ## Sources
 
-- Direct codebase inspection: `graph/relations.mjs`, `daemon/server.mjs`, `daemon/mcp-server.mjs`, `daemon/scheduler.mjs`, `config/env.mjs` (HIGH confidence)
-- Kuzu Node.js API: [docs.kuzudb.com/client-apis/nodejs](https://docs.kuzudb.com/client-apis/nodejs/) — async/sync API, ESM support, Database/Connection classes (HIGH confidence)
-- Kuzu concurrency model: [kuzudb.github.io/docs/concurrency](https://kuzudb.github.io/docs/concurrency/) — single READ_WRITE Database constraint confirmed (HIGH confidence)
-- Kuzu algo extension: [docs.kuzudb.com/extensions/algo](https://docs.kuzudb.com/extensions/algo/) and [docs.kuzudb.com/extensions/algo/pagerank](https://docs.kuzudb.com/extensions/algo/pagerank/) — PROJECT_GRAPH, PageRank, pre-installed in >= 0.11.3 (HIGH confidence)
-- Kuzu projected graph + async pool limitation: [docs.kuzudb.com/get-started/graph-algorithms](https://docs.kuzudb.com/get-started/graph-algorithms/) — "projected graphs are bound to a specific Connection instance" confirmed (HIGH confidence)
-- LangChain.js GraphCypherQAChain: [v03.api.js.langchain.com GraphCypherQAChain](https://v03.api.js.langchain.com/classes/langchain.chains_graph_qa_cypher.GraphCypherQAChain.html) — accepts custom graph adapter with getSchema() + query() (MEDIUM confidence — interface contract inferred, not explicit custom adapter docs)
-- langchain-kuzu Python package: [pypi.org/project/langchain-kuzu](https://pypi.org/project/langchain-kuzu/) — Python KuzuQAChain confirmed; JavaScript equivalent not officially available (HIGH confidence on Python; MEDIUM on JS adapter pattern)
-- Kuzu npm package: [npmjs.com/package/kuzu](https://www.npmjs.com/package/kuzu) — pre-built binaries, no node-gyp (HIGH confidence)
+- `.planning/PROJECT.md` (this repo) — v3.4 milestone scope, decisions table, prereq gaps
+- `.planning/STATE.md` (this repo) — confirmed gaps (DEEPL_API_KEY, FTP creds, soffice PATH, Figma MCP auth), test fixture decks
+- `daemon/watcher.mjs` (this repo) — chokidar config, debounce/dedup mechanism, `writingNow` usage, `.md`/.pdf/.docx/.rtf watch patterns
+- `daemon/scheduler.mjs` (this repo) — `execFileAsync` subprocess pattern, cron job structure
+- `daemon/registry-lock.mjs` (this repo) — `writingNow` Set, the existing loop-protection primitive
+- `daemon/server.mjs` (this repo) — REST endpoint conventions (`POST /scan`, `POST /convert`, etc.)
+- `daemon/mcp-server.mjs` (this repo) — 14 existing `server.registerTool()` calls, read/write tool pairing convention
+- `config/env.mjs` (this repo) — centralized env var pattern, `.env` loading via `process.loadEnvFile()`
+- `scripts/db/schema.sql` (this repo) — `conversions`, `documents`, `diagrams`, `scan_history` table shapes; `stale_diagrams`/`pending_relinks` view pattern reused for `latest_slide_runs`
+- `processors/relink-processor.mjs` (this repo, referenced) — multi-function-per-concern processor convention
+- `docs/proposals/2026-05-21-figma-ai-presentation-preplan.md` (this repo) — original Marp deck decision rationale, existing fixture decks' provenance
+- `package.json` (this repo) — confirmed `basic-ftp >=5.3.0` already present as a `pnpm.overrides` security-patch entry (transitive dep somewhere), `puppeteer` already a devDependency (Chromium reuse opportunity)
+- `/Users/Shared/htdocs/github/DVWDesign/AgentHub/src/index.ts` (sibling repo) — confirmed `POST /api/discoveries` REST payload shape `{ repo_source, title, content, discovery_type, topics }`, port 3004 per global CLAUDE.md service registry
+- [marp-team/marp-cli README](https://github.com/marp-team/marp-cli/blob/main/README.md) — confirmed one-format-per-invocation via `--pdf`/`--pptx` flags, `--pptx-editable` requires LibreOffice Impress + a browser, config file supports per-format boolean keys (exact multi-format-in-one-call behavior needs a spike — MEDIUM confidence, flagged in Pattern 2)
 
 ---
-
-*Architecture research for: DocuMind v3.3 — Kuzu Graph Intelligence + LangChain Text-to-Cypher*
-*Researched: 2026-04-07*
+*Architecture research for: DocuMind v3.4 Presentation Pipeline*
+*Researched: 2026-07-10*
