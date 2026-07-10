@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "noEmit": true,
+    "allowJs": true,
+    "checkJs": false,
+    "skipLibCheck": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["scripts/**/*.mjs", "daemon/**/*.mjs"],
+  "exclude": ["node_modules", "graphify-out", "index", "data"]
+}

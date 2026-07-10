@@ -1,0 +1,28 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "timezone": "Europe/Paris",
+  "schedule": ["before 9am on Monday"],
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "description": "Group all @design-dvw/* shared packages",
+      "matchPackagePrefixes": ["@design-dvw/"],
+      "groupName": "@design-dvw packages",
+      "groupSlug": "design-dvw"
+    },
+    {
+      "description": "Automerge patch/minor dev tooling",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "matchPackageNames": ["typescript", "autoprefixer", "postcss", "tailwindcss", "@types/node"],
+      "automerge": true
+    },
+    {
+      "description": "Major version bumps require manual review",
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "labels": ["dependencies", "major-upgrade"]
+    }
+  ]
+}
