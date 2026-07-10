@@ -8,7 +8,9 @@
 
 - ✅ **v3.2 Dockerize** — Phases 11-15 (shipped 2026-03-28)
 
-- 🚧 **v3.3 Kuzu Graph Intelligence** — Phases 16-21 (in progress)
+- ✅ **v3.3 Kuzu Graph Intelligence** — Phases 16-18, 22 (shipped 2026-04-20; phases 19-21 cancelled — Graphify covers graph algorithms/text-to-Cypher/visualization natively)
+
+- 🚧 **v3.4 Presentation Pipeline** — Phases 23-29 (in progress)
 
 ## Phases
 
@@ -63,21 +65,48 @@ Full details: `.planning/milestones/v3.2-ROADMAP.md`
 
 </details>
 
-### 🚧 v3.3 Kuzu Graph Intelligence (In Progress)
+<details>
+<summary>✅ v3.3 Kuzu Graph Intelligence (Phases 16-18, 22) — SHIPPED 2026-04-20</summary>
 
 **Milestone Goal:** Replace DocuMind's SQLite-backed graph layer with Kuzu (embedded in-process graph DB), add graph algorithms (PageRank, centrality, cycle detection), integrate LangChain text-to-Cypher for natural language graph queries, and ship an interactive visualization dashboard.
 
-- [x] **Phase 16: Kuzu Foundation** — Verify ESM import + Docker build; freeze schema; initialize Kuzu DB on daemon startup (completed 2026-04-08)
+- [x] Phase 16: Kuzu Foundation (3/3 plans) — completed 2026-04-08
 
-- [x] **Phase 17: Sync Bridge** — Migrate doc_relationships from SQLite → Kuzu; auto-sync after each rebuild; health reporting (completed 2026-04-12)
+- [x] Phase 17: Sync Bridge (3/3 plans) — completed 2026-04-12
 
-- [x] **Phase 18: Query Layer** — Upgrade /graph REST API and get_related MCP tool to use Kuzu Cypher traversal (completed 2026-04-13)
+- [x] Phase 18: Query Layer (3/3 plans) — completed 2026-04-13
 
-- [ ] **Phase 19: Graph Algorithms** — Add graph_rank, graph_cycles, graph_orphans MCP tools (PageRank, SCC, WCC)
+- [x] Phase 22: Obsolete Docs Dashboard (3/3 plans) — completed 2026-04-20
 
-- [ ] **Phase 20: Text-to-Cypher** — LangChain KuzuGraphAdapter; graph_query MCP tool for natural language → Cypher
+- [ ] ~~Phase 19: Graph Algorithms~~ — CANCELLED — Graphify covers graph algorithms natively
 
-- [ ] **Phase 21: Visualization Dashboard** — Vite React app in dashboard/ with interactive Cytoscape.js graph explorer
+- [ ] ~~Phase 20: Text-to-Cypher~~ — CANCELLED — Graphify covers natural-language graph queries natively
+
+- [ ] ~~Phase 21: Visualization Dashboard~~ — CANCELLED — Graphify covers graph visualization natively
+
+Kuzu itself was later retired per ADR-001 (2026-07) — SQLite recursive CTEs replaced it for graph traversal.
+
+Full requirements record: `.planning/milestones/v3.3-REQUIREMENTS.md`
+
+</details>
+
+### 🚧 v3.4 Presentation Pipeline (In Progress)
+
+**Milestone Goal:** Automated slides publishing pipeline — EN Marp decks as single source of truth, DeepL French translation, HTML/PDF/PPTX rendering, FTP deploy, and Figma Slides push, orchestrated by the DocuMind daemon with agent-driven content updates.
+
+- [ ] **Phase 23: Foundation & Hygiene** — Ledger migration, env var scaffolding, gitignore/dockerignore hygiene for the pipeline
+
+- [ ] **Phase 24: Render Stage** — EN deck → HTML/PDF/PPTX via marp-cli, proven under the PM2 daemon environment
+
+- [ ] **Phase 25: Translation Stage** — EN → FR via DeepL with placeholder-protected Marp syntax/tables and a lint gate
+
+- [ ] **Phase 26: Ledger Wiring** — Every render/translate run recorded and queryable before the watcher goes live
+
+- [ ] **Phase 27: Watcher Integration & Loop Protection** — Saving an EN deck auto-triggers the pipeline exactly once, loop-free
+
+- [ ] **Phase 28: Deploy Stage** — FTP publish with dry-run default and atomic stage-then-rename
+
+- [ ] **Phase 29: Ecosystem Surface & Notification** — REST/MCP triggers, AgentHub discovery, drift cron, Figma Slides runbook
 
 ## Phase Details
 
@@ -275,58 +304,26 @@ Plans:
 
 - [ ] 18-03-PLAN.md — Wire kuzuFindRelated into get_related MCP tool (direction param)
 
-### Phase 19: Graph Algorithms
+### Phase 19: Graph Algorithms — CANCELLED
 
-**Goal**: Three new MCP tools expose Kuzu's built-in graph algorithms — PageRank-ranked documents, circular dependency chains, and isolated document clusters — callable from any MCP client
-**Depends on**: Phase 17
-**Requirements**: ALGO-01, ALGO-02, ALGO-03
-**Success Criteria** (what must be TRUE):
+**Status**: Cancelled 2026-04-20 — Graphify covers graph algorithms natively; not rebuilt on Kuzu
+**Goal (as originally scoped)**: Three new MCP tools expose Kuzu's built-in graph algorithms — PageRank-ranked documents, circular dependency chains, and isolated document clusters — callable from any MCP client
+**Requirements**: ALGO-01, ALGO-02, ALGO-03 (moved to Out of Scope in PROJECT.md)
+**Plans**: Cancelled — none written
 
-1. Calling `graph_rank` returns a list of documents sorted by PageRank score; documents with more incoming relationships score higher than isolated ones
+### Phase 20: Text-to-Cypher — CANCELLED
 
-2. Calling `graph_cycles` returns at least one result when a known circular dependency exists in the graph (verified by seeding test data)
+**Status**: Cancelled 2026-04-20 — Graphify covers natural-language graph queries natively
+**Goal (as originally scoped)**: A custom KuzuGraphAdapter wires LangChain's text-to-Cypher chain to DocuMind's Kuzu instance; the graph_query MCP tool accepts natural language, generates safe read-only Cypher, executes it, and returns structured results — degrading gracefully when no LLM key is configured
+**Requirements**: CYPHER-01, CYPHER-02, CYPHER-03, CYPHER-04 (moved to Out of Scope in PROJECT.md)
+**Plans**: Cancelled — none written
 
-3. Calling `graph_orphans` returns documents that have no incoming or outgoing relationships — confirmed correct against a document known to be unlinked
+### Phase 21: Visualization Dashboard — CANCELLED
 
-4. All three tools are registered in the MCP server tool manifest and appear in `list_tools` response
-
-**Plans**: TBD
-
-### Phase 20: Text-to-Cypher
-
-**Goal**: A custom KuzuGraphAdapter wires LangChain's text-to-Cypher chain to DocuMind's Kuzu instance; the graph_query MCP tool accepts natural language, generates safe read-only Cypher, executes it, and returns structured results — degrading gracefully when no LLM key is configured
-**Depends on**: Phase 17
-**Requirements**: CYPHER-01, CYPHER-02, CYPHER-03, CYPHER-04
-**Success Criteria** (what must be TRUE):
-
-1. Calling `graph_query` with "which documents depend on ARCHITECTURE.md?" returns a populated result set drawn from live Kuzu data
-
-2. Setting `DOCUMIND_LLM_PROVIDER=anthropic` uses Claude (claude-sonnet-4-6); the env var is the only change needed to switch providers
-
-3. A generated Cypher containing `DELETE`, `MERGE`, or `DROP` is rejected before execution and returns a sanitization error — the Kuzu DB is not modified
-
-4. Calling `graph_query` with no API key configured returns a structured error message ("LLM provider not configured") rather than an uncaught exception
-
-**Plans**: TBD
-
-### Phase 21: Visualization Dashboard
-
-**Goal**: A Vite React app in dashboard/ serves an interactive Cytoscape.js document graph explorer at /graph.html, with repo/type/depth filters, Kuzu Explorer available as an optional PM2 service, and a graph export endpoint for external tools
-**Depends on**: Phase 18, Phase 19
-**Requirements**: VIZ-01, VIZ-02, VIZ-03, VIZ-04, VIZ-05
-**Success Criteria** (what must be TRUE):
-
-1. `npm run dashboard:build` produces static files in `dashboard/dist/` that Express serves at `/`; opening the app in a browser shows the graph explorer without a build server running
-
-2. The graph page renders document nodes and relationship edges from live Kuzu data; clicking a node shows its title, repo, and relationship count using @design-dvw/ui Card and Badge components
-
-3. Applying a repo filter removes nodes from other repos from the canvas without a page reload; depth slider changes traversal depth and updates the graph
-
-4. Running `pm2 start ecosystem.config.cjs --only documind-kuzu-explorer` starts Kuzu Explorer on its configured port; `pm2 stop` stops it without affecting the main daemon
-
-5. `GET /graph/export` returns a JSON payload containing all nodes and edges in a format consumable by external tools (Cytoscape.js, Gephi, D3)
-
-**Plans**: TBD
+**Status**: Cancelled 2026-04-20 — Graphify covers graph visualization natively
+**Goal (as originally scoped)**: A Vite React app in dashboard/ serves an interactive Cytoscape.js document graph explorer at /graph.html, with repo/type/depth filters, Kuzu Explorer available as an optional PM2 service, and a graph export endpoint for external tools
+**Requirements**: VIZ-01, VIZ-02, VIZ-03, VIZ-04, VIZ-05 (moved to Out of Scope in PROJECT.md)
+**Plans**: Cancelled — none written
 
 ### Phase 22: Obsolete Docs Dashboard
 
@@ -355,52 +352,167 @@ Plans:
 
 - [ ] 22-03-PLAN.md — Plain-HTML dashboard (dashboard/obsolete.html) with sortable table, batch-select, and dismiss actions
 
+### Phase 23: Foundation & Hygiene
+
+**Goal**: Pipeline infrastructure — the ledger table, env var scaffolding, and git/Docker hygiene — is in place before any translate/render/deploy code is written
+**Depends on**: Nothing (first v3.4 phase)
+**Requirements**: FOUND-01, FOUND-02, FOUND-03
+**Success Criteria** (what must be TRUE):
+
+1. Rendered slide files (HTML/PDF/PPTX) are absent from `git ls-files` after `git rm --cached`, yet remain present on disk locally (no history rewrite)
+
+2. `.env.example` documents `DEEPL_API_KEY`, `FTP_HOST`, `FTP_USER`, `FTP_PASSWORD`, `FTP_REMOTE_PATH`, and `SOFFICE_PATH` with placeholder values — no real secrets committed
+
+3. Running the versioned migration creates the `slide_pipeline_runs` table and `latest_slide_runs` view, queryable via the sqlite3 CLI
+
+4. `.dockerignore` excludes `.env`; building the image and inspecting its layers confirms no secret values are baked in
+
+**Plans**: TBD
+
+### Phase 24: Render Stage
+
+**Goal**: Any EN Marp deck can be rendered to HTML, PDF, and PPTX in one command, reliably, including when invoked server-side under the PM2 daemon environment
+**Depends on**: Phase 23
+**Requirements**: RNDR-01, RNDR-02, RNDR-03
+**Success Criteria** (what must be TRUE):
+
+1. Running `npm run slides:build` against a fixture deck produces HTML, PDF, and PPTX output files from a single command
+
+2. When `SOFFICE_PATH` resolves, the produced PPTX is natively editable (real slide objects, not a rasterized image); when it doesn't resolve, the build logs an explicit warning rather than silently falling back to an image-only PPTX
+
+3. Restarting the daemon via `pm2 restart documind` and invoking the render function server-side succeeds — Chrome/soffice binary resolution is verified under PM2's environment, not just an interactive shell
+
+4. The marp-cli multi-format invocation pattern (one config-driven call vs. three per-format calls) is resolved via a short spike and the chosen pattern is documented before Phase 25 begins
+
+**Plans**: TBD
+
+**Research flag**: MEDIUM confidence on whether `.marprc.yml`'s per-format config produces multiple outputs from one invocation, or whether marp-cli requires one call per format — spike required (see research/SUMMARY.md).
+
+### Phase 25: Translation Stage
+
+**Goal**: An EN deck can be translated to French via DeepL without corrupting Marp syntax, code, tables, or brand terms, and the generated deck passes the project's own lint rules
+**Depends on**: Phase 24
+**Requirements**: TRNS-01, TRNS-02, TRNS-03, TRNS-04, TRNS-05, TRNS-06
+**Success Criteria** (what must be TRUE):
+
+1. Translating a fixture EN deck produces a `.fr.md` sibling with prose rendered in French while front-matter, Marp directive comments, code fences, inline code, and URLs remain byte-identical to the EN source
+
+2. GFM tables in the generated `.fr.md` pass `markdownlint-cli2` (DVW001/DVW002) with zero violations before the run is considered successful — a violation fails the run rather than being auto-fixed and continued
+
+3. Glossary-pinned terms (DVWDesign, Figma, Marp, MCP, DocuMind, FigJam) appear untranslated in the `.fr.md` output; front-matter and footer strings are never sent to the DeepL API
+
+4. Re-running translation on an unchanged EN deck makes zero DeepL API calls — content-hash comparison short-circuits the call
+
+5. The generated `.fr.md` carries a header comment warning that it is generated and manual edits will be overwritten (corrections go to the glossary instead), and the file is tracked in git
+
+**Plans**: TBD
+
+**Research flag**: This is the single highest-risk stage in the milestone (DeepL has no native Markdown/Marp awareness) — placeholder-protection and round-trip validation must be correct before render/watcher trust this stage's output.
+
+### Phase 26: Ledger Wiring
+
+**Goal**: Every render and translate execution is recorded as a queryable pipeline run, independent of and prior to the watcher going live
+**Depends on**: Phase 24, Phase 25
+**Requirements**: PIPE-04
+**Success Criteria** (what must be TRUE):
+
+1. Manually invoking the CLI publish script for a deck writes a row to `slide_pipeline_runs` with per-stage (translate/render) status and duration
+
+2. Querying `latest_slide_runs` returns the most recent run per deck with an overall success/failure state
+
+3. A deliberately failing translate stage (e.g. invalid API key) still produces a ledger row showing the translate stage as failed with a captured error message, not a silent crash or missing row
+
+**Plans**: TBD
+
+### Phase 27: Watcher Integration & Loop Protection
+
+**Goal**: Saving an EN deck automatically triggers the full pipeline exactly once, with no feedback loops or overlapping runs, and dispatch-driven content edits flow through the same trigger path as manual edits
+**Depends on**: Phase 26
+**Requirements**: PIPE-01, PIPE-02, PIPE-03, PIPE-05
+**Success Criteria** (what must be TRUE):
+
+1. Editing and saving a fixture EN deck under `docs/slides/` automatically triggers translate → render → deploy with no manual command
+
+2. After a pipeline run completes, the generated `.fr.md`/HTML/PDF/PPTX writes do not themselves trigger a new pipeline run — confirmed by daemon logs showing exactly one run per source edit
+
+3. Saving the same deck three times within a couple of seconds coalesces into exactly one pipeline run, not three, via a per-deck run lock
+
+4. A file write applied via a RootDispatcher dispatch to an EN deck triggers the same watcher path as a manual edit, confirmed by a resulting ledger entry
+
+**Plans**: TBD
+
+**Research flag**: Loop-protection strategy is pre-resolved by research (glob exclusion is primary; a dedicated per-deck run-lock — not the existing `writingNow` registry lock — handles overlap; content-hash is defense-in-depth). Do not re-litigate; implement as specified in research/SUMMARY.md.
+
+### Phase 28: Deploy Stage
+
+**Goal**: Rendered HTML deploys to the web host safely, defaulting to dry-run until FTP credentials and protocol are confirmed
+**Depends on**: Phase 27
+**Requirements**: DPLY-01, DPLY-02, DPLY-03
+**Success Criteria** (what must be TRUE):
+
+1. With FTP credentials configured, the deploy stage uploads EN + FR HTML to a staging path then atomically renames into the live path — no partial/half-published state is ever observable
+
+2. With FTP credentials absent from `.env`, the deploy stage logs its intended upload actions and uploads nothing — dry-run is the default, not an opt-in flag
+
+3. Every deploy produces a manifest listing uploaded files with content hashes and timestamps, queryable after the run
+
+4. The FTP vs. FTPS vs. SFTP protocol is confirmed in writing with the hosting provider before dry-run is switched off for the first live deploy
+
+**Plans**: TBD
+
+**Research flag**: Deploy protocol (FTP/FTPS/SFTP) is an unconfirmed external dependency, not a documentation gap — treat as a phase blocker for the "dry-run off" milestone, not a research task to resolve internally.
+
+### Phase 29: Ecosystem Surface & Notification
+
+**Goal**: The pipeline is triggerable and observable from outside the daemon process — REST, MCP, AgentHub — and the Figma Slides path is documented for manual agent use
+**Depends on**: Phase 28
+**Requirements**: SURF-01, SURF-02, SURF-03, SURF-04, FIGS-01
+**Success Criteria** (what must be TRUE):
+
+1. `POST /slides/build` with a deck name triggers that deck's pipeline; called with no body triggers all decks
+
+2. Calling the `build_slides` MCP tool from Claude Code triggers the same pipeline and returns run status
+
+3. A successful deploy publishes a discovery to AgentHub (`POST /api/discoveries` on port 3004), non-fatal on failure; the entry is visible via AgentHub's feed
+
+4. The weekly drift-check cron compares deployed file hashes against current source hashes and logs any mismatch found
+
+5. A documented runbook describes the manual steps to push a rendered deck to Figma Slides via `use_figma`
+
+**Plans**: TBD
+
+**Research flag**: LOW confidence on the `figma-use-slides` skill's actual input contract (rendered HTML vs. raw markdown vs. structured JSON) — stays a documented runbook, not a coded integration, until Figma MCP auth unblocks and the contract is verified.
+
 ## Progress
 
-| Phase                                | Milestone | Plans Complete | Status      | Completed  |
-
-| ------------------------------------ | --------- | -------------- | ----------- | ---------- |
-
-| 1. Schema Migration Foundation       | v3.0      | 3/3            | Complete    | 2026-03-17 |
-
-| 2. Context Profile Loader            | v3.0      | 2/2            | Complete    | 2026-03-17 |
-
-| 3. Orchestrator and Scheduler Wiring | v3.0      | 4/4            | Complete    | 2026-03-17 |
-
-| 4. MCP Server — Read Tools           | v3.0      | 2/2            | Complete    | 2026-03-17 |
-
-| 5. MCP Server — Write Tools          | v3.0      | 3/3            | Complete    | 2026-03-22 |
-
-| 6. MCP Intelligence Tools            | v3.1      | 1/1            | Complete    | 2026-03-22 |
-
-| 7. Diagram Registry Completion       | v3.1      | 1/1            | Complete    | 2026-03-22 |
-
-| 8. Slash Command Updates             | v3.1      | 2/2            | Complete    | 2026-03-22 |
-
-| 9. Markdown Tooling Propagation      | v3.1      | 1/1            | Complete    | 2026-03-22 |
-
-| 10. Documentation Fixes              | v3.1      | 2/2            | Complete    | 2026-03-22 |
-
-| 11. Foundation                       | v3.2      | 3/3            | Complete    | 2026-03-23 |
-
-| 12. Dockerfile + Docker Compose      | v3.2      | 2/2            | Complete    | 2026-03-26 |
-
-| 13. Git-Clone Ingestion + Dual Mode  | v3.2      | 2/2            | Complete    | 2026-03-26 |
-
-| 14. MCP HTTP Transport               | v3.2      | 2/2            | Complete    | 2026-03-28 |
-
-| 15. CI & Distribution                | v3.2      | 2/2            | Complete    | 2026-03-28 |
-
-| 16. Kuzu Foundation                  | 3/3 | Complete    | 2026-04-08 | -          |
-
-| 17. Sync Bridge                      | 3/3 | Complete    | 2026-04-12 | -          |
-
-| 18. Query Layer                      | 3/3 | Complete   | 2026-04-13 | -          |
-
-| 19. Graph Algorithms                 | v3.3      | 0/TBD          | Not started | -          |
-
-| 20. Text-to-Cypher                   | v3.3      | 0/TBD          | Not started | -          |
-
-| 21. Visualization Dashboard          | v3.3      | 0/TBD          | Not started | -          |
-
-| 22. Obsolete Docs Dashboard          | 3/3 | Complete    | 2026-04-20 | -          |
+| Phase                                       | Milestone | Plans Complete | Status      | Completed  |
+| -------------------------------------------- | --------- | --------------- | ----------- | ---------- |
+| 1. Schema Migration Foundation               | v3.0      | 3/3             | Complete    | 2026-03-17 |
+| 2. Context Profile Loader                    | v3.0      | 2/2             | Complete    | 2026-03-17 |
+| 3. Orchestrator and Scheduler Wiring         | v3.0      | 4/4             | Complete    | 2026-03-17 |
+| 4. MCP Server — Read Tools                   | v3.0      | 2/2             | Complete    | 2026-03-17 |
+| 5. MCP Server — Write Tools                  | v3.0      | 3/3             | Complete    | 2026-03-22 |
+| 6. MCP Intelligence Tools                    | v3.1      | 1/1             | Complete    | 2026-03-22 |
+| 7. Diagram Registry Completion               | v3.1      | 1/1             | Complete    | 2026-03-22 |
+| 8. Slash Command Updates                     | v3.1      | 2/2             | Complete    | 2026-03-22 |
+| 9. Markdown Tooling Propagation              | v3.1      | 1/1             | Complete    | 2026-03-22 |
+| 10. Documentation Fixes                      | v3.1      | 2/2             | Complete    | 2026-03-22 |
+| 11. Foundation                               | v3.2      | 3/3             | Complete    | 2026-03-23 |
+| 12. Dockerfile + Docker Compose              | v3.2      | 2/2             | Complete    | 2026-03-26 |
+| 13. Git-Clone Ingestion + Dual Mode          | v3.2      | 2/2             | Complete    | 2026-03-26 |
+| 14. MCP HTTP Transport                       | v3.2      | 2/2             | Complete    | 2026-03-28 |
+| 15. CI & Distribution                        | v3.2      | 2/2             | Complete    | 2026-03-28 |
+| 16. Kuzu Foundation                          | v3.3      | 3/3             | Complete    | 2026-04-08 |
+| 17. Sync Bridge                              | v3.3      | 3/3             | Complete    | 2026-04-12 |
+| 18. Query Layer                              | v3.3      | 3/3             | Complete    | 2026-04-13 |
+| 19. Graph Algorithms                         | v3.3      | N/A             | Cancelled   | -          |
+| 20. Text-to-Cypher                           | v3.3      | N/A             | Cancelled   | -          |
+| 21. Visualization Dashboard                  | v3.3      | N/A             | Cancelled   | -          |
+| 22. Obsolete Docs Dashboard                  | v3.3      | 3/3             | Complete    | 2026-04-20 |
+| 23. Foundation & Hygiene                     | v3.4      | 0/TBD           | Not started | -          |
+| 24. Render Stage                             | v3.4      | 0/TBD           | Not started | -          |
+| 25. Translation Stage                        | v3.4      | 0/TBD           | Not started | -          |
+| 26. Ledger Wiring                            | v3.4      | 0/TBD           | Not started | -          |
+| 27. Watcher Integration & Loop Protection    | v3.4      | 0/TBD           | Not started | -          |
+| 28. Deploy Stage                             | v3.4      | 0/TBD           | Not started | -          |
+| 29. Ecosystem Surface & Notification         | v3.4      | 0/TBD           | Not started | -          |

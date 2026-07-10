@@ -81,15 +81,39 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 | - | - | - |
-| (populated by roadmapper) | | |
+| FOUND-01 | Phase 23 | Pending |
+| FOUND-02 | Phase 23 | Pending |
+| FOUND-03 | Phase 23 | Pending |
+| RNDR-01 | Phase 24 | Pending |
+| RNDR-02 | Phase 24 | Pending |
+| RNDR-03 | Phase 24 | Pending |
+| TRNS-01 | Phase 25 | Pending |
+| TRNS-02 | Phase 25 | Pending |
+| TRNS-03 | Phase 25 | Pending |
+| TRNS-04 | Phase 25 | Pending |
+| TRNS-05 | Phase 25 | Pending |
+| TRNS-06 | Phase 25 | Pending |
+| PIPE-04 | Phase 26 | Pending |
+| PIPE-01 | Phase 27 | Pending |
+| PIPE-02 | Phase 27 | Pending |
+| PIPE-03 | Phase 27 | Pending |
+| PIPE-05 | Phase 27 | Pending |
+| DPLY-01 | Phase 28 | Pending |
+| DPLY-02 | Phase 28 | Pending |
+| DPLY-03 | Phase 28 | Pending |
+| SURF-01 | Phase 29 | Pending |
+| SURF-02 | Phase 29 | Pending |
+| SURF-03 | Phase 29 | Pending |
+| SURF-04 | Phase 29 | Pending |
+| FIGS-01 | Phase 29 | Pending |
 
 **Coverage:**
 
 - v3.4 requirements: 25 total
-- Mapped to phases: 0
-- Unmapped: 25 ⚠️ (pending roadmap)
+- Mapped to phases: 25
+- Unmapped: 0 ✓
 
 ---
 
 *Requirements defined: 2026-07-10*
-*Last updated: 2026-07-10 after scoping decisions (FR tracked in git, footers untranslated, no history rewrite, all surfaces in scope)*
+*Last updated: 2026-07-10 after roadmap creation — all 25 requirements mapped to phases 23-29*
