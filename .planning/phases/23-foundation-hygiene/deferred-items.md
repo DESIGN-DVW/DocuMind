@@ -2,7 +2,11 @@
 
 Items discovered during plan execution that are out of scope for the current task (pre-existing, unrelated to the task's file changes) per the executor's scope-boundary rule. Not auto-fixed; logged here for future triage.
 
-## 23-02: Missing package-lock.json blocks Docker image build
+## 23-02: Missing package-lock.json blocks Docker image build — ✓ RESOLVED 2026-07-11
+
+**Resolution:** Root cause was two-fold: (1) `.gitignore` line 3 explicitly ignored `package-lock.json` (pnpm-era rule — repo also carries `pnpm-lock.yaml` and a pnpm symlink store in the local `node_modules`); (2) `npm install --package-lock-only` crashed in-place (`Cannot read properties of null (reading 'matches')`) because npm's arborist chokes on the pnpm `.pnpm` symlink store. Lockfile was generated in a clean directory from `package.json` + `.npmrc` (873 packages, lockfileVersion 3, `npm ci --dry-run` validated), the ignore rule removed, and the lockfile committed (`e92c4cc`). `docker build` now succeeds end-to-end; image-layer secret checks completed and passed (no `.env` in image, no secret-shaped strings in layer history, no env vars baked into image config). Remaining pnpm remnants (`pnpm-lock.yaml` tracked in git, `"pnpm"` section in package.json, pnpm-contaminated local `node_modules`) logged for user triage.
+
+## Original entry (2026-07-10)
 
 **Found during:** 23-02 Task 3 (Docker secret-hygiene verification)
 

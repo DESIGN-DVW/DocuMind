@@ -2,8 +2,8 @@
 phase: 23-foundation-hygiene
 verified: 2026-07-10T21:50:58Z
 status: passed
-human_approved: "2026-07-11 — user approved; Docker lockfile check taken by user (repo has .npmrc legacy-peer-deps=true), stash triage pending"
-score: 3/4 success criteria fully verified (1 partial — environment-blocked)
+human_approved: "2026-07-11 — user approved; stash triage pending"
+score: "4/4 success criteria verified (Truth 4 completed 2026-07-11: package-lock.json generated + committed, docker build succeeds, image-layer secret checks passed — no .env in image, no secrets in layer history or image config)"
 human_verification:
   - test: "Generate package-lock.json, rebuild the Docker image, and re-run the layer-inspection secret check (docker run ... test -f .env; docker history --no-trunc | grep -iE 'deepl|ftp_pass|api[_-]?key')"
     expected: "Image builds successfully; no .env file present in the image filesystem; no secret-shaped strings in any layer's command history"
@@ -29,7 +29,7 @@ human_verification:
 | 1 | Rendered slide files (HTML/PDF/PPTX) absent from `git ls-files`, remain on disk, no history rewrite | ✓ VERIFIED | `git ls-files docs/slides \| grep -E '\.(html\|pdf\|pptx)$'` → empty; all 6 files present on disk (`ls docs/slides/{external,internal}/`); both `.md` sources still tracked |
 | 2 | `.env.example` documents `DEEPL_API_KEY`, `FTP_HOST`, `FTP_USER`, `FTP_PASSWORD`, `FTP_REMOTE_PATH`, `SOFFICE_PATH` with placeholders — no real secrets | ✓ VERIFIED | All 6 vars present in `.env.example` PRESENTATION PIPELINE section; secrets (`DEEPL_API_KEY`, `FTP_PASSWORD`, `FTP_HOST`, `FTP_USER`) commented out with obviously-fake placeholders; manual scan found no real credential-shaped value |
 | 3 | Versioned migration creates `slide_pipeline_runs` table + `latest_slide_runs` view, queryable via sqlite3 CLI | ✓ VERIFIED | `sqlite3 data/documind.db ".schema slide_pipeline_runs"` and `".schema latest_slide_runs"` both return definitions; live-DB insert/dedup test confirmed one row per `deck_path` (most recent by `started_at`); `schema_migrations` lists `008-action-log` and `009-slide-pipeline-runs` |
-| 4 | `.dockerignore` excludes `.env`; building the image and inspecting layers confirms no secrets baked in | ? PARTIAL | Static checks pass (`.dockerignore` contains `.env`; Dockerfile has `RUN rm -f ... .env`). Image-level check could NOT be completed — independently reproduced `docker build` failing at `RUN npm ci` (no `package-lock.json` in repo, confirmed pre-existing and unrelated to this phase's changes) |
+| 4 | `.dockerignore` excludes `.env`; building the image and inspecting layers confirms no secrets baked in | ✓ VERIFIED | Completed 2026-07-11 after lockfile fix (see deferred-items.md): `docker build` succeeds; image filesystem contains no real `.env` (only `.env.example` placeholders + `node_modules/natural/.env` upstream sample defaults); `docker history --no-trunc` shows no secret-shaped strings; image config bakes no env vars beyond PATH/NODE_VERSION/YARN_VERSION |
 
 **Score:** 3/4 truths fully verified; 1 partial (environment-blocked, not a regression introduced by this phase)
 

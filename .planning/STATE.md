@@ -62,13 +62,13 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 
 ### Prereq gaps (user-side)
 
-- DEEPL_API_KEY not set anywhere (no .env in DocuMind yet)
+- ~~DEEPL_API_KEY not set~~ RESOLVED 2026-07-11: user created `.env` (renamed from .env.local) with real DeepL key, FTP credentials, and LibreOffice path — loaded by config/env.mjs
 
-- FTP host/user/pass/path unknown; FTP vs FTPS vs SFTP protocol unconfirmed with hosting provider (Phase 28 blocker for going live)
+- FTP vs FTPS vs SFTP protocol unconfirmed with hosting provider (Phase 28 blocker for going live); credentials now in `.env`
 
 - Figma MCP unauthorized (needs interactive OAuth session) — Phase 29 Figma runbook stays LOW confidence/manual until resolved
 
-- LibreOffice `soffice` not on PATH (needed for --pptx-editable; resolve /Applications/LibreOffice.app/Contents/MacOS/soffice)
+- pnpm remnants need triage: `pnpm-lock.yaml` still tracked in git + `"pnpm"` section in package.json (repo standardized on npm — package-lock.json committed 2026-07-11); local `node_modules` contains pnpm `.pnpm` symlink store (crashes npm arborist in-place — consider a clean `npm ci` when the daemon can be restarted)
 
 ### Test fixtures
 
