@@ -45,13 +45,9 @@ May 2026
 When design, code, and documentation live in separate tools —
 
 - Diagrams go **stale** the moment architecture changes
-
 - Design handoffs **lose context** between Figma and the codebase
-
-- 14 teams maintain **14 disconnected** sets of documentation
-
+- N teams maintain **N disconnected** sets of documentation
 - PNGs in pull requests are **barely legible**
-
 - Links in docs point to **deleted FigJam files**
 
 > **The result:** teams spend more time maintaining artifacts than creating value.
@@ -81,11 +77,8 @@ When design, code, and documentation live in separate tools —
 Figma's own canvas-native AI, launched May 20 2026.
 
 - Generate **multiple design directions simultaneously**
-
 - **Bulk-edit** components, rename, convert to dark mode
-
 - Summarize **design critique comments** into an action plan
-
 - Works **inside your Figma file**, not in a separate tool
 
 **With our MCP server:** Agent refines designs on canvas → MCP reads the result into code → no manual handoff.
@@ -95,19 +88,12 @@ Figma's own canvas-native AI, launched May 20 2026.
 ## Before → After
 
 | Before | After |
-
 | --- | --- |
-
 | Diagram updated in code, FigJam forgotten | SHA-256 staleness detection — stale diagrams surfaced automatically |
-
 | Design handoff = screenshot in Notion | MCP reads Figma component tree directly into code |
-
 | Grep across 14 repos manually | Full-text search: 620+ files, < 100ms |
-
 | 22kb PNG — unreadable at full width | 185kb Figma REST export — retina quality |
-
 | Diagrams land on default board page | Pre-configured section destinations — no manual moves |
-
 | 14 markdown files with different URLs | One `curate_diagram` call updates all 14 simultaneously |
 
 ---
@@ -115,20 +101,11 @@ Figma's own canvas-native AI, launched May 20 2026.
 ## The Numbers
 
 | Metric | Result |
-
 | --- | --- |
-
 | PNG quality improvement | **8×** (22kb → 185kb) |
-
 | Files searchable | **620+** across 14+ repos |
-
 | Search latency | **< 100ms** |
-
 | Repos updated per curation call | **14 simultaneously** |
-
-| Figma Buzz ROI (3yr) | **311%** vs build-in-house |
-
-| Avoided build cost | **$316K–$480K** |
 
 ---
 
@@ -137,50 +114,20 @@ Figma's own canvas-native AI, launched May 20 2026.
 ### For your design team
 
 - Design tokens flow from Figma directly into code — no copy-paste
-
 - Bulk component updates happen in minutes, not days
-
 - Design critique → action plan without a facilitator
 
 ### For your developers
 
 - Diagrams are always current — staleness is detected, flagged, and tracked
-
 - Design context is readable from the CLI — no browser required
-
 - Cross-repo documentation search works like Google
 
 ### For your stakeholders
 
 - Stable FigJam URLs that never break
-
 - Presentation-quality PNGs in every pull request
-
 - One dashboard showing documentation health across all repos
-
----
-
-## Figma Buzz + Campaign Manager
-
-### (From RandD existing analysis)
-
-| What Campaign Manager Does | What Figma Buzz Does |
-
-| --- | --- |
-
-| Campaign planning & coordination | — |
-
-| Client approvals & collaboration | — |
-
-| — | Bulk asset generation (100s in minutes) |
-
-| — | CSV-driven brand variations |
-
-| Publishing automation | — |
-
-### 0% overlap. 100% synergistic
-
-### ROI: 311% over 3 years. $316K–$480K saved vs building in-house
 
 ---
 
@@ -189,13 +136,9 @@ Figma's own canvas-native AI, launched May 20 2026.
 Three tiers. Designed for scale.
 
 | Tier | Who | Format | Duration | Outcome |
-
 | --- | --- | --- | --- | --- |
-
 | **T1 Awareness** | All stakeholders | Webinar + demo | 30 min | Understands what's possible |
-
 | **T2 User** | Designers, PMs | Workshop + playbook | 1 day | Uses the framework independently |
-
 | **T3 Admin** | Devs, agents | Deep-dive | 2 days | Extends and maintains the framework |
 
 All sessions recorded. Playbook included. Quarterly updates as tools evolve.
@@ -207,23 +150,14 @@ All sessions recorded. Playbook included. Quarterly updates as tools evolve.
 Three packages. Choose by scope.
 
 | | **Starter** | **Standard** | **Premium** |
-
 | --- | --- | --- | --- |
-
 | Framework Setup | ✓ | ✓ | ✓ |
-
 | T1 Awareness | ✓ | ✓ | ✓ |
-
 | T2 User Training | — | ✓ | ✓ |
-
 | T3 Admin Training | — | — | ✓ |
-
 | Coaching Sessions | 1 | 3 | Unlimited (6mo) |
-
 | Material License | — | 1 year | 1 year |
-
 | Retainer | — | — | 6 months |
-
 | **Total** | **€3,500–6,000** | **€9,000–14,000** | **€18,000–28,000** |
 
 ### All prices indicative. Custom scoping available
@@ -235,21 +169,17 @@ Three packages. Choose by scope.
 **Week 1** — Framework Setup
 
 - Tool configuration: Figma MCP, Claude Code, DocuMind
-
 - Repository onboarding: CLAUDE.md authored per repo
-
 - Central FigJam board: sections created per team
 
 **Week 2** — T1 Awareness Webinar
 
 - Live 30-min session with all stakeholders
-
 - Q&A recorded; deck + playbook distributed
 
 **Week 3–4** — T2 User Workshop (optional)
 
 - 1-day hands-on for design + product teams
-
 - Real project applied during training
 
 **Ongoing** — Retainer (optional)
@@ -261,11 +191,8 @@ Three packages. Choose by scope.
 ## Why DVWDesign
 
 - **Built this framework for ourselves** — 14+ repos, 620+ docs, production since 2025
-
 - **Not a vendor pitch** — we run this stack daily; we know where it breaks
-
 - **Training from practitioners** — every example is from real work
-
 - **Framework-first** — we configure and extend; you own what we build for you
 
 ---

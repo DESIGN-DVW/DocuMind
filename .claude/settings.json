@@ -33,6 +33,17 @@
             "statusMessage": "Auto-fixing ESLint issues..."
           }
         ]
+      },
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"/Users/Shared/htdocs/github/DVWDesign/RootDispatcher/scripts/hooks/cost-ingest-hook.mjs\"",
+            "timeout": 15,
+            "statusMessage": "Recording cost..."
+          }
+        ]
       }
     ],
     "PreToolUse": [
@@ -45,6 +56,18 @@
             "command": "npx eslint . 2>/dev/null || true",
             "timeout": 120,
             "statusMessage": "Linting before commit..."
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"/Users/Shared/htdocs/github/DVWDesign/RootDispatcher/scripts/write-obsidian-session.mjs\" --stub --repo \"$CLAUDE_PROJECT_DIR\"",
+            "timeout": 15,
+            "statusMessage": "Logging session to Obsidian vault..."
           }
         ]
       }

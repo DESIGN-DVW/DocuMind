@@ -121,7 +121,7 @@ gh api repos/DVW-Design/GlossiaApp/collaborators | jq '.[].login'
 
 ```
 
-## Current known collaborators:
+## Current known collaborators
 
 - <guillaume@aigenconsulting.com>
 
@@ -161,7 +161,7 @@ This is the cleanest method and preserves all history, issues, and PRs.
 
 5. Click "I understand, transfer this repository"
 
-##### What This Does:
+##### What This Does
 
 - Moves repository to DESIGN-DVW organization
 
@@ -412,7 +412,7 @@ git remote set-url origin https://github.com/DVW-Design/GlossiaApp.git
 
 **Cause:** Git remote still points to old URL
 
-#### Solution:
+#### Solution
 
 ```bash
 
@@ -425,7 +425,7 @@ git fetch origin
 
 **Cause:** User not invited to DESIGN-DVW organization
 
-#### Solution:
+#### Solution
 
 1. Go to: <https://github.com/orgs/DESIGN-DVW/people>
 
@@ -466,30 +466,23 @@ After migration, verify:
 ## Migration Timeline
 
 | Step | Estimated Time | When to Do |
-
 | ------ | --------------- | ------------ |
-
 | Pre-migration checklist | 15 minutes | Before migration |
-
 | GitHub transfer | 2 minutes | During migration |
-
 | Update local remotes | 5 minutes | Immediately after |
-
 | Invite collaborators | 10 minutes | Immediately after |
-
 | Verification | 15 minutes | Immediately after |
-
 | **Total** | **~45 minutes** | **Single session** |
 
 ## Contact Information
 
-### For GitHub Transfer Issues:
+### For GitHub Transfer Issues
 
 - GitHub Support: <https://support.github.com>
 
 - GitHub Docs: <https://docs.github.com/en/repositories/creating-and-managing-repositories/transferring-a-repository>
 
-### For Access Issues:
+### For Access Issues
 
 - Organization owners of DESIGN-DVW
 

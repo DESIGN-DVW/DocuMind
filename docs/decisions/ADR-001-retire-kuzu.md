@@ -1,7 +1,9 @@
 ---
+
 date: "2026-05-29"
 status: "accepted"
 deciders: ["David Viard", "Claude @ DocuMind"]
+
 ---
 
 # ADR-001: Retire Kuzu Graph Database
@@ -19,14 +21,19 @@ After months of operation, two structural problems emerged:
 Root causes:
 
 - Startup backfill checked `COUNT(Document)` nodes, not edge count — empty graphs
+
   passed the check even with all nodes but no edges.
+
 - The sync (`syncToKuzu`) issued one Cypher MERGE query per edge — 184,928 sequential
+
   round-trips timed out every time, leaving the graph perpetually empty.
 
 **2. Ecosystem redundancy.** Two systems in the DVW stack already cover Kuzu's intended role:
 
 - **Graphify** — code + docs knowledge graph with community detection and traversal.
+
   Handles the "graph of relationships" use case natively.
+
 - **Obsidian Vaults** — personal knowledge and memory store, orthogonal to DocuMind.
 
 ## Decision
@@ -50,22 +57,31 @@ community detection, and multi-repo relationship analysis.
 ### Files deleted
 
 - `graph/kuzu-init.mjs`
+
 - `graph/kuzu-sync.mjs`
+
 - `graph/kuzu-queries.mjs`
+
 - `scripts/rebuild-kuzu-graph.mjs`
+
 - `scripts/smoke-test-kuzu-queries.mjs`
+
 - `scripts/kuzu-smoke-test.mjs`
+
 - `data/documind.kuzu/` (database directory)
 
 ### New file
 
 - `graph/sqlite-traversal.mjs` — `traverseGraph()` (single-hop) + `findRelated()`
+
   (recursive CTE, up to N hops) — same response contract as the Kuzu functions they replace.
 
 ### What does NOT change
 
 - `doc_relationships` table — the 184,928 edges remain; SQLite was always the source of truth.
+
 - `graph/relations.mjs` — relationship builder is unaffected.
+
 - All other DocuMind features (FTS5, keyword extraction, diagram registry, linting, etc.).
 
 ### Ecosystem role going forward

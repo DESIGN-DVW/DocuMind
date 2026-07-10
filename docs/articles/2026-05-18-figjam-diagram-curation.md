@@ -50,13 +50,9 @@ The fix wasn't a new tool. It was a registry.
 Every diagram in our ecosystem now produces three artifacts:
 
 | Artifact       | Format         | Purpose                                         |
-
 | -------------- | -------------- | ----------------------------------------------- |
-
 | Mermaid source | `.mmd`         | Version-controlled, diffable source of truth    |
-
 | PNG preview    | `.png`         | GitHub, PRs, inline markdown                    |
-
 | FigJam view    | Board node URL | Collaboration, presentation, stakeholder review |
 
 A fourth entry — a row in DocuMind's SQLite database — ties them together. It stores the source hash, the generated URL, the curated URL, and a staleness flag. When the `.mmd` changes, the staleness flag flips. When the PNG or FigJam view is regenerated, the hash updates.

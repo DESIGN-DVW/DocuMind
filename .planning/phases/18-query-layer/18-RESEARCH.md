@@ -25,12 +25,14 @@ via a new HTTP sub-call to the daemon (HTTP bridge pattern — avoids dual Datab
 passing `kuzuDb` through the MCP init path.
 
 <phase_requirements>
+
 ## Phase Requirements
 
 | ID | Description | Research Support |
-|----|-------------|-----------------|
+| ---- | ------------- | ----------------- |
 | QUERY-01 | `GET /graph` supports `direction=forward\|reverse\|both` parameter (Kuzu backend) | Kuzu Cypher arrow syntax: `->` forward, `<-` reverse, `-` both; `docId` param triggers per-node traversal; existing SQLite path removed |
 | QUERY-02 | `get_related` MCP tool uses Kuzu Cypher traversal (same response contract, reverse traversal enabled) | `graph/kuzu-queries.mjs` exports `kuzuFindRelated`; response shape matches current `findRelated` output: `{ doc_id, hops, total, related: [{doc_id, relationship_type, weight, depth, path, repository, filename, category}] }` |
+
 </phase_requirements>
 
 ## Standard Stack
@@ -38,7 +40,7 @@ passing `kuzuDb` through the MCP init path.
 ### Core
 
 | Library | Version | Purpose | Why Standard |
-|---------|---------|---------|--------------|
+| --------- | --------- | --------- | -------------- |
 | kuzu | ^0.11.3 | Graph database — Cypher queries | Already installed, schema frozen, kuzuDb singleton in server.mjs |
 | better-sqlite3 | existing | SQLite — documents lookup for node metadata | Stays as-is; no FTS replacement |
 | express | existing | REST endpoint host | No change |
@@ -55,6 +57,7 @@ package and the existing `kuzuDb` singleton.
 ### Recommended File Structure Change
 
 ```text
+
 graph/
 ├── relations.mjs        # KEEP — still used for buildRelationships; findRelated stays but is bypassed
 ├── kuzu-init.mjs        # UNCHANGED — frozen schema DDL
@@ -63,6 +66,7 @@ graph/
 daemon/
 ├── server.mjs           # MODIFIED — /graph handler uses kuzuTraverseGraph; passes kuzuDb
 └── mcp-server.mjs       # MODIFIED — get_related handler calls kuzuFindRelated
+
 ```
 
 ### Pattern 1: Kuzu Directional Traversal in Cypher
@@ -70,30 +74,42 @@ daemon/
 **What:** Kuzu's Cypher uses arrow direction to control traversal direction. No application-side
 filtering needed — the database does it.
 
-**Forward (outgoing from docId):**
+#### Forward (outgoing from docId)
+
 ```cypher
+
 MATCH (src:Document {id: $id})-[r]->(tgt:Document)
 RETURN tgt.id AS doc_id, label(r) AS relationship_type, tgt.path, tgt.repository,
        tgt.filename, tgt.category, 1 AS depth
+
 ```
 
-**Reverse (incoming to docId — documents that point TO this doc):**
+#### Reverse (incoming to docId — documents that point TO this doc)
+
 ```cypher
+
 MATCH (src:Document)-[r]->(tgt:Document {id: $id})
 RETURN src.id AS doc_id, label(r) AS relationship_type, src.path, src.repository,
        src.filename, src.category, 1 AS depth
+
 ```
 
-**Both (undirected — union of forward and reverse):**
+#### Both (undirected — union of forward and reverse)
+
 ```cypher
+
 MATCH (src:Document {id: $id})-[r]-(tgt:Document)
 RETURN tgt.id AS doc_id, label(r) AS relationship_type, tgt.path, tgt.repository,
        tgt.filename, tgt.category, 1 AS depth
+
 ```
 
 Note: The pipe `|` operator for multiple relationship types works when listing edge tables:
+
 ```cypher
+
 MATCH (a:Document)-[r:imports|related_to|parent_of]->(b:Document)
+
 ```
 
 For "all relationship types" across all 8 tables, omit the label or list all 8 via `|`.
@@ -103,10 +119,12 @@ For "all relationship types" across all 8 tables, omit the label or list all 8 v
 **What:** Kuzu supports `*min..max` syntax on relationship patterns for variable-length paths.
 
 ```cypher
+
 MATCH (src:Document {id: $id})-[r*1..3]->(tgt:Document)
 RETURN tgt.id AS doc_id, label(r) AS relationship_type,
        tgt.path, tgt.repository, tgt.filename, tgt.category,
        length(r) AS depth
+
 ```
 
 **Constraint:** Multi-hop traversal with mixed edge labels — when omitting label, Kuzu traverses
@@ -118,6 +136,7 @@ calls this.
 ### Pattern 3: Connection Lifecycle (established in Phases 16-17)
 
 ```javascript
+
 // Source: confirmed pattern from graph/kuzu-sync.mjs and daemon/server.mjs
 const conn = new kuzu.Connection(kuzuDb);
 try {
@@ -128,6 +147,7 @@ try {
 } finally {
   try { conn.close(); } catch (_) {}
 }
+
 ```
 
 Never hold multiple connections simultaneously. Open per-call, close in `finally`.
@@ -159,6 +179,7 @@ plain JS objects. Column names in the RETURN clause become property names. Close
 before closing the connection.
 
 ```javascript
+
 const result = await conn.query(
   'MATCH (d:Document {id: $id}) RETURN d.path AS path, d.repository AS repository',
   { id: 42 }
@@ -166,6 +187,7 @@ const result = await conn.query(
 const rows = await result.getAll();
 // rows = [{ path: '/some/file.md', repository: 'DocuMind' }]
 try { result.close(); } catch (_) {}
+
 ```
 
 ### Pattern 6: UNION for "both" direction (alternative approach)
@@ -174,6 +196,7 @@ If undirected `-` syntax does not return `label(r)` reliably for all edge types,
 UNION ALL:
 
 ```cypher
+
 MATCH (src:Document {id: $id})-[r]->(tgt:Document)
 RETURN tgt.id AS doc_id, label(r) AS relationship_type, tgt.path,
        tgt.repository, tgt.filename, tgt.category, 1 AS depth
@@ -181,6 +204,7 @@ UNION ALL
 MATCH (src:Document)-[r]->(tgt:Document {id: $id})
 RETURN src.id AS doc_id, label(r) AS relationship_type, src.path,
        src.repository, src.filename, src.category, 1 AS depth
+
 ```
 
 This guarantees the full edge label is returned regardless of direction matching behavior.
@@ -189,18 +213,25 @@ Use UNION (not UNION ALL) to deduplicate when a node is both source and target.
 ### Anti-Patterns to Avoid
 
 - **Opening kuzu.Database twice in one process:** Only one Database per process. The daemon
+
   owns its instance; don't import kuzuDb across process boundary.
+
 - **Holding a Connection across async awaits outside a single function:** Always open/close
+
   within one function call. Never store a Connection in module scope.
+
 - **Replacing findRelated in relations.mjs:** Keep it. `buildRelationships` in `relations.mjs`
+
   is still called by the orchestrator. The function just stops being the source for queries.
+
 - **Removing the SQLite /graph fallback without guarding:** Add a guard: if `docId` param is
+
   present, use Kuzu traversal; if not (list mode), keep the SQLite `document_graph` view query.
 
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
-|---------|-------------|-------------|-----|
+| --------- | ------------- | ------------- | ----- |
 | Directional traversal filtering | Application-side edge direction filter | Kuzu Cypher `->` / `<-` / `-` arrow syntax | Database handles it; no JS needed |
 | Multi-hop traversal | Recursive JS loop | Kuzu `*1..N` variable-length path | Database optimizes recursion |
 | Result deduplication | Manual Set-based dedup in JS | Kuzu `UNION` (not `UNION ALL`) | Dedup at query level |
@@ -278,16 +309,24 @@ RETURN clause first, cross-check against `findRelated` output, then implement.
 ### kuzuTraverseGraph (for /graph REST endpoint)
 
 ```javascript
+
 // graph/kuzu-queries.mjs
 import kuzu from 'kuzu';
 
 /**
+
  * Traverse document graph from a specific node using Kuzu backend.
+
  * @param {object} kuzuDb - kuzu.Database singleton
+
  * @param {number} docId - Source document ID
+
  * @param {'forward'|'reverse'|'both'} direction - Traversal direction
+
  * @param {string|null} relType - Optional: single relationship type filter
+
  * @returns {Promise<Array>} Array of { doc_id, relationship_type, path, repository, filename, category, depth }
+
  */
 export async function kuzuTraverseGraph(kuzuDb, docId, direction = 'forward', relType = null) {
   const conn = new kuzu.Connection(kuzuDb);
@@ -334,19 +373,29 @@ export async function kuzuTraverseGraph(kuzuDb, docId, direction = 'forward', re
     try { conn.close(); } catch (_) {}
   }
 }
+
 ```
 
 ### kuzuFindRelated (for get_related MCP tool)
 
 ```javascript
+
 /**
+
  * Multi-hop related document traversal using Kuzu.
+
  * Response contract matches findRelated() from graph/relations.mjs.
+
  * @param {object} kuzuDb - kuzu.Database (can be daemon's or mcp-server's own instance)
+
  * @param {number} docId - Source document ID
+
  * @param {number} maxDepth - Max hops (1-3)
+
  * @param {'forward'|'reverse'|'both'} direction - Traversal direction (default: forward)
+
  * @returns {Promise<Array>} Array matching findRelated output shape
+
  */
 export async function kuzuFindRelated(kuzuDb, docId, maxDepth = 2, direction = 'forward') {
   const conn = new kuzu.Connection(kuzuDb);
@@ -395,11 +444,13 @@ export async function kuzuFindRelated(kuzuDb, docId, maxDepth = 2, direction = '
     try { conn.close(); } catch (_) {}
   }
 }
+
 ```
 
 ### Updated /graph handler in server.mjs (docId-branching pattern)
 
 ```javascript
+
 // daemon/server.mjs — updated /graph handler
 app.get('/graph', async (req, res) => {
   const { repo, type, depth = 2, docId, direction = 'forward' } = req.query;
@@ -420,11 +471,13 @@ app.get('/graph', async (req, res) => {
   if (!hasTable.count) return res.json({ nodes: [], edges: [] });
   // ... existing SQLite query unchanged
 });
+
 ```
 
 ### Updated get_related handler in mcp-server.mjs
 
 ```javascript
+
 // daemon/mcp-server.mjs — updated get_related tool
 import kuzu from 'kuzu';
 import { KUZU_DIR } from '../config/env.mjs';
@@ -461,41 +514,58 @@ server.registerTool(
     }
   }
 );
+
 ```
 
 ## State of the Art
 
 | Old Approach | Current Approach | When Changed | Impact |
-|--------------|------------------|--------------|--------|
+| -------------- | ------------------ | -------------- | -------- |
 | SQLite recursive CTE in findRelated | Kuzu `*1..N` Cypher variable-length path | Phase 18 | Native graph engine; reverse traversal now possible |
 | `/graph` SQLite-only, no direction param | `/graph?docId=&direction=` with Kuzu backend | Phase 18 | New capability: reverse + both modes |
 | `get_related` forward-only | `get_related` with `direction` param | Phase 18 | Reverse traversal for "who references this doc?" |
 
-**Deprecated/outdated after Phase 18:**
+### Deprecated/outdated after Phase 18
+
 - `findRelated` from `graph/relations.mjs` for query purposes — file stays but the function is no
+
   longer called by MCP or REST. It can be removed in a future cleanup phase; don't remove now.
 
 ## Open Questions
 
 1. **label(r[0]) on variable-length paths in Kuzu 0.11.3**
+
    - What we know: Kuzu supports `*1..N` paths; `r` in this case is a LIST of edges
+
    - What's unclear: Whether `label(r[0])` is valid syntax in Kuzu 0.11.3 (confirmed in Neo4j,
+
      not verified in Kuzu)
+
    - Recommendation: Include a smoke test in the plan's verify step. If `label(r[0])` fails,
+
      fall back to a depth-1 single-hop query for relationship_type and a separate reachability
      query for depth — or restructure using UNION per depth level.
 
 2. **Kuzu UNION column ordering requirement**
+
    - What we know: UNION requires matching column count and types
+
    - What's unclear: Whether Kuzu 0.11.3 requires identical column names or just types
+
    - Recommendation: Always alias columns identically in both UNION branches. Already shown
+
      in examples above.
 
 3. **mcp-server.mjs Kuzu shutdown**
+
    - What we know: mcp-server.mjs runs in stdio mode; process exits when MCP client disconnects
+
    - What's unclear: Whether kuzu.Database needs explicit `.close()` on process exit in the
+
      MCP server process (vs. GC handling it)
+
    - Recommendation: Add a `process.on('exit', () => { try { kuzuDb.close(); } catch(_) {} })`
+
      handler in mcp-server.mjs. Non-fatal if omitted but good hygiene.
 
 ## Sources
@@ -503,34 +573,50 @@ server.registerTool(
 ### Primary (HIGH confidence)
 
 - Kuzu `graph/kuzu-sync.mjs` — confirmed `conn.query(cypher, params)` pattern, `result.getAll()`,
+
   `result.close()`, `conn.close()` lifecycle (Phase 17, commit 4d9817c)
+
 - Kuzu `graph/kuzu-init.mjs` — confirmed frozen schema: 8 REL TABLEs, Document node table,
+
   property types (Phase 16, commit e775d4a)
+
 - `daemon/mcp-server.mjs` — confirmed `get_related` tool registration, `findRelated` call,
+
   response shape `{ doc_id, hops, total, related: [...] }` (existing code, read directly)
+
 - `.planning/STATE.md` — confirmed all Phase 16-17 decisions, kuzuDb singleton ownership,
+
   Connection lifecycle, non-fatal sync pattern
 
 ### Secondary (MEDIUM confidence)
 
 - [Kuzu MATCH docs](https://kuzudb.github.io/docs/cypher/query-clauses/match/) — fetched directly;
+
   confirmed `->` forward, `<-` reverse, `-` undirected syntax; `|` multi-type; `*min..max` for
   variable-length paths
+
 - [Kuzu UNION docs](https://kuzudb.github.io/docs/cypher/query-clauses/union/) — fetched directly;
+
   confirmed UNION vs UNION ALL behavior
 
 ### Tertiary (LOW confidence)
 
 - `label(r[0])` on list-type paths in Kuzu 0.11.3 — inferred from Cypher semantics, not
+
   directly verified against Kuzu 0.11.3 docs. Flag for smoke test validation.
 
 ## Metadata
 
-**Confidence breakdown:**
+### Confidence breakdown
+
 - Standard stack: HIGH — all libraries already present; no new deps
+
 - Architecture: HIGH — file locations and module boundaries confirmed from source code
+
 - Kuzu Cypher direction syntax: HIGH — confirmed from official docs fetch
+
 - label(r[0]) on variable-length paths: LOW — needs smoke test to validate
+
 - MCP process isolation / separate Kuzu Database: HIGH — standard OS process model
 
 **Research date:** 2026-04-11

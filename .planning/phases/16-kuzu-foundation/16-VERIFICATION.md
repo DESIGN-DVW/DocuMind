@@ -1,9 +1,11 @@
 ---
+
 phase: 16-kuzu-foundation
 verified: 2026-04-08T02:10:00Z
 status: passed
 score: 11/11 must-haves verified
 re_verification: false
+
 ---
 
 # Phase 16: Kuzu Foundation Verification Report
@@ -105,15 +107,21 @@ No Phase 16 files (kuzu-smoke-test.mjs, kuzu-init.mjs, env.mjs KUZU_DIR addition
 None. All phase artifacts exist, are substantive, and are fully wired. The phase goal is achieved.
 
 - kuzu@0.11.3 is installed and ESM-compatible in Node.js 22 (smoke test passes live)
+
 - The frozen 8-table schema is defined idempotently in `graph/kuzu-init.mjs`
+
 - `KUZU_DIR` follows the established env pattern in `config/env.mjs`
+
 - `daemon/server.mjs` has a complete Kuzu lifecycle: open → schema init → liveness probe → shutdown close
+
 - All 7 commits from the phase are present and verifiable in git history
+
 - Phase 17 has a clean foundation: `kuzuDb` is exported from `server.mjs`, schema is frozen, import form is settled
 
 **Minor note:** `package.json` specifies `^0.11.3` (allows patches) rather than the exact `0.11.3` called for in Plan 01. The currently installed version IS 0.11.3 exactly, so there is no functional gap — this is a cosmetic deviation from the plan's wording. Not a blocker.
 
 ---
 
-_Verified: 2026-04-08T02:10:00Z_
-_Verifier: Claude (gsd-verifier)_
+### Verified: 2026-04-08T02:10:00Z
+
+### Verifier: Claude (gsd-verifier)

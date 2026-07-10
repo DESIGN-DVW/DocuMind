@@ -21,31 +21,18 @@ Welcome, Claude. You are the AI agent for **DocuMind** — the central documenta
 DocuMind is the documentation intelligence layer across all DVWDesign repos.
 
 | Tool | Purpose |
-
 | ---- | ------- |
-
 | `mcp__documind__search_docs` | Search documentation across all indexed repos |
-
 | `mcp__documind__lint_file` | Lint a markdown file for standards compliance |
-
 | `mcp__documind__fix_file` | Auto-fix linting issues in a markdown file |
-
 | `mcp__documind__get_related` | Find related documents to a given file |
-
 | `mcp__documind__get_similarities` | Find similar content across repos |
-
 | `mcp__documind__get_deviations` | Detect deviations from ecosystem conventions |
-
 | `mcp__documind__register_diagram` | Register a diagram in the central registry |
-
 | `mcp__documind__curate_diagram` | Relink a diagram after FigJam curation |
-
 | `mcp__documind__get_diagrams` | List all registered diagrams |
-
 | `mcp__documind__get_keywords` | Extract keywords from documentation |
-
 | `mcp__documind__trigger_scan` | Trigger a documentation scan |
-
 | `mcp__documind__index_file` | Index a file for search |
 
 **When to use:** Prefer DocuMind over manual grep/read for documentation queries. It understands context and relationships between docs.
@@ -55,14 +42,11 @@ DocuMind is the documentation intelligence layer across all DVWDesign repos.
 Two Figma MCP servers are available:
 
 | Server | Use Case |
-
 | ------ | -------- |
-
 | `figma-desktop` (port 3845) | Read DVW Design files (must be open in Figma Beta) |
-
 | `claude.ai Figma` (remote) | Generate diagrams, write designs, Code Connect |
 
-#### Key tools:
+#### Key tools
 
 - `get_design_context` — Read design from Figma (primary tool for design-to-code)
 
@@ -82,7 +66,7 @@ Two Figma MCP servers are available:
 
 3. FigJam view via `generate_diagram` MCP tool + `register_diagram`
 
-**Central FigJam board:** `https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/DVW-Design-Dev-Strategy`
+**Central FigJam board:** `https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/DVW-Design-Dev-Strategy?node-id=323-2295&t=4K6fWPvO42Go2cJC-4/DVW-Design-Dev-Strategy`
 
 ### Aikido Security MCP
 
@@ -97,19 +81,12 @@ Available for database operations, migrations, edge functions, and type generati
 The `@design-dvw/*` namespace on GitHub Packages (npm) provides shared utilities:
 
 | Package | Purpose |
-
 | ------- | ------- |
-
 | `@design-dvw/utils` | Common utilities (string, date, validation helpers) |
-
 | `@design-dvw/brand` | DVW Design System tokens (colors, typography, spacing) |
-
 | `@design-dvw/ui` | Shared UI components (React + Tailwind) |
-
 | `@design-dvw/supabase` | Supabase client config + shared types |
-
 | `@design-dvw/mongodb` | MongoDB connection helpers + shared schemas |
-
 | `@design-dvw/upload-core` | File upload utilities (chunked, resumable) |
 
 **Migration guide:** `/Users/Shared/htdocs/github/DVWDesign/RootDispatcher/docs/shared-packages/MIGRATION-GUIDE.md`
@@ -117,27 +94,16 @@ The `@design-dvw/*` namespace on GitHub Packages (npm) provides shared utilities
 ## Slash Commands
 
 | Command | Purpose |
-
 | ------- | ------- |
-
 | `/figma-analyze` | Analyze Figma components via MCP |
-
 | `/figma-extract-tokens` | Extract design tokens (CSS, TypeScript, Tailwind, MUI) |
-
 | `/figma-generate-code` | Generate component code from Figma designs |
-
 | `/figma-diagram` | Create FigJam diagram (triple output + registry) |
-
 | `/figma-curate` | Relink diagram after FigJam curation |
-
 | `/diagram-registry` | View/manage diagram registry |
-
 | `/security-scan` | Dependency audit + secret detection + code patterns |
-
 | `/deploy-check` | Pre-deployment validation (types, lint, tests, build) |
-
 | `/handover` | Generate handover doc + update memory file |
-
 | `/push` | Push changes to GitHub with proper checks |
 
 ## Dispatch & Proposal System

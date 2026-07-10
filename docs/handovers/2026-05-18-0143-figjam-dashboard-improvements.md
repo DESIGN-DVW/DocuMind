@@ -1,7 +1,9 @@
 # Handover — DocuMind — 2026-05-18 01:43
 
 > **Branch:** `docs/2026-04-11-md-vs-mdx-guide` (all session work is uncommitted on this branch)
+
 > **Last commit:** `b60f10b feat(graphify): add DocuMind knowledge graph — 354 nodes, 581 edges, 36 communities`
+
 > **Written by:** Claude Sonnet 4.6 at end of session
 
 ---
@@ -11,44 +13,73 @@
 All work this session is **uncommitted** (78 files modified/added). Changes live on branch `docs/2026-04-11-md-vs-mdx-guide`. A separate PR-ready commit is needed before merging.
 
 - **[Task A]** Updated FigJam MCP docs to reflect `generate_diagram` now accepting `fileKey`:
+
   - `docs/FIGMA-MCP-FEATURE-REQUEST.md` — RESOLVED banner added, Priority 1 marked done, feature request updated
+
   - `docs/USE-FIGMA-TOOL-GUIDE.md` — New `generate_diagram with fileKey` section added at end
+
   - `docs/DIAGRAM-WORKFLOW.md` — Step 4 updated: `fileKey` used at generation time, manual board move no longer required
+
   - `.claude/commands/figma-diagram.md` — Step 3 updated: `fileKey` param in `generate_diagram` call, references `docs/DIAGRAM-WORKFLOW.md` for the key value (avoids secret scanner false positive)
 
 - **[Task C]** Added shared nav bar to both dashboards:
+
   - `dashboard/obsolete.html` — nav with active state on "Obsolete Docs"
+
   - `dashboard/diagrams.html` — nav with active state on "Diagram Curation"
+
   - CSS inline in each file (no shared CSS file — both are standalone static HTML)
 
 - **[Task E]** Obsolescence dashboard filter improvements:
+
   - Added `.page-note` subtitle explaining same-named files are per-repo
+
   - Added `repo-hint` class: filename cell now shows `filename (repo)` inline
+
   - Added "Why" column with signal chips: `age` / `orphan` / `kwd` / `sim` (color-coded, with tooltips)
+
   - Added "Hide diagram files" checkbox (default: ON) — server-side filter via `hide_diagram_files` query param
+
   - Server route `GET /obsolete` in `daemon/server.mjs` updated to exclude `.mmd` paths when flag is set
 
 - **[Task D]** Enhanced Archive button — three-part change:
+
   - **Migration:** `scripts/db/migrations/008-action-log.sql` created (new file, untracked)
+
   - **Server startup:** `daemon/server.mjs` — `action_log` table created via `db.exec()` at startup (~line 62)
+
   - **Archive endpoint** (`POST /obsolete/:id/archive`) rewritten to:
+
     1. Join signal → document to get `file_path` + `repository`
+
     2. Write `action_log` row: `action='archive'`, `actor='user'`, `target_path`, `target_repo`, `performed_at`
+
     3. Append `relPath` to repo's `.gitignore` (non-fatal if repo root not found via `ctx.repoRoots`)
+
     4. Return `{ status, id, archived_at, gitignore_updated: true/false }`
+
   - **Dashboard** toast updated: shows "Archived — added to .gitignore" vs fallback message
+
   - **Scan exclusion** in `processors/obsolescence-detector.mjs`:
+
     - Archived document IDs are loaded before upsert — skipped so `archived_at` is preserved
+
     - Cleanup DELETE now adds `AND archived_at IS NULL` — archived signals never purged by re-scan
 
 - **[Task B]** Searched DocuMind for old Figma docs:
+
   - No active Anima recommendations found (the removal was already documented in `mcp-enhancements-2.md`)
+
   - Found `STRATEGIC-ANALYSIS-FIGMA-MCP-WORKFLOW.md` (Oct 2025, FigmailAPP) as outdated
+
   - **DISPATCH-063** created: `RootDispatcher/dispatches/pending/FigmailAPP/DISPATCH-063-figma-workflow-docs-update.md`
+
   - FigmaDSController had zero indexed results — nothing to update
 
 - **[Task F]** FigJam pending curation inventoried — 12 of 16 diagrams have no `curated_url`:
+
   - **DISPATCH-064** created: `RootDispatcher/dispatches/pending/DocuMind/DISPATCH-064-figjam-pending-curation-batch.md`
+
   - Batch deferred to future session (requires user to provide board node URLs)
 
 ---
@@ -57,14 +88,16 @@ All work this session is **uncommitted** (78 files modified/added). Changes live
 
 ### `generate_diagram` fileKey — confirmed resolved
 
-The Figma MCP `generate_diagram` tool now accepts `fileKey`. The central board key is embedded in the board URL `https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/`. The key is `L8gOzoOCb90ur2g9fDI9hm`. Diagrams now render into that file on the default page. Page-level targeting is still not supported — curation to the correct section remains a manual step.
+The Figma MCP `generate_diagram` tool now accepts `fileKey`. The central board key is embedded in the board URL `https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/DVW-Design-Dev-Strategy?node-id=323-2295&t=4K6fWPvO42Go2cJC-4/`. The key is `L8gOzoOCb90ur2g9fDI9hm`. Diagrams now render into that file on the default page. Page-level targeting is still not supported — curation to the correct section remains a manual step.
 
 ### Diagram curation status (as of 2026-05-18)
 
 16 diagrams registered total:
 
 - **4 curated** (RootDispatcher): Agent Organization, Repo-Specific Agents, shared-packages Structure, DISPATCH-005 Workflow
+
 - **3 on board, wrong/shared node-id** (RootDispatcher): Ecosystem diagrams 18/19/20 all share `node-id=81-333` — they need to be separated and individually curated
+
 - **9 old redirect URLs** across any2figma (5), Figma-Plug-ins (2), LibraryAssetManager (1), RootDispatcher (1)
 
 ### `ctx.repoRoots` is the source for repo paths in server.mjs
@@ -76,6 +109,7 @@ The `.gitignore` write in the enhanced archive endpoint uses `ctx.repoRoots.find
 Archived signals are protected by two guards in `processors/obsolescence-detector.mjs`:
 
 1. Pre-upsert: archived doc IDs fetched → filtered out of `toUpsertFiltered`
+
 2. Cleanup DELETE: `AND archived_at IS NULL` prevents orphan cleanup from wiping archived rows
 
 ### `action_log` table applied at startup
@@ -105,30 +139,47 @@ DocuMind search returns Anima hits in `client/node_modules/@mui/**/CHANGELOG.md`
 ### All session changes — uncommitted
 
 - **Status:** All 78 modified files are unstaged/uncommitted on `docs/2026-04-11-md-vs-mdx-guide`
+
 - **Branch:** `docs/2026-04-11-md-vs-mdx-guide`
+
 - **Key files changed this session:**
+
   - `docs/FIGMA-MCP-FEATURE-REQUEST.md`
+
   - `docs/USE-FIGMA-TOOL-GUIDE.md`
+
   - `docs/DIAGRAM-WORKFLOW.md`
+
   - `.claude/commands/figma-diagram.md`
+
   - `dashboard/obsolete.html`
+
   - `dashboard/diagrams.html`
+
   - `daemon/server.mjs`
+
   - `processors/obsolescence-detector.mjs`
+
   - `scripts/db/migrations/008-action-log.sql` (untracked new file)
+
 - **What's done:** All code changes complete
+
 - **What remains:** Stage and commit the session changes; optionally open a PR to `master`
 
 ### DISPATCH-063 — FigmailAPP Figma workflow docs
 
 - **Status:** Dispatch written, not yet applied
+
 - **Location:** `RootDispatcher/dispatches/pending/FigmailAPP/DISPATCH-063-figma-workflow-docs-update.md`
+
 - **What remains:** A FigmailAPP session must pick this up and update 3 docs
 
 ### DISPATCH-064 — FigJam batch curation
 
 - **Status:** Dispatch written, not yet started
+
 - **Location:** `RootDispatcher/dispatches/pending/DocuMind/DISPATCH-064-figjam-pending-curation-batch.md`
+
 - **What remains:** User must open standalone FigJam URLs, move content to central board, provide node URLs, then run `/figma-curate` for each
 
 ---
@@ -146,24 +197,34 @@ DocuMind search returns Anima hits in `client/node_modules/@mui/**/CHANGELOG.md`
 ## State Verification
 
 ```bash
+
 # Confirm branch
+
 git branch --show-current
+
 # Expected: docs/2026-04-11-md-vs-mdx-guide
 
 # Confirm session changes are present and uncommitted
+
 git status --short | grep -E "daemon/server.mjs|dashboard/obsolete|dashboard/diagrams|processors/obsolescence"
+
 # Expected: M  daemon/server.mjs, M dashboard/obsolete.html, etc.
 
 # Confirm migration file exists
+
 ls scripts/db/migrations/008-action-log.sql
+
 # Expected: file present
 
 # Confirm dispatch files were written
+
 ls /Users/Shared/htdocs/github/DVWDesign/RootDispatcher/dispatches/pending/FigmailAPP/DISPATCH-063*
 ls /Users/Shared/htdocs/github/DVWDesign/RootDispatcher/dispatches/pending/DocuMind/DISPATCH-064*
 
 # Check DocuMind daemon (if running)
+
 curl -s http://localhost:9000/health | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(d.status, d.version)"
+
 ```
 
 ---
@@ -173,7 +234,9 @@ curl -s http://localhost:9000/health | node -e "const d=JSON.parse(require('fs')
 ### Priority 1 — Commit the session changes
 
 ```bash
+
 # Stage only the files changed this session (not the mass of pre-existing unstaged .planning/ changes)
+
 git add \
   docs/FIGMA-MCP-FEATURE-REQUEST.md \
   docs/USE-FIGMA-TOOL-GUIDE.md \
@@ -187,24 +250,33 @@ git add \
   docs/handovers/
 
 git commit -m "feat(figjam+dashboard): fileKey docs, nav bar, archive enhancements, obsolescence filters"
+
 ```
 
 ### Priority 2 — Restart DocuMind daemon to apply action_log migration
 
 ```bash
+
 pm2 restart dvw-documind
+
 # Or from DocuMind dir:
+
 npm run daemon:start
+
 ```
 
 Verify: `curl http://localhost:9000/health` returns `200`. The `action_log` table is created at startup automatically.
 
 ### Priority 3 — Run DISPATCH-064 (FigJam curation batch)
 
-1. Open central board: `https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/`
+1. Open central board: `https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/DVW-Design-Dev-Strategy?node-id=323-2295&t=4K6fWPvO42Go2cJC-4/`
+
 2. Check if Ecosystem diagrams (18/19/20) are visible — they should be at `node-id=81-333` area
+
 3. Move each to its correct section; copy individual `?node-id=XXX` URLs
+
 4. Run `/figma-curate` with each name + curated URL
+
 5. For the 9 old redirect URLs: open each link in browser first (creates the file), or regenerate with `/figma-diagram` + `fileKey` (preferred for any2figma diagrams which have no timestamps)
 
 ### Priority 4 — Apply DISPATCH-063 in FigmailAPP
@@ -231,7 +303,7 @@ The graph stack note: Kuzu is referenced in `server.mjs` imports but the user co
 
 | Item | Value |
 | ------ | ------- |
-| Central FigJam board | `https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/DVW-Design-Dev-Strategy` |
+| Central FigJam board | `https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/DVW-Design-Dev-Strategy?node-id=323-2295&t=4K6fWPvO42Go2cJC-4/DVW-Design-Dev-Strategy` |
 | Central board file key | `L8gOzoOCb90ur2g9fDI9hm` |
 | DocuMind daemon port | `9000` |
 | action_log migration | `scripts/db/migrations/008-action-log.sql` |

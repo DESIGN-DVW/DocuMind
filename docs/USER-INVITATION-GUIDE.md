@@ -21,11 +21,8 @@
 ### Current Situation
 
 | Organization   | Has Access? | Repositories                                     |
-
 | -------------- | ----------- | ------------------------------------------------ |
-
 | **DVW-Design** | ✅ YES       | GlossiaApp only                                  |
-
 | **DESIGN-DVW** | ❌ NO        | All other repos (Figma-Plug-ins, DocuMind, etc.) |
 
 ### The Problem
@@ -46,7 +43,6 @@ When you asked why <guillaume@aigenconsulting.com> couldn't access:
 1. **Go to Organization People page:**
 
    - Visit: <https://github.com/orgs/DESIGN-DVW/people>
-
    - Must be logged in as organization owner/admin
 
 2. **Click "Invite member"**
@@ -64,7 +60,6 @@ When you asked why <guillaume@aigenconsulting.com> couldn't access:
 4. **Select role:**
 
    - **Member** (Recommended) - Can access repositories based on team permissions
-
    - **Owner** - Full admin access to organization
 
    **Recommended:** Start with "Member" role
@@ -74,15 +69,12 @@ When you asked why <guillaume@aigenconsulting.com> couldn't access:
 6. **User receives email:**
 
    - Subject: "You've been invited to join the DESIGN-DVW organization"
-
    - Contains link to accept invitation
 
 7. **User accepts invitation:**
 
    - Clicks link in email
-
    - Logs into GitHub
-
    - Clicks "Join DESIGN-DVW"
 
 #### After Invitation Accepted
@@ -90,26 +82,19 @@ When you asked why <guillaume@aigenconsulting.com> couldn't access:
 Grant repository access:
 
 1. Go to: <https://github.com/DESIGN-DVW/Figma-Plug-ins/settings/access>
-
 2. Click "Add people or teams"
-
 3. Search for: <guillaume@aigenconsulting.com>
-
 4. Select permission level:
 
    - **Read** - Can view and clone
-
    - **Triage** - Can manage issues and PRs
-
    - **Write** - Can push to repository
-
    - **Maintain** - Can manage repository settings
-
    - **Admin** - Full access
 
 5. Click "Add <guillaume@aigenconsulting.com> to this repository"
 
-##### Repeat for each repository they need access to.
+##### Repeat for each repository they need access to
 
 ### Method 2: GitHub CLI (Fastest for Multiple Repos)
 
@@ -183,16 +168,12 @@ gh api \
 
 ```
 
-## Permission levels:
+## Permission levels
 
 - `pull` = Read access
-
 - `push` = Write access
-
 - `admin` = Admin access
-
 - `maintain` = Maintain access
-
 - `triage` = Triage access
 
 ## Grant Access to ALL Repositories (Bulk)
@@ -294,35 +275,24 @@ If you plan to invite multiple users with similar permissions:
 ### For External Consultants (like <guillaume@aigenconsulting.com>)
 
 | Repository        | Recommended Permission       | Reason                                       |
-
 | ----------------- | ---------------------------- | -------------------------------------------- |
-
 | Figma-Plug-ins    | **Read**                     | Can view BUSINESS-ANALYSIS.md and other docs |
-
 | DocuMind          | **Read**                     | Can view documentation                       |
-
 | FigmailAPP        | **Write** (if working on it) | Can contribute code                          |
-
 | FigmaDSController | **Write** (if working on it) | Can contribute code                          |
-
 | All Others        | **Read** or None             | Access based on need                         |
 
 ### For Full-Time Team Members
 
 | Repository       | Recommended Permission | Reason                         |
-
 | ---------------- | ---------------------- | ------------------------------ |
-
 | All Repositories | **Write**              | Can contribute to all projects |
-
 | Critical Repos   | **Maintain**           | Can manage issues and PRs      |
 
 ### For Organization Admins
 
 | Repository       | Recommended Permission | Reason       |
-
 | ---------------- | ---------------------- | ------------ |
-
 | All Repositories | **Admin**              | Full control |
 
 ## Verification
@@ -389,7 +359,7 @@ Or visit in browser:
 
 ### Issue: Invitation Not Received
 
-#### Solutions:
+#### Solutions
 
 1. Check spam/junk folder
 
@@ -409,7 +379,7 @@ Or visit in browser:
 
 **Cause:** Repository is private and user doesn't have access
 
-#### Solution:
+#### Solution
 
 1. Verify user accepted organization invitation
 
@@ -451,23 +421,16 @@ Once GlossiaApp is migrated from DVW-Design to DESIGN-DVW:
 ### Immediate Actions
 
 - [ ] Invite <guillaume@aigenconsulting.com> to DESIGN-DVW organization
-
 - [ ] Wait for them to accept invitation
-
 - [ ] Grant access to Figma-Plug-ins repository (minimum)
-
 - [ ] Grant access to other repositories as needed
-
 - [ ] Verify they can access BUSINESS-ANALYSIS.md file
 
 ### After GlossiaApp Migration
 
 - [ ] Migrate GlossiaApp from DVW-Design to DESIGN-DVW
-
 - [ ] Verify <guillaume@aigenconsulting.com> still has access to GlossiaApp
-
 - [ ] Remove their access from DVW-Design organization (if unused)
-
 - [ ] Confirm all repositories are in one organization
 
 ## Quick Reference
@@ -475,29 +438,21 @@ Once GlossiaApp is migrated from DVW-Design to DESIGN-DVW:
 ### Organization URLs
 
 - **Organization page:** <https://github.com/DESIGN-DVW>
-
 - **People management:** <https://github.com/orgs/DESIGN-DVW/people>
-
 - **Team management:** <https://github.com/orgs/DESIGN-DVW/teams>
-
 - **Settings:** <https://github.com/organizations/DESIGN-DVW/settings>
 
 ### Key Repositories
 
 - **Figma-Plug-ins:** <https://github.com/DESIGN-DVW/Figma-Plug-ins>
-
 - **DocuMind:** <https://github.com/DESIGN-DVW/DocuMind>
-
 - **FigmailAPP:** <https://github.com/DESIGN-DVW/FigmailAPP>
-
 - **GlossiaApp (after migration):** <https://github.com/DESIGN-DVW/GlossiaApp>
 
 ### User Email
 
 - **Email:** <guillaume@aigenconsulting.com>
-
 - **Current Access:** DVW-Design organization only
-
 - **Needed Access:** DESIGN-DVW organization
 
 ## Summary
@@ -510,14 +465,11 @@ Once GlossiaApp is migrated from DVW-Design to DESIGN-DVW:
 
 **Time Required:** 5 minutes to invite, 2 minutes for them to accept
 
-### Next Steps:
+### Next Steps
 
 1. Use Method 1 (web interface) to invite
-
 2. Wait for acceptance email
-
 3. Grant repository-specific access
-
 4. Verify they can access files
 
 **Version:** 1.0.0

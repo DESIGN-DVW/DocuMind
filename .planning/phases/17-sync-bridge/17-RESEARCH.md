@@ -25,13 +25,15 @@ Cypher MERGE statement handles upserts, and the data source is the already-popul
 Extend `/health` to query Kuzu edge count.
 
 <phase_requirements>
+
 ## Phase Requirements
 
 | ID | Description | Research Support |
-|----|-------------|-----------------|
+| ---- | ------------- | ----------------- |
 | SYNC-01 | After each relationship rebuild, doc_relationships sync automatically from SQLite to Kuzu | Wire `syncToKuzu(db, kuzuDb)` call into `runDeepScan` in orchestrator after `buildRelationships` completes |
 | SYNC-02 | Operator can trigger full Kuzu graph rebuild via `npm run graph:rebuild` | New `scripts/rebuild-kuzu-graph.mjs` standalone script; add `graph:rebuild` to package.json scripts |
 | SYNC-03 | `/health` endpoint reports Kuzu edge count and sync status vs SQLite | Query both `SELECT COUNT(*) FROM doc_relationships` (SQLite) and `MATCH ()-[r]->() RETURN COUNT(r)` (Kuzu); diff determines in-sync vs drift detected |
+
 </phase_requirements>
 
 ## Standard Stack
@@ -39,27 +41,29 @@ Extend `/health` to query Kuzu edge count.
 ### Core
 
 | Library | Version | Purpose | Why Standard |
-|---------|---------|---------|--------------|
+| --------- | --------- | --------- | -------------- |
 | kuzu | 0.11.3 | Graph write target — Cypher MERGE for upsert | Already installed; confirmed ESM default import |
 | better-sqlite3 | ^12.6.2 | Source read — SELECT from doc_relationships | Already used throughout; synchronous reads fine here |
 
 ### Supporting
 
 | Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
+| --------- | --------- | --------- | ------------- |
 | (none new) | — | No new dependencies required | All functionality uses kuzu + better-sqlite3 already present |
 
 ### Alternatives Considered
 
 | Instead of | Could Use | Tradeoff |
-|------------|-----------|----------|
+| ------------ | ----------- | ---------- |
 | Kuzu MERGE upsert | DELETE all + CREATE fresh | MERGE is safer (preserves future manual edges); full drop+create used only in `graph:rebuild` |
 | Passing kuzuDb through runScan options | Importing kuzuDb directly in orchestrator | Parameter passing is cleaner (testable, no circular import risk) — orchestrator should not import from server.mjs |
 
-**Installation:**
+#### Installation
 
 ```bash
+
 # No new packages needed
+
 ```
 
 ## Architecture Patterns
@@ -67,12 +71,14 @@ Extend `/health` to query Kuzu edge count.
 ### Recommended Project Structure
 
 ```text
+
 graph/
 ├── kuzu-init.mjs        # Phase 16 — schema DDL (frozen, no changes)
 ├── kuzu-sync.mjs        # Phase 17 — NEW: sync + rebuild functions
 └── relations.mjs        # SQLite relationship builder (no changes)
 scripts/
 └── rebuild-kuzu-graph.mjs   # Phase 17 — NEW: standalone graph:rebuild script
+
 ```
 
 ### Pattern 1: Sync Module (kuzu-sync.mjs)
@@ -83,21 +89,30 @@ scripts/
 **When to use:** `syncToKuzu` after every `buildRelationships` call; `rebuildKuzuGraph` for the
 `graph:rebuild` script and fresh-start backfill.
 
-**Example:**
+#### Example
 
 ```javascript
+
 // graph/kuzu-sync.mjs
 
 import kuzu from 'kuzu';
 
 /**
+
  * Mirror all doc_relationships rows from SQLite into Kuzu.
+
  * Uses MERGE for nodes (idempotent) then CREATE for edges (after clearing existing).
+
  * Safe to call repeatedly — clears Kuzu edges before re-inserting.
+
  *
+
  * @param {import('better-sqlite3').Database} db
+
  * @param {object} kuzuDb - kuzu.Database instance from server.mjs
+
  * @returns {Promise<{nodeCount: number, edgeCount: number}>}
+
  */
 export async function syncToKuzu(db, kuzuDb) {
   const conn = new kuzu.Connection(kuzuDb);
@@ -138,8 +153,11 @@ export async function syncToKuzu(db, kuzuDb) {
 }
 
 /**
+
  * Full drop + repopulate. Deletes all Kuzu nodes/edges, then re-creates from SQLite.
+
  * Used by graph:rebuild script and empty-Kuzu startup backfill.
+
  */
 export async function rebuildKuzuGraph(db, kuzuDb) {
   const conn = new kuzu.Connection(kuzuDb);
@@ -156,6 +174,7 @@ export async function rebuildKuzuGraph(db, kuzuDb) {
   // Re-populate with sync
   return syncToKuzu(db, kuzuDb);
 }
+
 ```
 
 ### Pattern 2: Orchestrator Integration (SYNC-01)
@@ -165,9 +184,10 @@ export async function rebuildKuzuGraph(db, kuzuDb) {
 
 **When to use:** Only in `runDeepScan` — the only scan mode that calls `buildRelationships`.
 
-**Example:**
+#### Example
 
 ```javascript
+
 // orchestrator.mjs — runDeepScan addition (step 3 + new step 3b)
 
 // 3. Graph rebuild (SQLite)
@@ -180,17 +200,20 @@ if (kuzuDb) {
   kuzuEdgeCount = syncResult.edgeCount;
   console.log(`[orchestrator] Kuzu sync complete: ${kuzuEdgeCount} edges mirrored`);
 }
+
 ```
 
-**Signature change:**
+#### Signature change
 
 ```javascript
+
 // BEFORE (Phase 16)
 export async function runScan(db, ctx, options = {})
 
 // AFTER (Phase 17)
 export async function runScan(db, ctx, options = {})
 // options gains: kuzuDb (optional, defaults undefined — backwards compatible)
+
 ```
 
 Callers in `scheduler.mjs` and `server.mjs` must pass `kuzuDb` to daily/weekly scan calls.
@@ -202,9 +225,10 @@ nodes. If empty, trigger `rebuildKuzuGraph` before the server starts accepting r
 
 **When to use:** Only when fresh Kuzu dir detected.
 
-**Example:**
+#### Example
 
 ```javascript
+
 // daemon/server.mjs — after initKuzuSchema call
 
 const kuzuDb = new kuzu.Database(KUZU_DIR);
@@ -228,6 +252,7 @@ if (kuzuNodeCount === 0) {
   const result = await rebuildKuzuGraph(db, kuzuDb);
   console.log(`[Kuzu] Backfill complete: ${result.nodeCount} nodes, ${result.edgeCount} edges`);
 }
+
 ```
 
 ### Pattern 4: Health Endpoint Sync Status (SYNC-03)
@@ -235,9 +260,10 @@ if (kuzuNodeCount === 0) {
 **What:** Extend the existing `/health` async handler to compare SQLite edge count vs Kuzu edge
 count and add `sync_status` field.
 
-**Example:**
+#### Example
 
 ```javascript
+
 // daemon/server.mjs — /health handler addition
 
 // Count SQLite edges
@@ -275,6 +301,7 @@ res.json({
     sync_status: syncStatus,
   },
 });
+
 ```
 
 ### Pattern 5: Standalone Rebuild Script (SYNC-02)
@@ -285,9 +312,10 @@ its own connections, calls `rebuildKuzuGraph`, exits.
 **Critical:** This script runs standalone (outside the daemon). It must open its own Database
 instances and call `process.exit(0)` after close (kuzu GC segfault avoidance per Plan 16-01).
 
-**Example:**
+#### Example
 
 ```javascript
+
 // scripts/rebuild-kuzu-graph.mjs
 import kuzu from 'kuzu';
 import Database from 'better-sqlite3';
@@ -305,6 +333,7 @@ console.log(`[graph:rebuild] Done: ${result.nodeCount} nodes, ${result.edgeCount
 try { kuzuDb.close(); } catch (_) {}
 db.close();
 process.exit(0);  // Required: prevents GC segfault (Plan 16-01)
+
 ```
 
 ### Pattern 6: Kuzu Cypher Edge Insertion by Type
@@ -312,9 +341,10 @@ process.exit(0);  // Required: prevents GC segfault (Plan 16-01)
 **What:** Each of the 8 edge types has different optional properties. The edge inserter must
 dispatch on `relationship_type` and parse `metadata` JSON for property values.
 
-**Example:**
+#### Example
 
 ```javascript
+
 // Property mapping per edge type (from kuzu-init.mjs frozen schema)
 const REL_TYPES = [
   'imports', 'parent_of', 'variant_of', 'supersedes',
@@ -365,25 +395,33 @@ async function insertEdge(conn, edge) {
       );
   }
 }
+
 ```
 
 ### Anti-Patterns to Avoid
 
 - **Sharing a single Connection across sync and health concurrently:** Kuzu is an embedded
+
   single-writer database. Each logical operation should open its own Connection, complete its
   queries, and close. Connections are cheap. Never pass a long-lived Connection between modules.
+
 - **Opening a second kuzu.Database in the daemon:** Only one `kuzu.Database` instance per process.
+
   The `kuzuDb` singleton is owned by `server.mjs`. All other modules receive it as a parameter.
+
 - **Calling `process.exit()` in daemon-context modules:** Only standalone scripts need it.
+
   `kuzu-sync.mjs` must never call `process.exit()`.
+
 - **Counting edges via a single `MATCH ()-[r]->() RETURN COUNT(r)`:** Kuzu requires specifying
+
   the relationship table name in traversal queries. Cross-rel-table wildcard `[r]` may not be
   supported. Count each of the 8 tables separately and sum.
 
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
-|---------|-------------|-------------|-----|
+| --------- | ------------- | ------------- | ----- |
 | Node upsert | Custom SELECT+INSERT/UPDATE logic | Kuzu Cypher MERGE | MERGE is the Kuzu standard for conditional create; single statement |
 | Edge deduplication | Track inserted edge IDs | Drop-and-recreate pattern (delete edges, re-insert from SQLite) | SQLite is the source of truth; re-sync is idempotent by design |
 | Batch write transactions | Custom batching/chunking logic | One Connection per sync call, serial awaits | Kuzu embedded: no network overhead; serial awaits are fast enough for ~10K edges |
@@ -435,7 +473,9 @@ Alternatively: expose `POST /graph/rebuild` as a daemon endpoint that delegates 
 `rebuildKuzuGraph(db, kuzuDb)` — this ensures only one Database instance is ever open.
 
 **Recommendation:** Phase 17 should implement BOTH:
+
 1. `npm run graph:rebuild` (standalone, daemon must be stopped)
+
 2. `POST /graph/rebuild` endpoint (daemon-internal, safer)
 
 The npm script satisfies SYNC-02 literally. The endpoint provides operational safety.
@@ -474,6 +514,7 @@ Verified patterns from official sources:
 ### Kuzu MERGE Node Upsert
 
 ```javascript
+
 // Source: kuzu@0.11.3 confirmed working in Phase 16 smoke test
 // MERGE creates node if it doesn't exist; SET updates properties
 await conn.query(
@@ -482,48 +523,58 @@ await conn.query(
   { id: doc.id, path: doc.path, repo: doc.repository,
     filename: doc.filename ?? '', category: doc.category ?? '' }
 );
+
 ```
 
 ### Kuzu Edge Count Per Table
 
 ```javascript
+
 // Count edges in a single rel table (wildcard across tables not guaranteed to work)
 const res = await conn.query(`MATCH ()-[e:imports]->() RETURN COUNT(e) AS cnt`);
 const rows = await res.getAll();
 const count = rows[0]?.cnt ?? 0;
 try { res.close(); } catch (_) {}
+
 ```
 
 ### Kuzu Delete All Edges of a Type
 
 ```javascript
+
 // Drop all edges before re-inserting (idempotent sync pattern)
 await conn.query(`MATCH ()-[r:imports]->() DELETE r`);
+
 ```
 
 ### Kuzu Delete All Document Nodes (full rebuild)
 
 ```javascript
+
 // Must delete all edges first (they reference nodes)
 for (const rel of REL_TYPES) {
   await conn.query(`MATCH ()-[r:${rel}]->() DELETE r`);
 }
 await conn.query(`MATCH (d:Document) DELETE d`);
+
 ```
 
 ### SQLite doc_relationships Query (source read)
 
 ```javascript
+
 // Source: graph/relations.mjs — confirmed column names
 const edges = db.prepare(
   `SELECT source_doc_id, target_doc_id, relationship_type, weight, metadata
    FROM doc_relationships`
 ).all();
+
 ```
 
 ### Connection Lifecycle Pattern (established in Phase 16)
 
 ```javascript
+
 // Source: scripts/kuzu-smoke-test.mjs + kuzu-init.mjs
 const conn = new kuzu.Connection(kuzuDb);
 try {
@@ -531,39 +582,53 @@ try {
 } finally {
   try { conn.close(); } catch (_) {}
 }
+
 ```
 
 ## State of the Art
 
 | Old Approach | Current Approach | When Changed | Impact |
-|--------------|------------------|--------------|--------|
+| -------------- | ------------------ | -------------- | -------- |
 | Kuzu empty (Phase 16) | Kuzu mirrors SQLite relationships (Phase 17) | This phase | Graph queries become possible |
 | `/health` kuzu: status+path only | `/health` kuzu: status+path+edge_count+sync_status | This phase | Operators can verify sync parity |
 | `initScheduler(db, ROOT, ctx)` | `initScheduler(db, ROOT, ctx, kuzuDb)` | This phase | Weekly deep scan triggers Kuzu sync |
 
-**Deprecated/outdated:**
+### Deprecated/outdated
 
 - Nothing deprecated; this phase adds new functionality without removing existing patterns.
 
 ## Open Questions
 
 1. **Kuzu MATCH+CREATE edge performance at scale**
+
    - What we know: Phase 16 smoke test confirmed basic CREATE works; no performance benchmark exists
+
    - What's unclear: At 10K+ edges, does individual-row MATCH+CREATE in a loop become a bottleneck?
+
    - Recommendation: Implement single-row loop first (simplest, correct). If performance is a
+
      problem in Phase 18/19 query testing, evaluate Kuzu bulk load via CSV or batched transactions.
 
 2. **Kuzu `result.getAll()` return type for COUNT queries**
+
    - What we know: Smoke test used `result.getAll()` and accessed `rows[0]`
+
    - What's unclear: COUNT query returns `[{ cnt: N }]` or `[{ 'COUNT(e)': N }]`? Column alias
+
      matters for the health check count logic.
+
    - Recommendation: Use an explicit alias `COUNT(e) AS cnt` and access `rows[0]?.cnt`. Verify
+
      in the first task of this phase.
 
 3. **Single-process lock safety for `npm run graph:rebuild`**
+
    - What we know: Kuzu embedded is single-writer per directory
+
    - What's unclear: Does kuzu@0.11.3 use a lockfile we can detect, or does it throw an error?
+
    - Recommendation: Document in script README that daemon must be stopped. Optionally implement
+
      `POST /graph/rebuild` daemon endpoint as the safer alternative.
 
 ## Sources
@@ -571,33 +636,46 @@ try {
 ### Primary (HIGH confidence)
 
 - Phase 16 SUMMARY files (16-01, 16-02, 16-03) — confirmed ESM import, schema, shutdown order,
+
   kuzuDb export, deferred scheduler wiring
+
 - `graph/kuzu-init.mjs` — frozen 8-table schema (Document node + 8 typed edge tables with properties)
+
 - `graph/relations.mjs` — confirmed `doc_relationships` columns: source_doc_id, target_doc_id,
+
   relationship_type, weight, metadata
+
 - `daemon/server.mjs` — confirmed kuzuDb export, /health handler structure, initScheduler call
+
 - `orchestrator.mjs` — confirmed runDeepScan step order (buildRelationships at step 3)
+
 - `daemon/scheduler.mjs` — confirmed weekly CRON calls `runScan(db, ctx, { mode: 'deep' })`
+
 - `package.json` — confirmed no `graph:rebuild` script exists yet
 
 ### Secondary (MEDIUM confidence)
 
 - kuzu@0.11.3 Cypher syntax for MERGE, DELETE, MATCH+CREATE: based on standard Cypher patterns
+
   confirmed working in kuzu smoke test environment; MERGE specifically is standard Cypher supported
   by Kuzu per their documentation patterns
 
 ### Tertiary (LOW confidence)
 
 - COUNT query alias return format `{ cnt: N }` — inferred from standard Cypher behavior; needs
+
   empirical verification in Phase 17 Task 1
 
 ## Metadata
 
-**Confidence breakdown:**
+### Confidence breakdown
 
 - Standard stack: HIGH — no new dependencies; all from Phase 16 confirmed working
+
 - Architecture: HIGH — all integration points confirmed from reading actual source files
+
 - Pitfalls: HIGH — derived from reading existing code + Phase 16 decisions (concurrent access,
+
   scheduler wiring, node-before-edge ordering all confirmed from codebase inspection)
 
 **Research date:** 2026-04-10

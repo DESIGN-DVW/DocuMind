@@ -389,6 +389,7 @@
           <th>Name</th>
           <th>Repo</th>
           <th>Status</th>
+          <th>Curated</th>
           <th>Generated URL</th>
           <th>Curated URL</th>
           <th>PNG</th>
@@ -397,7 +398,7 @@
         </tr>
       </thead>
       <tbody id="diagram-tbody">
-        <tr><td colspan="8" class="loading">Loading diagrams...</td></tr>
+        <tr><td colspan="9" class="loading">Loading diagrams...</td></tr>
       </tbody>
     </table>
   </div>
@@ -416,14 +417,14 @@
 
     async function loadDiagrams() {
       var tbody = document.getElementById('diagram-tbody');
-      tbody.innerHTML = '<tr><td colspan="8" class="loading">Loading diagrams...</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" class="loading">Loading diagrams...</td></tr>';
       showError('');
 
       try {
         var res = await fetch('/diagrams');
         if (!res.ok) {
           showError('Failed to load diagrams: HTTP ' + res.status);
-          tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Failed to load diagrams.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Failed to load diagrams.</td></tr>';
           return;
         }
         var data = await res.json();
@@ -432,7 +433,7 @@
         applyFilters();
       } catch (err) {
         showError('Network error loading diagrams: ' + err.message);
-        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Network error — is the daemon running?</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Network error — is the daemon running?</td></tr>';
       }
     }
 
@@ -498,7 +499,7 @@
       tbody.innerHTML = '';
 
       if (rows.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No diagrams match the current filters.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No diagrams match the current filters.</td></tr>';
         count.textContent = '0 diagrams';
         return;
       }
@@ -531,10 +532,15 @@
             '</td>'
           : '<td class="source-cell" style="color:#cbd5e1">—</td>';
 
+        var curatedDateCell = row.curated_at
+          ? new Date(row.curated_at).toLocaleDateString('en-CA')
+          : '<span style="color:#cbd5e1">—</span>';
+
         tr.innerHTML =
           '<td class="name-cell" title="' + escapeHtml(row.name) + '">' + escapeHtml(row.name) + '</td>' +
           '<td>' + escapeHtml(row.repository) + '</td>' +
           '<td><span id="badge-' + escapeHtml(row.name) + '" class="badge badge-' + escapeHtml(row.status) + '">' + escapeHtml(row.status) + '</span></td>' +
+          '<td style="white-space:nowrap;color:#64748b;font-size:0.8rem">' + curatedDateCell + '</td>' +
           '<td>' + figjamCell + '</td>' +
           '<td id="curated-' + escapeHtml(row.name) + '">' + curatedCell + '</td>' +
           '<td>' + pngCell + '</td>' +

@@ -32,23 +32,14 @@ This causes:
 ### Organization: DESIGN-DVW (Primary)
 
 | Repository          | Location                                                | Status   |
-
 | ------------------- | ------------------------------------------------------- | -------- |
-
 | Aprimo              | `https://github.com/DESIGN-DVW/Aprimo.git`              | ✅ Active |
-
 | CampaignManager     | `https://github.com/DESIGN-DVW/CampaignManager.git`     | ✅ Active |
-
 | DocuMind            | `https://github.com/DESIGN-DVW/DocuMind.git`            | ✅ Active |
-
 | Figma-Plug-ins      | `https://github.com/DESIGN-DVW/Figma-Plug-ins.git`      | ✅ Active |
-
 | LibraryAssetManager | `https://github.com/DESIGN-DVW/LibraryAssetManager.git` | ✅ Active |
-
 | RootDispatcher      | `https://github.com/DESIGN-DVW/RootDispatcher.git`      | ✅ Active |
-
 | FigmaDSController   | `https://github.com/DESIGN-DVW/FigmaDSController.git`   | ✅ Active |
-
 | FigmailAPP          | `https://github.com/DESIGN-DVW/FigmailAPP`              | ✅ Active |
 
 **Total:** 8 repositories
@@ -56,9 +47,7 @@ This causes:
 ### Organization: DVW-Design (Legacy)
 
 | Repository | Location                                       | Status           |
-
 | ---------- | ---------------------------------------------- | ---------------- |
-
 | GlossiaApp | `https://github.com/DVW-Design/GlossiaApp.git` | ⚠️ Different Org |
 
 **Total:** 1 repository
@@ -66,21 +55,13 @@ This causes:
 ### Local Only (No GitHub Remote)
 
 | Repository             | Local Path                                                     | Status   |
-
 | ---------------------- | -------------------------------------------------------------- | -------- |
-
 | @figma-agents          | `/Users/Shared/htdocs/github/DVWDesign/@figma-agents`          | 📍 Local |
-
 | @figma-core            | `/Users/Shared/htdocs/github/DVWDesign/@figma-core`            | 📍 Local |
-
 | FigmaAPI/@figma-core   | `/Users/Shared/htdocs/github/DVWDesign/FigmaAPI/@figma-core`   | 📍 Local |
-
 | FigmaAPI/@figma-docs   | `/Users/Shared/htdocs/github/DVWDesign/FigmaAPI/@figma-docs`   | 📍 Local |
-
 | RandD                  | `/Users/Shared/htdocs/github/DVWDesign/RandD`                  | 📍 Local |
-
 | mjml-dev-mode          | `/Users/Shared/htdocs/github/DVWDesign/mjml-dev-mode`          | 📍 Local |
-
 | mjml-dev-mode-proposal | `/Users/Shared/htdocs/github/DVWDesign/mjml-dev-mode-proposal` | 📍 Local |
 
 **Total:** 7 local-only repositories
@@ -133,7 +114,7 @@ When you invite users to GitHub, they need separate invitations for each organiz
 
 ### Option 1: Consolidate Everything to DESIGN-DVW (RECOMMENDED)
 
-#### Steps:
+#### Steps
 
 1. **Migrate GlossiaApp from DVW-Design to DESIGN-DVW**
 
@@ -165,7 +146,7 @@ When you invite users to GitHub, they need separate invitations for each organiz
 
    - Just update documentation
 
-#### Pros:
+#### Pros
 
 - Single organization to manage
 
@@ -175,7 +156,7 @@ When you invite users to GitHub, they need separate invitations for each organiz
 
 - GitHub auto-redirects from old URLs
 
-#### Cons:
+#### Cons
 
 - Requires admin access to both organizations
 
@@ -183,7 +164,7 @@ When you invite users to GitHub, they need separate invitations for each organiz
 
 ### Option 2: Keep Both Organizations
 
-#### Steps:
+#### Steps
 
 1. **Document which repos belong to which org**
 
@@ -203,13 +184,13 @@ When you invite users to GitHub, they need separate invitations for each organiz
 
    - Use correct org name for each repo
 
-#### Pros:
+#### Pros
 
 - No repository transfers needed
 
 - No risk of breaking existing links
 
-#### Cons:
+#### Cons
 
 - Must manage two organizations forever
 
@@ -221,7 +202,7 @@ When you invite users to GitHub, they need separate invitations for each organiz
 
 ### Option 3: Rename DESIGN-DVW to DVWDesign
 
-#### Steps:
+#### Steps
 
 1. **Rename organization on GitHub**
 
@@ -241,7 +222,7 @@ When you invite users to GitHub, they need separate invitations for each organiz
 
    - Matches local folder name
 
-#### Pros:
+#### Pros
 
 - Matches documentation (less to update)
 
@@ -251,7 +232,7 @@ When you invite users to GitHub, they need separate invitations for each organiz
 
 - GitHub auto-redirects
 
-#### Cons:
+#### Cons
 
 - Requires GitHub org admin access
 
@@ -283,33 +264,33 @@ When you invite users to GitHub, they need separate invitations for each organiz
 
 ### Phase 2: Cross-Repository Updates
 
-10. Create automated script to fix all 134+ references
+1. Create automated script to fix all 134+ references
 
-11. Run script across all repositories
+2. Run script across all repositories
 
-12. Test all documentation links
+3. Test all documentation links
 
-13. Commit changes to each repository
+4. Commit changes to each repository
 
 ### Phase 3: Organization Consolidation
 
-14. Transfer GlossiaApp from DVW-Design to DESIGN-DVW
+1. Transfer GlossiaApp from DVW-Design to DESIGN-DVW
 
-15. Update GlossiaApp git remote locally
+2. Update GlossiaApp git remote locally
 
-16. Invite all users to DESIGN-DVW
+3. Invite all users to DESIGN-DVW
 
-17. Archive or delete DVW-Design organization
+4. Archive or delete DVW-Design organization
 
 ### Phase 4: User Access
 
-18. Invite <guillaume@aigenconsulting.com> to DESIGN-DVW
+1. Invite <guillaume@aigenconsulting.com> to DESIGN-DVW
 
-19. Grant appropriate permissions
+2. Grant appropriate permissions
 
-20. Test access to all repositories
+3. Test access to all repositories
 
-21. Document user management process
+4. Document user management process
 
 ## User Invitation Process
 
@@ -385,7 +366,7 @@ gh api \
 
 See previous scan results for complete list.
 
-#### Most affected repositories:
+#### Most affected repositories
 
 1. FigmailAPP - ~50 references
 
@@ -397,7 +378,7 @@ See previous scan results for complete list.
 
 ## Next Steps
 
-### Please confirm your preferred approach:
+### Please confirm your preferred approach
 
 1. ✅ **Option 1:** Consolidate to DESIGN-DVW (recommended)
 
@@ -420,21 +401,13 @@ Once confirmed, I will:
 ## Summary
 
 | Aspect                       | Current State                    | Target State           |
-
 | ---------------------------- | -------------------------------- | ---------------------- |
-
 | **Primary Organization**     | DESIGN-DVW                       | DESIGN-DVW             |
-
 | **Legacy Organization**      | DVW-Design                       | Migrate to DESIGN-DVW  |
-
 | **Documentation References** | DVWDesign (wrong)                | DESIGN-DVW (correct)   |
-
 | **Local Folder**             | DVWDesign                        | DVWDesign (unchanged)  |
-
 | **Total Repositories**       | 16 (8 GitHub, 1 legacy, 7 local) | 16 (9 GitHub, 7 local) |
-
 | **Incorrect URLs**           | 134+                             | 0                      |
-
 | **Organizations to Manage**  | 2                                | 1                      |
 
 **Status:** ⚠️ Awaiting user confirmation on preferred solution

@@ -13,6 +13,7 @@ DocuMind registers 14 MCP tools. Claude uses them automatically when you ask abo
 Just ask Claude in any repo where DocuMind MCP is connected:
 
 ```text
+
 Search my docs for "authentication"
 Are there any duplicate docs about Docker?
 What's related to CLAUDE.md?
@@ -23,6 +24,7 @@ Lint this file: docs/SETUP.md
 Fix the markdown issues in docs/ONBOARDING.md
 Index this file I just created: docs/NEW-FEATURE.md
 Scan the DocuMind repo for changes
+
 ```
 
 ### Explicit Tool Requests
@@ -30,10 +32,12 @@ Scan the DocuMind repo for changes
 If you want to be precise about which tool Claude uses:
 
 ```text
+
 Use search_docs to find "MCP transport" in the DocuMind repo
 Use check_existing to see if we already have Docker setup docs
 Use get_deviations to find convention violations
 Use trigger_scan to do a full scan of all repos
+
 ```
 
 ### MCP Tool Reference
@@ -78,7 +82,9 @@ Type these in any Claude Code session where DocuMind is the active project:
 Open in a browser while the daemon is running:
 
 ```text
+
 http://localhost:9000/dashboard/diagrams.html
+
 ```
 
 Interactive diagram curation UI with filtering, search, and status badges.
@@ -92,35 +98,47 @@ The daemon runs on port 9000. All endpoints return JSON.
 ### Quick Examples
 
 ```bash
+
 # Health check
+
 curl http://localhost:9000/health
 
 # Search
+
 curl "http://localhost:9000/search?q=docker&limit=5"
 
 # Stats dashboard
+
 curl http://localhost:9000/stats
 
 # Folder tree for a repo
+
 curl http://localhost:9000/tree/DocuMind
 
 # Document graph
+
 curl "http://localhost:9000/graph?repo=DocuMind&depth=2"
 
 # Keywords
+
 curl "http://localhost:9000/keywords?repo=DocuMind&category=technology"
 
 # Trigger incremental scan
+
 curl -X POST http://localhost:9000/scan
 
 # Trigger full scan of one repo
+
 curl -X POST http://localhost:9000/scan -H "Content-Type: application/json" -d '{"repo":"DocuMind","mode":"full"}'
 
 # List stale diagrams
+
 curl "http://localhost:9000/diagrams?stale=true"
 
 # Diagram lookup by name
+
 curl http://localhost:9000/diagrams/lookup/documind-architecture
+
 ```
 
 ### Full Endpoint Reference
@@ -152,27 +170,34 @@ Run from the DocuMind project directory.
 ### Most Useful
 
 ```bash
+
 # Start/stop daemon
+
 npm run daemon:start
 npm run daemon:stop
 npm run daemon:logs
 
 # Scan and index
+
 npm run scan
 npm run index
 
 # Lint and fix markdown
+
 npm run lint
 npm run lint:fix
 npm run fix:all
 
 # Analysis
+
 npm run analyze:similarities
 npm run analyze:deviations
 
 # Database
+
 npm run db:init
 npm run db:reset
+
 ```
 
 ### Full Script List
@@ -200,6 +225,9 @@ Run `npm run` with no arguments to see all available scripts.
 ## Prerequisites
 
 - DocuMind daemon running (`npm run daemon:start` or `docker compose up`)
+
 - For MCP tools: Claude Code with DocuMind MCP server configured
+
 - For REST API: daemon accessible on port 9000
+
 - For CLI: Node.js 20+ and `npm install` completed

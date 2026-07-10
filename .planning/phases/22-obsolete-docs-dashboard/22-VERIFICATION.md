@@ -1,16 +1,22 @@
 ---
+
 phase: 22-obsolete-docs-dashboard
 verified: 2026-04-20T16:00:00Z
 status: human_needed
 score: 12/13 must-haves verified
 re_verification: false
 human_verification:
+
   - test: "Open http://localhost:9000/dashboard/obsolete.html in a browser and click the Delete button on a row"
+
     expected: "The row is immediately removed from the table with no confirmation dialog — confirm this is intentional and acceptable given OBS-03 requires 'no destructive action without confirmation'"
     why_human: "Delete permanently removes a DB row (destructive) but has no confirm() guard in the JS. Archive Selected has confirm(); per-row Archive does not. Cannot verify policy intent programmatically."
+
   - test: "Open http://localhost:9000/dashboard/obsolete.html and verify the table populates, filters work, and confidence bars render correctly"
+
     expected: "Table loads with flagged docs, repo/flag dropdowns filter without reload, column headers sort on click, confidence fill bars are colored red/amber/green/indigo by tier"
     why_human: "Visual rendering and interactive behavior cannot be verified programmatically"
+
 ---
 
 # Phase 22: Obsolete Docs Dashboard Verification Report
@@ -110,5 +116,6 @@ Plan 03 also deviated from the original plan spec by upgrading "dismiss" (30-day
 
 ---
 
-_Verified: 2026-04-20_
-_Verifier: Claude (gsd-verifier)_
+#### Verified: 2026-04-20
+
+#### Verifier: Claude (gsd-verifier)

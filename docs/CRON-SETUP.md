@@ -36,15 +36,10 @@ npm run cron:stop
 The system installs the following cron jobs:
 
 | Job | Schedule | Frequency | Command | Log File |
-
 | ----- | ---------- | ----------- | --------- | ---------- |
-
 | **Scan** | `0 * * * *` | Every hour | `npm run scan:report` | `logs/cron-markdown-scan-hourly.log` |
-
 | **Index** | `5 * * * *` | Every hour (+5min) | `npm run index` | `logs/cron-markdown-index-hourly.log` |
-
 | **Validate** | `0 9 * * *` | Daily at 9:00 AM | `npm run validate` | `logs/cron-markdown-validate-daily.log` |
-
 | **Lint** | `0 10 * * *` | Daily at 10:00 AM | `npm run lint` | `logs/cron-markdown-lint-daily.log` |
 
 ### Schedule Explanation
@@ -322,7 +317,7 @@ npm run cron:setup
 
 ### Jobs Not Running
 
-#### Check if cron is active:
+#### Check if cron is active
 
 ```bash
 
@@ -336,7 +331,7 @@ systemctl status cron
 
 ```
 
-## Check crontab syntax:
+## Check crontab syntax
 
 ```bash
 
@@ -344,7 +339,7 @@ crontab -l
 
 ```
 
-## Check logs:
+## Check logs
 
 ```bash
 
@@ -360,7 +355,7 @@ grep CRON /var/log/syslog
 
 ## Scripts Failing
 
-### Run script manually to see errors:
+### Run script manually to see errors
 
 ```bash
 
@@ -369,7 +364,7 @@ npm run scan:report
 
 ```
 
-### Check script permissions:
+### Check script permissions
 
 ```bash
 
@@ -379,7 +374,7 @@ ls -la scripts/*.mjs
 
 ```
 
-## Check Node.js is in PATH:
+## Check Node.js is in PATH
 
 ```bash
 
@@ -391,7 +386,7 @@ which node
 
 ## Logs Not Created
 
-### Check logs directory exists:
+### Check logs directory exists
 
 ```bash
 
@@ -399,7 +394,7 @@ ls -la logs/
 
 ```
 
-### Create manually if needed:
+### Create manually if needed
 
 ```bash
 
@@ -408,7 +403,7 @@ chmod 755 logs
 
 ```
 
-### Check disk space:
+### Check disk space
 
 ```bash
 
@@ -565,31 +560,18 @@ All cron commands redirect to log files. Never rely on email output.
 ## Quick Reference
 
 | Task | Command |
-
 | ------ | --------- |
-
 | Install cron jobs | `npm run cron:setup` |
-
 | Remove cron jobs | `npm run cron:stop` |
-
 | List jobs | `node scripts/setup-cron.mjs --list` |
-
 | View crontab | `crontab -l` |
-
 | Edit crontab manually | `crontab -e` |
-
 | View all logs | `tail -f logs/cron-*.log` |
-
 | View scan log | `tail -f logs/cron-markdown-scan-hourly.log` |
-
 | Archive logs | `mv logs/*.log logs/archive/` |
-
 | Test scan | `npm run scan:report` |
-
 | Test index | `npm run index` |
-
 | Test validate | `npm run validate` |
-
 | Test lint | `npm run lint` |
 
 **Version:** 1.0.0

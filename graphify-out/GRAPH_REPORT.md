@@ -164,7 +164,7 @@ Nodes (38): backfillClassifications(), backfillSummaries(), fixGitHubOrgReferenc
 ### Community 1 - "diagram_registry_md"
 
 Cohesion: 0.05975609756097561
-Nodes (41): Diagram Registry: any2figma entries (6-Pass Pipeline, AST Schema, Architecture Data Flow, Emitter Outputs, HTML Parser Flow), Diagram Registry Audit Report, any2figma Diagrams: 5 diagrams missing curated FigJam URLs, Node Version Mismatch: better-sqlite3 compiled for newer Node than active (v22.14.0 vs MODULE_VERSION 137), Orphaned PNG: GlossiaApp GlossiaAppFlow.png (no .mmd source), Unregistered .mmd: documind-workflow.mmd, Central FigJam Board: DVW-Design-Dev-Strategy (<https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/>), Curated Status: diagrams that have been moved to central FigJam board (has curated_url) (+33 more)
+Nodes (41): Diagram Registry: any2figma entries (6-Pass Pipeline, AST Schema, Architecture Data Flow, Emitter Outputs, HTML Parser Flow), Diagram Registry Audit Report, any2figma Diagrams: 5 diagrams missing curated FigJam URLs, Node Version Mismatch: better-sqlite3 compiled for newer Node than active (v22.14.0 vs MODULE_VERSION 137), Orphaned PNG: GlossiaApp GlossiaAppFlow.png (no .mmd source), Unregistered .mmd: documind-workflow.mmd, Central FigJam Board: DVW-Design-Dev-Strategy (<https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/DVW-Design-Dev-Strategy?node-id=323-2295&t=4K6fWPvO42Go2cJC-4/>), Curated Status: diagrams that have been moved to central FigJam board (has curated_url) (+33 more)
 
 ### Community 2 - "readme_documind"
 
