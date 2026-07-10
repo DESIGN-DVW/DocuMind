@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DocuMind — Obsolete Docs Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 14px;
+      color: #1e293b;
+      background: #f8fafc;
+      padding: 24px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #0f172a;
+      margin-bottom: 6px;
+    }
+    .page-note {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      margin-bottom: 16px;
+    }
+    .repo-hint { color: #94a3b8; font-size: 0.78rem; margin-left: 4px; }
+    .sig { display: inline-block; padding: 1px 5px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; margin: 1px; }
+    .sig-age   { background: #fef3c7; color: #92400e; }
+    .sig-orphan{ background: #ede9fe; color: #6d28d9; }
+    .sig-kwd   { background: #fce7f3; color: #9d174d; }
+    .sig-sim   { background: #d1fae5; color: #065f46; }
+    .filter-checkbox { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+
+    /* Error banner */
+    #error-banner {
+      display: none;
+      background: #fef2f2;
+      border: 1px solid #fca5a5;
+      color: #dc2626;
+      padding: 10px 14px;
+      border-radius: 6px;
+      margin-bottom: 14px;
+      font-size: 0.875rem;
+    }
+
+    /* Filter controls */
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 16px;
+      padding: 12px 16px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+    }
+
+    .filter-row label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #64748b;
+      margin-right: 2px;
+    }
+
+    .filter-row select,
+    .filter-row input[type="text"] {
+      padding: 6px 10px;
+      border: 1px solid #cbd5e1;
+      border-radius: 5px;
+      font-size: 0.875rem;
+      color: #1e293b;
+      background: #fff;
+      height: 34px;
+    }
+
+    .filter-row select:focus,
+    .filter-row input[type="text"]:focus {
+      outline: none;
+      border-color: #6366f1;
+      box-shadow: 0 0 0 2px rgba(99,102,241,0.15);
+    }
+
+    .filter-row input[type="text"] {
+      min-width: 180px;
+    }
+
+    .btn {
+      padding: 6px 14px;
+      border: none;
+      border-radius: 5px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      height: 34px;
+      transition: background 0.15s;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: #6366f1;
+      color: #fff;
+    }
+
+    .btn-primary:hover:not(:disabled) { background: #4f46e5; }
+
+    .btn-secondary {
+      background: #e2e8f0;
+      color: #475569;
+    }
+
+    .btn-secondary:hover { background: #cbd5e1; }
+
+    .btn-sm {
+      padding: 3px 10px;
+      font-size: 0.8rem;
+      height: 28px;
+    }
+
+    .btn-archive-row {
+      background: #f1f5f9;
+      color: #64748b;
+      border: 1px solid #cbd5e1;
+    }
+
+    .btn-archive-row:hover { background: #fef9c3; color: #854d0e; border-color: #fde047; }
+
+    .btn-delete-row {
+      background: #fff1f2;
+      color: #be123c;
+      border: 1px solid #fda4af;
+    }
+
+    .btn-delete-row:hover { background: #ffe4e6; color: #9f1239; border-color: #fb7185; }
+
+    /* Badge styles */
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-obsolete     { background: #fef2f2; color: #dc2626; }
+    .badge-redundant    { background: #fef9c3; color: #b45309; }
+    .badge-stale        { background: #f0fdf4; color: #15803d; }
+    .badge-needs-update { background: #eff6ff; color: #1d4ed8; }
+
+    /* Confidence bar */
+    .conf-bar {
+      display: inline-block;
+      width: 60px;
+      height: 8px;
+      background: #e2e8f0;
+      border-radius: 4px;
+      overflow: hidden;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    .conf-fill {
+      height: 100%;
+      border-radius: 4px;
+    }
+
+    /* Row checkbox */
+    input[type="checkbox"] { cursor: pointer; }
+
+    /* Batch action bar */
+    .batch-bar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .batch-count {
+      font-size: 0.85rem;
+      color: #64748b;
+    }
+
+    /* Sort indicator */
+    th[data-sort] { cursor: pointer; user-select: none; }
+    th[data-sort]:hover { background: #f1f5f9; }
+    th.sort-asc::after  { content: ' \25B2'; font-size: 0.7em; }
+    th.sort-desc::after { content: ' \25BC'; font-size: 0.7em; }
+
+    /* Table */
+    .table-wrapper {
+      overflow-x: auto;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      background: #fff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+
+    thead th {
+      background: #f1f5f9;
+      color: #475569;
+      font-weight: 600;
+      text-align: left;
+      padding: 10px 14px;
+      border-bottom: 1px solid #e2e8f0;
+      white-space: nowrap;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid #f1f5f9;
+      transition: background 0.1s;
+    }
+
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:nth-child(even) { background: #fafafa; }
+    tbody tr:hover { background: #f0f4ff; }
+
+    tbody td {
+      padding: 9px 14px;
+      vertical-align: middle;
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: #94a3b8;
+    }
+
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 24px;
+      color: #94a3b8;
+      font-style: italic;
+    }
+  /* ── Dashboard nav ─────────────────────────────────── */
+  .dash-nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 4px 12px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .dash-nav__brand {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #64748b;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-right: 12px;
+  }
+  .dash-nav a {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #475569;
+    text-decoration: none;
+    transition: background 0.15s;
+  }
+  .dash-nav a:hover { background: #f1f5f9; color: #0f172a; }
+  .dash-nav a.active { background: #e0f2fe; color: #0369a1; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+  <nav class="dash-nav">
+    <span class="dash-nav__brand">DocuMind</span>
+    <a href="/dashboard/obsolete.html" class="active">Obsolete Docs</a>
+    <a href="/dashboard/diagrams.html">Diagram Curation</a>
+  </nav>
+
+  <h1>Obsolete Docs Dashboard</h1>
+  <p class="page-note">Same-named files (CLAUDE.md, README.md…) appear separately per repo — use the Repo column to distinguish them.</p>
+
+  <div id="error-banner"></div>
+
+  <!-- Batch action bar -->
+  <div class="batch-bar">
+    <button id="btn-archive" class="btn btn-primary" disabled>Archive Selected</button>
+    <span class="batch-count" id="selected-count">0 selected</span>
+    <button id="btn-refresh" class="btn btn-secondary">Refresh</button>
+  </div>
+
+  <!-- Filter row -->
+  <div class="filter-row">
+    <label for="filter-repo">Repo:</label>
+    <select id="filter-repo"><option value="">All</option></select>
+
+    <label for="filter-flag">Flag:</label>
+    <select id="filter-flag">
+      <option value="">All</option>
+      <option value="obsolete">Obsolete</option>
+      <option value="redundant">Redundant</option>
+      <option value="stale">Stale</option>
+      <option value="needs-update">Needs Update</option>
+    </select>
+
+    <label for="filter-text">Search:</label>
+    <input type="text" id="filter-text" placeholder="Filter by path...">
+
+    <label class="filter-checkbox">
+      <input type="checkbox" id="filter-hide-mmd" checked>
+      <span>Hide diagram files</span>
+    </label>
+
+    <button id="btn-reset" class="btn btn-secondary">Reset</button>
+  </div>
+
+  <!-- Stats summary -->
+  <div id="stats-summary" style="margin-bottom:12px; font-size:0.875rem; color:#64748b;"></div>
+
+  <!-- Table -->
+  <div id="loading" class="loading">Loading...</div>
+  <div id="empty-state" class="empty-state" style="display:none">No flagged documents found.</div>
+
+  <div class="table-wrapper" id="table-wrapper" style="display:none">
+    <table id="signals-table">
+      <thead>
+        <tr>
+          <th><input type="checkbox" id="select-all"></th>
+          <th data-sort="confidence_score" class="sort-desc">Confidence</th>
+          <th data-sort="flag_label">Flag</th>
+          <th data-sort="age_days">Age (days)</th>
+          <th data-sort="repository">Repo</th>
+          <th data-sort="path">File</th>
+          <th>Inbound Links</th>
+          <th>Why</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </div>
+
+  <script>
+    var allRows = [];
+    var sortKey = 'confidence_score';
+    var sortDir = -1; // -1 = DESC
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function showError(msg) {
+      var el = document.getElementById('error-banner');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    function hideError() {
+      document.getElementById('error-banner').style.display = 'none';
+    }
+
+    function confColor(score) {
+      if (score >= 0.8) return '#dc2626';
+      if (score >= 0.7) return '#d97706';
+      if (score >= 0.5) return '#16a34a';
+      return '#6366f1';
+    }
+
+    function buildSignals(row) {
+      var s = [];
+      if (row.age_days > 180)           s.push('<span class="sig sig-age" title="Not modified in ' + row.age_days + ' days">age</span>');
+      if (row.inbound_link_count === 0)  s.push('<span class="sig sig-orphan" title="No inbound links">orphan</span>');
+      if (row.keyword_matched)           s.push('<span class="sig sig-kwd" title="Path contains deprecated/archive keyword">kwd</span>');
+      if (row.similarity_score >= 0.7)   s.push('<span class="sig sig-sim" title="Similar doc exists (score ' + (row.similarity_score || 0).toFixed(2) + ')">sim</span>');
+      return s.join('');
+    }
+
+    function renderTable(rows) {
+      var tbody = document.getElementById('table-body');
+      var wrapper = document.getElementById('table-wrapper');
+      var empty = document.getElementById('empty-state');
+
+      if (rows.length === 0) {
+        wrapper.style.display = 'none';
+        empty.style.display = 'block';
+        return;
+      }
+
+      empty.style.display = 'none';
+      wrapper.style.display = 'block';
+
+      tbody.innerHTML = rows.map(function(row) {
+        var conf = (row.confidence_score * 100).toFixed(0) + '%';
+        var barColor = confColor(row.confidence_score);
+        var flagClass = 'badge badge-' + escapeHtml(row.flag_label);
+        var fileCell = escapeHtml(row.filename)
+          + '<span class="repo-hint">(' + escapeHtml(row.repository) + ')</span>';
+        return '<tr data-id="' + row.id + '">'
+          + '<td><input type="checkbox" class="row-check" data-id="' + row.id + '"></td>'
+          + '<td>'
+            + '<span class="conf-bar"><span class="conf-fill" style="width:' + (row.confidence_score * 100).toFixed(1) + '%;background:' + escapeHtml(barColor) + '"></span></span>'
+            + escapeHtml(conf)
+          + '</td>'
+          + '<td><span class="' + flagClass + '">' + escapeHtml(row.flag_label) + '</span></td>'
+          + '<td>' + escapeHtml(String(row.age_days)) + '</td>'
+          + '<td>' + escapeHtml(row.repository) + '</td>'
+          + '<td title="' + escapeHtml(row.path) + '">' + fileCell + '</td>'
+          + '<td>' + escapeHtml(String(row.inbound_link_count)) + '</td>'
+          + '<td>' + buildSignals(row) + '</td>'
+          + '<td><button class="btn btn-sm btn-archive-row" data-id="' + row.id + '">Archive</button> <button class="btn btn-sm btn-delete-row" data-id="' + row.id + '">Delete</button></td>'
+          + '</tr>';
+      }).join('');
+
+      updateSelectedCount();
+    }
+
+    function applyFilters() {
+      var repo = document.getElementById('filter-repo').value;
+      var flag = document.getElementById('filter-flag').value;
+      var text = document.getElementById('filter-text').value.toLowerCase();
+
+      var sorted = allRows.slice().sort(function(a, b) {
+        var av = a[sortKey], bv = b[sortKey];
+        if (av == null) av = '';
+        if (bv == null) bv = '';
+        if (av < bv) return -1 * sortDir;
+        if (av > bv) return  1 * sortDir;
+        return 0;
+      });
+
+      var filtered = sorted.filter(function(r) {
+        if (repo && r.repository !== repo) return false;
+        if (flag && r.flag_label !== flag) return false;
+        if (text && r.path.toLowerCase().indexOf(text) === -1) return false;
+        return true;
+      });
+
+      renderTable(filtered);
+    }
+
+    function updateSelectedCount() {
+      var checked = document.querySelectorAll('input.row-check:checked').length;
+      document.getElementById('selected-count').textContent = checked + ' selected';
+      document.getElementById('btn-archive').disabled = checked === 0;
+    }
+
+    function getSelectedIds() {
+      return Array.from(document.querySelectorAll('input.row-check:checked'))
+        .map(function(cb) { return Number(cb.dataset.id); });
+    }
+
+    function populateRepoFilter(rows) {
+      var repos = Array.from(new Set(rows.map(function(r) { return r.repository; }))).sort();
+      var sel = document.getElementById('filter-repo');
+      // Remove all options after "All"
+      while (sel.options.length > 1) sel.remove(1);
+      repos.forEach(function(repo) {
+        var opt = document.createElement('option');
+        opt.value = escapeHtml(repo);
+        opt.textContent = repo;
+        sel.appendChild(opt);
+      });
+    }
+
+    function updateStats(data) {
+      var el = document.getElementById('stats-summary');
+      el.textContent = data.total + ' signal(s) total \u2014 showing ' + data.count + ' active';
+    }
+
+    async function loadData() {
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('table-wrapper').style.display = 'none';
+      document.getElementById('empty-state').style.display = 'none';
+      hideError();
+
+      try {
+        var hideMmd = document.getElementById('filter-hide-mmd').checked ? 'true' : 'false';
+        var res = await fetch('/obsolete?limit=500&hide_diagram_files=' + hideMmd);
+        if (!res.ok) throw new Error('Server error: ' + res.status);
+        var data = await res.json();
+        allRows = data.rows || [];
+        populateRepoFilter(allRows);
+        updateStats(data);
+        applyFilters();
+      } catch (err) {
+        showError('Failed to load data: ' + err.message);
+      } finally {
+        document.getElementById('loading').style.display = 'none';
+      }
+    }
+
+    // Event listeners — NO inline onclick handlers (helmet blocks unsafe-inline)
+    document.addEventListener('DOMContentLoaded', function() {
+      loadData();
+
+      document.getElementById('btn-refresh').addEventListener('click', loadData);
+
+      document.getElementById('btn-reset').addEventListener('click', function() {
+        document.getElementById('filter-repo').value = '';
+        document.getElementById('filter-flag').value = '';
+        document.getElementById('filter-text').value = '';
+        applyFilters();
+      });
+
+      document.getElementById('filter-repo').addEventListener('change', applyFilters);
+      document.getElementById('filter-flag').addEventListener('change', applyFilters);
+      document.getElementById('filter-text').addEventListener('input', applyFilters);
+      document.getElementById('filter-hide-mmd').addEventListener('change', loadData);
+
+      document.getElementById('select-all').addEventListener('change', function() {
+        var isChecked = document.getElementById('select-all').checked;
+        document.querySelectorAll('input.row-check').forEach(function(cb) {
+          cb.checked = isChecked;
+        });
+        updateSelectedCount();
+      });
+
+      document.getElementById('table-body').addEventListener('change', function(e) {
+        if (e.target.classList.contains('row-check')) updateSelectedCount();
+      });
+
+      // Sort by column header click
+      document.querySelectorAll('th[data-sort]').forEach(function(th) {
+        th.addEventListener('click', function() {
+          var key = th.dataset.sort;
+          if (sortKey === key) {
+            sortDir *= -1;
+          } else {
+            sortKey = key;
+            sortDir = -1;
+          }
+          document.querySelectorAll('th[data-sort]').forEach(function(h) {
+            h.classList.remove('sort-asc', 'sort-desc');
+          });
+          th.classList.add(sortDir === -1 ? 'sort-desc' : 'sort-asc');
+          applyFilters();
+        });
+      });
+
+      // Per-row Archive + Delete buttons (event delegation)
+      document.getElementById('table-body').addEventListener('click', async function(e) {
+        var id = Number(e.target.dataset.id);
+
+        if (e.target.classList.contains('btn-archive-row')) {
+          try {
+            var res = await fetch('/obsolete/' + id + '/archive', { method: 'POST' });
+            if (!res.ok) throw new Error('Archive failed: ' + res.status);
+            var data = await res.json();
+            allRows = allRows.filter(function(r) { return r.id !== id; });
+            applyFilters();
+            var msg = data.gitignore_updated
+              ? 'Archived — added to .gitignore'
+              : 'Archived (repo root not found — .gitignore not updated)';
+            document.getElementById('stats-summary').textContent = msg;
+            setTimeout(function() { updateStats({ total: allRows.length, count: allRows.length }); }, 3000);
+          } catch (err) {
+            showError('Archive failed: ' + err.message);
+          }
+        }
+
+        if (e.target.classList.contains('btn-delete-row')) {
+          if (!confirm('Permanently delete this signal? It may resurface on the next daily scan if the document is still flagged.')) return;
+          try {
+            var res = await fetch('/obsolete/' + id, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Delete failed: ' + res.status);
+            allRows = allRows.filter(function(r) { return r.id !== id; });
+            applyFilters();
+          } catch (err) {
+            showError('Delete failed: ' + err.message);
+          }
+        }
+      });
+
+      // Archive Selected (batch — permanent)
+      document.getElementById('btn-archive').addEventListener('click', async function() {
+        var ids = getSelectedIds();
+        if (ids.length === 0) return;
+        if (!confirm('Archive ' + ids.length + ' document(s) permanently?\nThey will not resurface in future scans.\n\nNo documents will be deleted.')) return;
+        try {
+          var res = await fetch('/obsolete/batch-archive', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: ids })
+          });
+          if (!res.ok) throw new Error('Batch archive failed: ' + res.status);
+          var idSet = new Set(ids);
+          allRows = allRows.filter(function(r) { return !idSet.has(r.id); });
+          document.getElementById('select-all').checked = false;
+          applyFilters();
+        } catch (err) {
+          showError('Archive failed: ' + err.message);
+        }
+      });
+    });
+  </script>
+
+</body>
+</html>

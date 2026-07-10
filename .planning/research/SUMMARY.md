@@ -1,328 +1,213 @@
 # Project Research Summary
 
-**Project:** DocuMind v3.2 — Docker Containerization + MCP HTTP Transport + GHCR Publishing
-**Domain:** Node.js documentation intelligence daemon — containerization and remote deployment
-**Researched:** 2026-03-23
+**Project:** DocuMind v3.4 — Presentation Pipeline
+**Domain:** Daemon-orchestrated docs-as-code presentation pipeline (Marp Markdown → DeepL translation → multi-format render → FTP/Figma Slides deploy), added to an existing chokidar/node-cron/PM2/SQLite documentation daemon
+**Researched:** 2026-07-10
 **Confidence:** HIGH
+
+This document fully replaces the prior (2026-04-07) SUMMARY.md, which synthesized v3.3 Kuzu graph-database research. Kuzu was retired per ADR-001 (SQLite recursive CTEs cover graph traversal); all four underlying research files (STACK, FEATURES, ARCHITECTURE, PITFALLS) were rewritten from scratch on 2026-07-10 for the v3.4 milestone and contain zero Kuzu content.
 
 ## Executive Summary
 
-DocuMind v3.2 is a containerization milestone for an existing, fully operational Node.js documentation daemon. The system (v3.1) already ships REST API on port 9000, MCP stdio server with 14 tools, SQLite FTS5 with graph/keywords/diagrams, PM2 daemon, cron scheduler, and context profiles. v3.2 wraps this in Docker for portability — CI pipelines, remote Linux servers, and other developers' machines — while keeping the local macOS PM2 workflow intact. The recommended approach is a Debian-based multi-stage build (`node:22-bookworm-slim`), direct `node` process execution as PID 1, named volumes for SQLite persistence, dual repo-access modes (volume-mount for local dev, git-clone for CI), and MCP over Streamable HTTP (`POST /mcp`) for remote tool access. All of this publishes via GitHub Actions to GHCR with multi-arch support (linux/amd64 + linux/arm64).
+DocuMind v3.4 bolts a four-stage content pipeline — translate (DeepL), render (Marp CLI), deploy (FTP), and eventually push to Figma Slides — onto its existing chokidar-watched, PM2-managed, SQLite-backed daemon. This is not a greenfield build: every stack choice, architectural boundary, and integration pattern is constrained by code already present (`daemon/watcher.mjs`, `daemon/scheduler.mjs`, `daemon/registry-lock.mjs`, `config/env.mjs`, `scripts/db/schema.sql`). The recommended stack — `@marp-team/marp-cli`, `deepl-node`, `basic-ftp` — is deliberately minimal: no new markdown-AST library, no bundled Chromium (reuse the `puppeteer` devDependency already resolved for `@mermaid-js/mermaid-cli`), no SFTP client until the deploy protocol is confirmed with the hosting provider. The single highest-risk, highest-value piece of the whole milestone is the DeepL translation stage: DeepL has zero native Markdown or Marp-directive awareness, so front-matter, HTML-comment directives, code fences, and GFM tables (governed by this repo's own DVW001/DVW002 lint rules) must be placeholder-protected and round-trip-validated before any deck is trusted — this is table-stakes, not a nice-to-have, since even the two existing fixture decks contain code blocks and tables.
 
-The most important technical decision — and the one most likely to waste a day if wrong — is base image selection. `better-sqlite3` is a native C++ addon with glibc-linked prebuilt binaries. Alpine Linux uses musl libc, which is fundamentally incompatible at runtime. This is not a configuration issue; it is a known architectural incompatibility with no workaround that does not introduce significant complexity. Node 24 has an equivalent blocking issue: prebuilt binaries for N-API 137 do not yet exist and compilation from source fails with deprecated V8 API errors. Use `node:22-bookworm-slim` unconditionally.
+The recommended approach is additive and staged: build the render pipeline in isolation first (proves the `execFile`/marp-cli subprocess pattern against real fixture decks with zero watcher/translate/deploy risk), then translation (independently CLI-testable, degrades gracefully with no API key), then a ledger table (`slide_pipeline_runs`) so pipeline state is queryable before the watcher is wired in, then watcher integration (where loop-protection is proven end-to-end), then deploy (dry-run by default, atomic staged-then-rename upload), then ecosystem notification (AgentHub REST, not MCP — the daemon is a headless process with no LLM host, so MCP tools are structurally uncallable from it) and Figma Slides (deliberately kept out of the automated loop as an agent-invoked runbook, since it too requires an MCP-capable session).
 
-The second critical risk is existing macOS-specific absolute paths hardcoded in at least 10 files across the codebase. These paths (`/Users/Shared/htdocs/github/DVWDesign/...`) do not exist inside a Linux container. Direct codebase inspection confirms `config/constants.mjs` line 42, `processors/tree-processor.mjs` line 12, and `scripts/scan/enhanced-scanner.mjs` lines 22-31 all contain hardcoded absolute paths that bypass the context profile. This path audit must happen before any Dockerfile is written — it is a pre-Docker refactor requirement. Beyond these two risks, the remaining work is well-understood container plumbing with clear patterns from official sources.
+The primary risk across all four research files is the daemon's own generated output re-entering its own watch scope — a classic file-watcher feedback loop, compounded here because DeepL calls and headless-Chrome renders take seconds, not milliseconds, unlike the fast single-file writes the existing `writingNow` lock was designed for. ARCHITECTURE.md and PITFALLS.md propose different primary defenses for this (see the reconciliation below); both agree that a second, independent risk is overlapping pipeline runs for the same deck, requiring a dedicated per-deck run-lock rather than reliance on the existing shared debounce/lock machinery. Secondary risks — FTP protocol mismatch, `soffice`/Chrome PATH resolution differing between interactive shell and PM2 environment, secrets baked into the public GHCR image, and stale committed binaries already in git history — are all well-understood, single-repo problems with documented fixes, not open research questions.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The existing runtime stack (Node 22+, Express 5, better-sqlite3 12.6.2, MCP SDK 1.27.1, zod 3.25.0) requires no version changes for v3.2. Three net-new packages are added: `simple-git` for git-clone ingestion (7.9M weekly downloads, wraps native git CLI for faster large-repo operations), `dotenv` for environment-variable loading that naturally defers to Docker-injected env vars, and `@godaddy/terminus` for graceful shutdown (15-line integration vs. 80 lines of error-prone manual SIGTERM wiring, critical for protecting SQLite WAL on shutdown).
+Three new dependencies, all officially maintained and directly verified against the npm registry: `@marp-team/marp-cli` (devDependency, shelled out via `execFile` — never imported as a library, matching the existing `markdownlint-cli2`/`@mermaid-js/mermaid-cli` pattern), `deepl-node` (official DeepL SDK, `DeepLClient` class with `tagHandling`/`ignoreTags` and v3 multilingual glossary support), and `basic-ftp` (already transitively present via a `pnpm.overrides` security-patch entry — promoting it to a direct dependency adds nothing new to the tree). No new markdown-parsing library is needed; `gray-matter` and `markdown-it` (both already installed) are sufficient for the placeholder-protection masking scheme. Critically, `puppeteer` is already a devDependency (pulled in by `@mermaid-js/mermaid-cli`, with `pnpm.onlyBuiltDependencies` already forcing its Chromium download) — Marp's PDF/PPTX/PNG export needs a Chromium-family browser via `puppeteer-core`, and reusing `puppeteer.executablePath()` via `--browser-path` avoids a second ~200MB browser download and keeps Docker portability intact.
 
-The MCP SDK already ships `StreamableHTTPServerTransport` at `dist/esm/server/streamableHttp.js` — confirmed present in installed node_modules. The SSE transport (`/sse` + `/messages`) is deprecated in MCP spec 2025-03-26; only Streamable HTTP (`POST /mcp`, single endpoint) should be implemented in new code.
+**Core technologies:**
 
-#### Core technologies:
-
-- `node:22-bookworm-slim` base image — glibc compatibility for better-sqlite3 prebuilt binaries; Node 22 is Active LTS through 2027; do not use Alpine (musl libc) or Node 24 (missing N-API 137 prebuilts)
-
-- `simple-git@^3.33.0` — git clone/pull at container runtime; requires git CLI in the runtime image layer; never copy or bake at build time
-
-- `dotenv@^16.4.7` — env-var loading; Docker `environment:` and `env_file:` overrides take precedence naturally without configuration
-
-- `@godaddy/terminus@^4.12.1` — graceful shutdown via `createTerminus(server, { healthChecks, onSignal })`; closes SQLite connection and chokidar watcher before exit
-
-- `StreamableHTTPServerTransport` (in existing MCP SDK 1.27.1) — remote MCP access on `POST /mcp`; no new package required
-
-- `docker/build-push-action@v6` + `docker/metadata-action@v5` — GHCR publishing with semver tags and multi-arch (amd64 + arm64) via buildx
+- `@marp-team/marp-cli` (`^4.4.1`) — renders Marp Markdown decks to HTML/PDF/PPTX/PNG — the only actively maintained CLI renderer for the format; config via `.marprc.yml`/`marp.config.mjs` (cosmiconfig-loaded)
+- `deepl-node` (`^1.27.0`) — EN→FR translation via the official DeepL API SDK — ships the `tagHandling`/`ignoreTags`/glossary primitives needed to protect Marp syntax during translation; no native Markdown mode exists (confirmed via open `deepl-node` issue #26), so a custom masking layer is required regardless of SDK choice
+- `basic-ftp` (`^6.0.1`) — FTP/FTPS deploy client — promise-based, ESM-native, zero runtime deps, already in the dependency tree; **does not speak SFTP** — protocol must be confirmed with the hosting provider before this choice is locked in (fallback: `ssh2-sftp-client`)
+- LibreOffice (`soffice`, system install, not npm) — required only for the experimental `--pptx-editable` flag; confirmed prereq gap (not on PATH), must be pinned via `SOFFICE_PATH` env var rather than relied-upon auto-discovery
 
 ### Expected Features
 
-#### Must have (table stakes) — v3.2 launch:
+**Must have (table stakes):**
 
-- Non-root user in container (`USER node`, chown `/app/data`) — GHCR and Kubernetes block root-run images; one Dockerfile line
+- Marp render to HTML/PDF/PPTX from one command/config (`.marprc.yml`)
+- Front-matter, HTML-comment directive, code-fence, and GFM-table preservation during translation — the highest-risk table-stakes item; a naive full-text DeepL call corrupts all four
+- Proper-noun/brand-term protection via a DeepL glossary
+- Incremental rebuild via content-hash (reuse the existing `documents.content_hash` pattern)
+- Deploy dry-run mode (default until FTP creds land) and a deploy manifest/state record
+- Per-run status/log tracking (ledger table, same shape as existing `scan_runs`)
+- Watcher loop protection (glob-exclude generated output; see Pitfall reconciliation below)
 
-- Graceful shutdown SIGTERM handler — Docker stop sends SIGTERM; unhandled leads to force-kill and SQLite WAL corruption
+**Should have (differentiators):**
 
-- `HEALTHCHECK` instruction in Dockerfile pointing to existing `/health` endpoint — compose and CI service containers wait for healthy before routing traffic
+- Daemon-orchestrated trigger — decks publish themselves on EN source save, zero manual/CI step (the actual product differentiator; direct extension of `daemon/watcher.mjs`)
+- Glossary-backed translation for cross-deck brand-term consistency
+- RootDispatcher-sourced EN content updates (no special-case code needed — a dispatch application is just another file write the watcher already sees)
+- AgentHub `publish_discovery` notification on successful deploy (REST, non-fatal, best-effort)
+- Editable PPTX via LibreOffice (blocked on `soffice` prereq — build as opt-in, not default)
+- Figma Slides push as the eventual "live" presentation surface (blocked on Figma MCP auth; ship as a documented runbook now, automate later — this is the single highest long-term differentiator since no competitor docs-as-code pipeline targets Figma Slides as a deploy target)
 
-- `.dockerignore` excluding `node_modules/`, `.git/`, `data/`, `.env*`, `markdown.bbprojectd/` — excludes 100MB+ from build context and prevents credential leaks
+**Defer (v2+):**
 
-- Named volume for SQLite (`documind-data:/app/data`) — data must not be destroyed on container restart; bind-mounting from macOS host corrupts WAL mode on Docker Desktop
-
-- Environment variable configuration (`REPO_MODE`, `PORT`, `MCP_AUTH_TOKEN`, `SCAN_INTERVAL`, `FULL_SCAN_CRON`, `CHOKIDAR_USEPOLLING`) — portability across environments
-
-- `docker-compose.yml` with volume-mount mode, env var defaults, healthcheck, restart policy — `docker compose up` is the expected local dev UX
-
-- MCP HTTP transport (`StreamableHTTPServerTransport` on `POST /mcp`) — enables remote MCP clients; SDK already installed
-
-- Bearer token middleware on `/mcp` route — write-capable tools (lint, fix, index, scan) must not be callable without auth on a public image
-
-- GHCR GitHub Actions workflow — build + push on master + version tags; multi-arch
-
-#### Should have — v3.2.x after validation:
-
-- `docker-compose.ci.yml` for git-clone mode — enables CI without volume mounts
-
-- Periodic git pull cron in clone mode — repos go stale without it; trigger after CI deployments confirm the stale-index problem
-
-- SSH key auth for private repos in clone mode — HTTPS token covers most cases; SSH needed for specific cases
-
-#### Defer to v4+:
-
-- Kubernetes Helm chart — SQLite single-writer constraint makes horizontal scaling impossible without a database migration to Postgres or Turso
-
-- OAuth 2.1 on MCP endpoint — appropriate for multi-tenant only; bearer token is explicitly acceptable for single-user per MCP authorization docs
-
-- Multi-container compose with separate MCP process — adds network RPC overhead and sync complexity for zero architectural gain
+- Additional target languages beyond French (no validated demand; scope explosion of glossary/QA surface)
+- Onboarding other repos'/teams' decks onto this pipeline
+- Glossary self-service management tooling
+- Real-time/live-reload preview (Marp CLI's own `--server`/`--preview` already covers this for a single-user setup)
 
 ### Architecture Approach
 
-The containerized architecture replaces PM2 with Docker's own supervisor: `restart: unless-stopped` handles crash restart, Docker log driver captures stdout/stderr, and one process per container is the container idiom. `node daemon/server.mjs` runs as PID 1 (no dumb-init required when SIGTERM handlers are registered), MCP HTTP (`daemon/mcp-http.mjs`) starts conditionally when `DOCUMIND_MCP_HTTP=true`, and the stdio MCP server (`daemon/mcp-server.mjs`) remains unchanged as the transport for local macOS development. All 7 existing processors, the graph layer, and CLI scripts are unchanged — Docker just runs them.
+The pipeline is a single new processor module (`processors/slides-processor.mjs`, matching the existing one-processor-per-concern convention used by `relink-processor.mjs`) exposing `translateDeck()` / `renderDeck()` / `deployDeck()` / `recordRun()`, called identically from four entry points: the chokidar watcher, a thin CLI script (`scripts/publish-slides.mjs`), a REST endpoint (`POST /slides/publish`), and an MCP tool (`publish_slides`) — no orchestration-logic duplication across surfaces. A new `slide_pipeline_runs` table (not a reuse of the existing `conversions` table, whose `CHECK` constraint and one-row-per-format-conversion shape don't fit a multi-stage run) is the single source of truth for pipeline state, mirroring the `stale_diagrams`/`latest_slide_runs` "last known good" view pattern already established for the diagram registry. Daemon-to-daemon notification (AgentHub) is plain REST `fetch()`, never MCP — MCP tools only exist inside an LLM agent's tool-call loop, and the daemon is a headless PM2 process with no agent host attached; this same reasoning is why Figma Slides push is architected as a manual, agent-invoked runbook step rather than an automated pipeline stage.
 
-#### Major components (new and modified):
+**Major components:**
 
-1. `Dockerfile` (NEW) — multi-stage `node:22-bookworm-slim`; builder stage installs native modules; runtime stage copies compiled `node_modules`; non-root user; `CMD ["node", "daemon/server.mjs"]`
-
-2. `docker-compose.yml` (NEW) — port mapping, named volume, env var defaults, healthcheck, restart policy
-
-3. `.dockerignore` (NEW) — excludes build noise and secrets from image context
-
-4. `daemon/server.mjs` (MODIFIED) — adds graceful shutdown via `@godaddy/terminus`; conditionally starts MCP HTTP server
-
-5. `daemon/scheduler.mjs` (MODIFIED) — cron intervals read from `process.env` with fallback defaults
-
-6. `daemon/mcp-http.mjs` (NEW) — Streamable HTTP transport on port 9001; same tools as stdio via shared `daemon/mcp-tools.mjs`
-
-7. `processors/git-ingestor.mjs` (NEW) — clone/pull repos into `/repos/` using `simple-git`; runs at startup and on periodic cron
-
-8. `docker-entrypoint.sh` (NEW) — runs git-ingestor before daemon start when `DOCUMIND_REPOS` env var is set
-
-9. `config/profiles/docker.json` (NEW) — Docker-specific context profile with `/repos/*` path convention
-
-10. `.github/workflows/docker-publish.yml` (NEW) — build + push to GHCR on version tag; multi-arch via buildx
+1. `daemon/watcher.mjs` (MODIFIED) — detects EN deck changes via an `isSlidesEnSource()` predicate, dispatches to the pipeline (still indexes the file too, unchanged)
+2. `processors/slides-processor.mjs` (NEW) — owns the translate→render→deploy chain, per-deck in-flight guard, ledger writes
+3. `slide_pipeline_runs` table + `latest_slide_runs` view (NEW) — pipeline run ledger, single source of truth read by REST/MCP/CLI alike
+4. `scripts/publish-slides.mjs` (NEW) — thin CLI wrapper, mirrors `scripts/fix-markdown.mjs` convention, works standalone without the daemon running
+5. AgentHub REST integration (`fetch()` to port 3004) — non-fatal, best-effort ecosystem notification on successful deploy
 
 ### Critical Pitfalls
 
-1. **better-sqlite3 fails on Alpine / Node 24** — Alpine's musl libc breaks glibc-linked prebuilt binaries at runtime (`fcntl64: symbol not found`); Node 24 prebuilts for N-API 137 do not exist. Use `node:22-bookworm-slim` unconditionally. This is the first Dockerfile decision and the costliest to discover late.
+1. **Watcher feedback loop from the pipeline's own generated output** — `.fr.md`, `.html`, `.pdf`, `.pptx` writes match existing broad watch globs; without exclusion, the watcher re-indexes (and, once translate/render exist, could re-trigger) on its own artifacts. See reconciliation below for the agreed primary defense.
+2. **DeepL mangles Marp front-matter, directives, code fences, and proper nouns** — DeepL has no Markdown/Marp awareness; `tag_handling` only covers `xml`/`html`. Mitigation: placeholder-protect front-matter/directives/code before translation, restore verbatim after, validate by diffing EN vs. FR directive-comment counts (hard-fail on mismatch), and pin proper nouns via a DeepL glossary.
+3. **DeepL breaks GFM tables under this repo's own DVW001/DVW002 lint rules** — table rows/separators are not row-aware to DeepL's sentence-reflow behavior; a blank line inserted mid-table silently breaks GFM parsing. Mitigation: placeholder-protect entire table blocks, translate cell text only, then run `markdownlint-cli2` against every generated `.fr.md` as a pipeline gate (fail the run on violation, don't auto-fix-and-continue).
+4. **marp-cli headless Chrome / `soffice` flakiness specifically under PM2** — auto-discovery that works in an interactive shell can silently resolve differently (or not at all) under PM2's environment. Mitigation: pin `--browser-path` (via `puppeteer.executablePath()`) and `SOFFICE_PATH` explicitly in the daemon's env, verify with `pm2 env <id>`, and test render success via `pm2 restart`, not just CLI invocation.
+5. **FTP deploy publishes half-rendered output, or targets the wrong protocol entirely** — `basic-ftp` speaks FTP/FTPS only, not SFTP; passive-mode data channels can be silently blocked by firewalls even after a successful login. Mitigation: confirm the actual protocol with the hosting provider before locking in `basic-ftp`, stage-then-atomic-rename every deploy (never write directly to the live path file-by-file), and keep dry-run as the default until both the protocol and the rename path are verified end-to-end.
 
-2. **Hardcoded macOS paths block all scanning inside the container** — `config/constants.mjs` (line 42), `processors/tree-processor.mjs` (line 12), and `scripts/scan/enhanced-scanner.mjs` (lines 22-31) contain absolute `/Users/Shared/` paths confirmed by direct codebase inspection. Must be replaced with context-profile-driven lookups before Dockerfile authoring. This is the single mandatory pre-Docker step.
+## Reconciled Recommendation: Loop Protection & Overlap Prevention
 
-3. **SQLite WAL corruption on macOS bind mounts** — Docker Desktop on macOS routes bind mounts through VirtioFS; WAL mode's shared memory locking breaks silently, producing `SQLITE_BUSY` errors or silent write loss after container restart. Use named Docker volumes (`documind-data:/app/data`), not bind mounts, for the database. Bind mounts are acceptable only with `PRAGMA journal_mode=DELETE`.
+ARCHITECTURE.md and PITFALLS.md propose different primary mechanisms for the same problem — the pipeline's own writes re-entering the watcher — and this must be resolved explicitly before implementation:
 
-4. **`CMD ["npm", "start"]` swallows SIGTERM** — npm does not forward SIGTERM to its child Node process; Docker force-kills after 10 seconds, leaving the SQLite WAL unclosed. Use `CMD ["node", "daemon/server.mjs"]` and handle SIGTERM explicitly via `@godaddy/terminus`.
+- **ARCHITECTURE.md's proposal:** reuse `daemon/registry-lock.mjs`'s existing `writingNow` Set (add path before write, delete after ~2.5s hold) as loop-protection layer 2, on top of a filename-convention check as layer 1 and content-hash idempotency as layer 3.
+- **PITFALLS.md's objection:** `writingNow`'s current usage pattern is a `setTimeout(() => writingNow.delete(path), 3000)` sized for `relink-processor.mjs`'s small, fast, single-file registry rewrites. DeepL translation calls plus headless-Chrome multi-format renders (EN+FR × HTML/PDF/PPTX) routinely exceed that 3000ms window, combined with chokidar's own `awaitWriteFinish` (2000ms) and 5s debounce — there is no guarantee the lock is still held when the corresponding fs event actually fires, reopening exactly the loop it's meant to prevent. PITFALLS.md's recommendation is instead to keep generated globs (`**/*.fr.md`, `docs/slides/**/*.{html,pdf,pptx}`) out of the watch set entirely via `IGNORE_PATTERNS`, and to give the pipeline its own dedicated per-deck run-lock (independent of the shared debounce/lock machinery) to prevent overlapping runs — not to lean on the 3s registry lock for either purpose.
 
-5. **Chokidar watcher is silent on Docker Desktop volume mounts** — inotify events from the macOS host do not propagate through the Linux VM. Set `CHOKIDAR_USEPOLLING=true` and `CHOKIDAR_INTERVAL=2000` as env vars; rely on hourly cron as the authoritative scan source. Not an issue in git-clone mode (all writes happen inside the container's own filesystem).
+**Reconciled recommendation, adopted for the roadmap:**
 
-6. **Git credentials in image layers** — `ARG GITHUB_TOKEN` or `COPY .ssh` in Dockerfile embed credentials permanently into image layers visible via `docker history --no-trunc`. Pass credentials at container runtime via `environment:` in docker-compose; use BuildKit `--mount=type=ssh` only for build-time SSH access.
+1. **Primary, unconditional gate — glob exclusion:** add every generated pattern (`**/*.fr.md`, `docs/slides/**/*.html`, `docs/slides/**/*.pdf`, `docs/slides/**/*.pptx`, any FTP staging temp path) to `watcher.mjs`'s `IGNORE_PATTERNS`, so generated artifacts never enter chokidar's watch set at all. This removes the timing race entirely rather than managing it, and is checked before any lock or hash logic runs (ARCHITECTURE.md's `isSlidesEnSource()` filename-convention check — "does this path end in `.fr.md`?" — is folded into this same gate rather than treated as a separate layer).
+2. **Overlap prevention — a dedicated pipeline run-lock, not the shared registry lock:** a per-deck in-flight guard (`Map<deckPath, Promise>` or equivalent) scoped to `processors/slides-processor.mjs` itself, sized for multi-second/multi-stage work and completely independent of `daemon/registry-lock.mjs`'s `writingNow` Set. A second trigger for a deck already mid-pipeline coalesces (queues one rerun) rather than firing a concurrent run — this directly addresses PITFALLS.md's Pitfall 10 (overlapping runs corrupting deploy ordering via last-writer-wins-by-accident), which glob exclusion alone does not solve.
+3. **Defense-in-depth — content-hash idempotency:** `slide_pipeline_runs.source_hash` (SHA-256 of the EN source at trigger time) compared against the last successful run's hash before executing, and re-checked immediately before the final FTP publish/rename step so a newer in-flight run always wins over a slower, stale one. This catches the residual cases glob exclusion and the run-lock don't — daemon restarts mid-render, clock skew, or a manually-triggered re-run racing a watcher-triggered one.
 
-7. **PM2 as Docker CMD exits the container immediately** — PM2 daemonizes, then the calling process exits, stopping the container. Keep `ecosystem.config.cjs` for local macOS use unchanged; run `node` directly in the container.
+`writingNow` remains exactly as-is for its existing, proven use case (`relink-processor.mjs`'s fast registry rewrites) — it is **not** extended to cover slide-pipeline writes, and the roadmap should treat "reuse `writingNow` for multi-second pipeline writes" as an explicitly rejected approach, not an open option, when phase plans are written.
 
 ## Implications for Roadmap
 
-The build order is driven by three hard constraints: (1) path audit must precede all container work, (2) container foundation must precede feature layers, and (3) MCP HTTP and git-clone are independent of each other after the foundation is established. ARCHITECTURE.md suggests a clean 6-step sequence that maps directly to phases.
+Based on combined research, the dependency-ordered build sequence from ARCHITECTURE.md's "Suggested Build Order" is sound and should anchor phase structure. Suggested phases:
 
-### Phase 0: Pre-Docker Path Audit and Refactor
+### Phase 1: Foundation
 
-**Rationale:** Hardcoded macOS paths are a blocking prerequisite confirmed by direct codebase inspection. No container will scan correctly until all path lookups flow through the context profile. This is the only phase that must precede all others and it has zero Docker dependencies.
+**Rationale:** Every downstream stage needs config, a ledger to record into, and correct git/gitignore hygiene before any pipeline code runs. Also the cheapest phase to get fully right before anything depends on it.
+**Delivers:** `slide_pipeline_runs` migration; `config/env.mjs` additions (`DEEPL_API_KEY`, `SLIDES_FTP_*`, `SLIDES_SOFFICE_PATH`); `.marprc.yml`; `IGNORE_PATTERNS` additions in `watcher.mjs` for all generated globs; `.gitignore` rules + `git rm --cached` on the already-committed May-21 binaries; `.dockerignore` verification for `.env`.
+**Addresses:** Watcher loop protection (table stakes), deploy manifest/state tracking (table stakes)
+**Avoids:** Pitfall 8 (stale committed binaries / mis-scoped gitignore), Pitfall 9 (secrets baked into Docker image), lays the glob-exclusion groundwork for Pitfall 1
 
-**Delivers:** Codebase where all path resolution flows through `context/loader.mjs`; no `/Users/Shared/` strings in any production code path; `daemon/server.mjs` fails loudly on missing profile rather than falling back to macOS path.
+### Phase 2: Render Stage (isolated)
 
-**Addresses:** Pitfall 2 (hardcoded paths), PITFALLS.md pre-Docker refactor requirement.
+**Rationale:** Proves the `execFile`/marp-cli subprocess pattern against the two existing fixture decks with zero watcher/translate/deploy risk in the loop. Also resolves the open MEDIUM-confidence question (one-call-vs-three-calls for multi-format output) via a small spike before it's load-bearing elsewhere.
+**Delivers:** `renderDeck()` in `processors/slides-processor.mjs`, callable via `scripts/publish-slides.mjs --render-only`; explicit `--browser-path` pinned to `puppeteer.executablePath()`; `SOFFICE_PATH` pre-flight check for `--pptx-editable`.
+**Uses:** `@marp-team/marp-cli`, existing `puppeteer` devDependency, `execFileAsync` pattern from `daemon/scheduler.mjs`
+**Implements:** `processors/slides-processor.mjs` render function
 
-**Tasks:** Audit and fix `config/constants.mjs`, `processors/tree-processor.mjs`, `scripts/scan/enhanced-scanner.mjs`; replace hardcoded fallbacks with context-profile lookups; define `/repos/<name>/` as the canonical container-internal path convention.
+### Phase 3: Translation Stage (isolated)
 
-**Verification:** `grep -r '/Users/Shared' daemon/ processors/ config/constants.mjs` returns no results in production code paths.
+**Rationale:** Independently CLI-testable and unblocked even before `DEEPL_API_KEY` lands (graceful no-key skip is the default state today). This is the single highest-risk piece per all four research files and must be correct before render/watcher trust its output.
+**Delivers:** `translateDeck()` with placeholder-protection for front-matter/directives/code-fences/tables, DeepL glossary wiring, directive-count round-trip validation, and a `markdownlint-cli2` gate on generated `.fr.md` (fail the run on DVW001/DVW002 violation).
+**Addresses:** Front-matter/directive preservation, code-fence preservation, proper-noun protection, table preservation (all table stakes)
+**Avoids:** Pitfall 2 (DeepL mangles directives/code/proper nouns), Pitfall 3 (DeepL breaks GFM tables), Pitfall 7 (endpoint/quota mismatch — use `deepl-node`'s auto-detection, pre-check quota before batch runs)
 
-**Research flag:** Standard patterns — no phase research needed. This is a straightforward code audit and refactor.
+### Phase 4: Ledger Wiring
 
----
+**Rationale:** Needed before watcher integration so a bad trigger is debuggable via the DB, not just console logs — matches ARCHITECTURE.md's explicit sequencing rationale.
+**Delivers:** `recordRun()` wrapping stages 2+3, `latest_slide_runs` view live and queried.
+**Implements:** Data layer described in ARCHITECTURE.md's Data Model section
 
-### Phase 1: Dockerfile Foundation
+### Phase 5: Watcher Integration & Loop Protection
 
-**Rationale:** All subsequent phases depend on a working container. Establish production hygiene baselines before adding mode-specific features. This phase validates the critical base-image and signal-handling decisions.
+**Rationale:** This is where the reconciled loop-protection strategy (glob exclusion + dedicated run-lock + content-hash) is proven end-to-end — deliberately sequenced after render/translate are independently trusted, so a loop bug can't masquerade as a translation or render bug.
+**Delivers:** `isSlidesEnSource()`/glob-exclusion wiring in `daemon/watcher.mjs`, per-deck in-flight `Map` in `slides-processor.mjs` (dedicated run-lock, not `writingNow`), content-hash gate against `latest_slide_runs`.
+**Addresses:** Daemon-orchestrated trigger (differentiator), incremental rebuild (table stakes)
+**Avoids:** Pitfall 1 (watcher feedback loop) and Pitfall 10 (overlapping pipeline runs) — verified per the reconciled recommendation above, tested by editing a fixture deck and confirming exactly one run fires, the `.fr.md` write does not re-trigger, and a rapid second edit coalesces rather than double-running
 
-**Delivers:** Multi-stage `Dockerfile` with `node:22-bookworm-slim`, non-root user, graceful shutdown via `@godaddy/terminus`, `HEALTHCHECK` instruction, `.dockerignore`, named volume strategy, and `docker-compose.yml` with `restart: unless-stopped`.
+### Phase 6: Deploy Stage
 
-**Addresses:** All P1 table-stakes Docker features (non-root, healthcheck, `.dockerignore`, named volume, graceful shutdown, multi-stage build).
+**Rationale:** Independent of translate/render internals but naturally consumes their output paths — build once there's something real to deploy. Protocol confirmation (FTP/FTPS/SFTP) is a hard external dependency that should be resolved in parallel, not discovered mid-phase.
+**Delivers:** `deployDeck()` via `basic-ftp`, dry-run-by-default, atomic stage-then-rename upload pattern.
+**Addresses:** Deploy dry-run mode, deploy manifest/state tracking (table stakes)
+**Avoids:** Pitfall 6 (half-rendered/protocol-mismatched deploy) — confirm protocol with the hosting provider in writing before flipping dry-run off
 
-**Avoids:** Pitfalls 1 (Alpine), 3 (WAL bind mount), 4 (npm CMD), 7 (PM2 CMD).
+### Phase 7: Ecosystem Surface & Notification
 
-**Uses:** `node:22-bookworm-slim`, `@godaddy/terminus`, `CMD ["node", "daemon/server.mjs"]`, named Docker volumes, `CHOKIDAR_USEPOLLING` env var.
-
-**Verification gates:** `docker run --rm <image> node -e "require('better-sqlite3')"` exits 0; `docker stop` completes in under 5 seconds with exit code 0; `docker compose up` shows healthy status; build context under 10MB.
-
-**Research flag:** Standard patterns — official nodejs/docker-node BestPractices.md covers this exactly. Skip phase research.
-
----
-
-### Phase 2: Environment Variable Configuration
-
-**Rationale:** Must be established before any mode-specific code since both git-clone and MCP HTTP depend on env vars to configure their behavior. Externalizes all hardcoded config into `process.env` with sane defaults.
-
-**Delivers:** All runtime behavior configurable via environment variables; `daemon/scheduler.mjs` reads cron expressions from `process.env`; chokidar polling mode controlled by `CHOKIDAR_USEPOLLING`; `context/loader.mjs` supports `DOCUMIND_REPOS_DIR` path prefix; `.env.example` file with all supported vars documented.
-
-**Addresses:** Portability table stake; enables CI compatibility; sets up infrastructure for both Phases 3 and 4.
-
-**Uses:** `dotenv@^16.4.7`; new env vars `REPO_MODE`, `PORT`, `MCP_AUTH_TOKEN`, `SCAN_INTERVAL`, `FULL_SCAN_CRON`, `GIT_PULL_CRON`, `DOCUMIND_MCP_HTTP`, `DOCUMIND_MCP_HTTP_PORT`, `CHOKIDAR_USEPOLLING`, `CHOKIDAR_INTERVAL`.
-
-**Avoids:** Pitfall 5 (chokidar silent on Docker volumes — add `CHOKIDAR_USEPOLLING` here).
-
-**Research flag:** Standard patterns — 12-factor config with dotenv is well-documented. Skip phase research.
-
----
-
-### Phase 3: Git-Clone Ingestion Mode
-
-**Rationale:** Independent of MCP HTTP after Phase 2. Enables CI deployments where repos cannot be volume-mounted. The git-clone pattern is the primary feature that differentiates a "works locally" container from a "works anywhere" container.
-
-**Delivers:** `processors/git-ingestor.mjs` using `simple-git`; `docker-entrypoint.sh` that runs ingestor before daemon when `DOCUMIND_REPOS` is set; `config/profiles/docker.json` with `/repos/*` path convention; periodic git pull cron job in scheduler; `docker-compose.ci.yml` for CI use.
-
-**Addresses:** Dual repo access mode differentiator; CI compatibility (P2 features from FEATURES.md).
-
-**Uses:** `simple-git@^3.33.0`; `git` CLI installed in runtime image layer; `docker-entrypoint.sh`; `DOCUMIND_REPOS` env var (JSON array of `{ name, url, branch }`).
-
-**Avoids:** Pitfall 6 (git credentials in image layers — runtime env var injection only; never bake credentials at build time).
-
-**Research flag:** MEDIUM complexity — the dual-mode pattern is DocuMind-specific synthesis with no single reference confirming exactly this approach. Review kubernetes/git-sync sidecar for periodic-pull patterns before implementation. Confirm whether shallow clone (`--depth=1`) is sufficient for DVWDesign repo history sizes.
-
----
-
-### Phase 4: MCP HTTP Transport
-
-**Rationale:** Independent of git-clone mode after Phase 2. Required before GHCR publish — a write-capable MCP endpoint with no auth on a public image would be irresponsible. Builds on the graceful shutdown infrastructure from Phase 1.
-
-**Delivers:** `daemon/mcp-http.mjs` using `StreamableHTTPServerTransport`; bearer token middleware on `/mcp` route; shared `daemon/mcp-tools.mjs` module to avoid duplicating 14 tool registrations between stdio and HTTP servers; HTTP MCP config snippet for `.claude/mcp.json`; Origin header validation per MCP spec 2025-03-26.
-
-**Addresses:** MCP HTTP transport (P1); bearer token auth (P1, security gate before GHCR publish).
-
-**Uses:** `StreamableHTTPServerTransport` confirmed at `dist/esm/server/streamableHttp.js` in installed SDK; stateful session mode (sessionId generator + transport Map) for multi-step tool operations; `MCP_AUTH_TOKEN` env var.
-
-**Avoids:** Anti-pattern: exposing `POST /mcp` without Origin header validation (DNS rebinding attack vector per MCP spec); duplicating tool registrations across stdio and HTTP entry points.
-
-**Research flag:** Standard patterns — MCP SDK confirmed installed with HTTP transport present; official MCP spec is the authoritative source. Skip phase research.
-
----
-
-### Phase 5: GHCR Publishing and CI Workflow
-
-**Rationale:** Final phase — publishes only after the image is production-quality. Image must have non-root user, healthcheck, graceful shutdown, and bearer auth before making it public. Publishing is a one-way gate: leaked credentials in GHCR image layers require token rotation and image deletion.
-
-**Delivers:** `.github/workflows/docker-publish.yml` that builds and pushes multi-arch image to GHCR on version tag push; semantic version tags (`v3.2.0`, `v3.2`, `latest`) via `docker/metadata-action@v5`; layer caching via `cache-from/cache-to: type=gha`; `packages: write` permission configured.
-
-**Addresses:** GHCR publishing (P1); CI GitHub Actions workflow (P1); multi-arch build (P2); semantic version tags differentiator.
-
-**Uses:** `docker/build-push-action@v6`, `docker/metadata-action@v5`, `docker/login-action@v3`, `docker/setup-buildx-action@v3`, `docker/setup-qemu-action@v3`; `GITHUB_TOKEN` with auto-created `packages: write` scope.
-
-**Avoids:** Pitfall 6 corollary (credential audit — run `docker history --no-trunc` and `docker scout` or `trivy` before making image public).
-
-**Research flag:** Standard patterns — official GitHub docs confirm this workflow exactly. Skip phase research.
-
----
+**Rationale:** Trivial once the core loop (2-6) exists; low risk, correctly built last so it never blocks the deploy-critical path.
+**Delivers:** `notifyAgentHub()` REST call (non-fatal), `POST /slides/publish` + `GET /slides/runs` on `server.mjs`, `get_slide_runs`/`publish_slides` MCP tools, Figma Slides runbook (documented, agent-invoked, explicitly decoupled from the automated daemon loop — blocked on Figma MCP auth).
+**Addresses:** AgentHub discovery notification, Figma Slides push (differentiators — the latter deferred to v1.x per FEATURES.md pending the auth unblock)
 
 ### Phase Ordering Rationale
 
-- Phase 0 before everything: hardcoded macOS paths are a blocking dependency confirmed by codebase inspection; no container runs correctly without this fix.
-
-- Phase 1 before Phases 3 and 4: both modes need a working container; graceful shutdown protects SQLite across both modes regardless of which mode is active.
-
-- Phase 2 before Phases 3 and 4: both modes are env-var-driven; config infrastructure must exist before mode-specific logic reads from it.
-
-- Phases 3 and 4 are independent of each other after Phase 2 and can be built in parallel.
-
-- Phase 5 only after Phases 1-4: GHCR publish is a publication gate gated on security (auth on MCP HTTP) and data integrity (graceful shutdown).
+- Render-before-translate (Phase 2 before 3) inverts the pipeline's logical execution order deliberately: you cannot design the translation placeholder-protection scheme without first enumerating exactly which Marp directive/front-matter syntax exists in the corpus, which the render stage's own tooling surfaces naturally while being built.
+- Watcher integration is deliberately the fifth phase, not the first or second: both ARCHITECTURE.md and PITFALLS.md agree loop-protection is only trustworthy once render and translate are independently proven — wiring the watcher early would make loop bugs indistinguishable from translation/render bugs during debugging.
+- Deploy is sequenced after the ledger and watcher phases specifically so dry-run output is inspectable via the DB (`slide_pipeline_runs`) from day one, not just console noise, per FEATURES.md's MVP definition.
+- Figma Slides and full AgentHub automation are last because both are structurally decoupled from the daemon's automated loop (MCP tools require an LLM agent host, which the headless daemon process is not) — they cannot be "built early" even if desired; they're runbook/agent-invoked steps by architecture, not sequencing preference.
 
 ### Research Flags
 
-Phases requiring deeper research during planning:
+Needs research during phase planning:
 
-- **Phase 3 (Git-Clone Ingestion):** The dual-mode pattern is DocuMind-specific. Review kubernetes/git-sync for periodic-pull patterns. Confirm shallow clone suitability for DVWDesign repo sizes. Decide whether periodic pull cron belongs in scheduler or a separate entry point.
+- **Phase 2 (Render Stage):** MEDIUM confidence on whether `.marprc.yml`'s per-format boolean config (`pdf: true`, `pptx: true`) actually produces multiple output files from one invocation, or whether marp-cli genuinely requires one CLI invocation per format — flagged explicitly in ARCHITECTURE.md as needing a quick spike before the render stage's invocation pattern is finalized.
+- **Phase 7 (Figma Slides):** LOW confidence on the `figma-use-slides` skill's actual input contract (rendered HTML? raw markdown? structured JSON?) — FEATURES.md flags this as unconfirmed from public sources; must be resolved when Figma MCP auth unblocks, before this phase's design is finalized.
+- **Phase 6 (Deploy Stage):** Deploy protocol (FTP vs. FTPS vs. SFTP) is an external unknown, not a documentation gap — must be confirmed with the hosting provider before `basic-ftp` vs. an SFTP client decision is locked in; treat as a phase blocker, not a research task.
 
-Phases with standard patterns (skip `/gsd:research-phase`):
+Phases with standard, well-documented patterns (skip `/gsd:research-phase`):
 
-- **Phase 0 (Path Audit):** Straightforward code audit; patterns are well-understood.
-
-- **Phase 1 (Dockerfile Foundation):** Official nodejs/docker-node BestPractices.md covers this exactly.
-
-- **Phase 2 (Env Config):** dotenv + process.env is a well-established 12-factor pattern.
-
-- **Phase 4 (MCP HTTP):** SDK confirmed installed; MCP spec is the authoritative source.
-
-- **Phase 5 (GHCR CI):** Official GitHub docs confirm the workflow pattern.
+- **Phase 1 (Foundation):** Migration files, `.gitignore`/`.dockerignore` hygiene, and env var centralization all follow established, already-used patterns in this repo.
+- **Phase 4 (Ledger Wiring):** Directly mirrors the existing `scan_runs`/`stale_diagrams` table-and-view pattern already proven in this codebase.
+- **Phase 7 (AgentHub REST portion only):** `fetch()` to a known, already-documented REST payload shape — no new pattern needed.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
-
-| ------ | ---------- | ----- |
-
-| Stack | HIGH | Base image choice verified via open upstream issues in better-sqlite3 repo; GHCR workflow from official GitHub docs; MCP transport from official spec 2025-03-26; all new packages confirmed available |
-
-| Features | HIGH | Table stakes from official nodejs/docker-node BestPractices.md; MCP from official spec; GHCR from official GitHub docs; anti-features well-documented |
-
-| Architecture | HIGH | Based on direct codebase inspection + SDK presence confirmed in node_modules; component boundaries clearly drawn with specific file names and line numbers |
-
-| Pitfalls | HIGH | better-sqlite3 Alpine incompatibility confirmed via maintainer docs and open issues; WAL + Docker via SQLite official docs ("WAL does not work over a network filesystem"); hardcoded paths confirmed by direct file inspection with specific line numbers |
+| ------ | ------------ | ------- |
+| Stack | HIGH | All three core packages verified directly against the npm registry (version, engines, dependency tree); DeepL's Markdown-handling gap confirmed via the official SDK's own open issue tracker, not inference |
+| Features | MEDIUM-HIGH | Marp/DeepL mechanics verified against official docs/GitHub; daemon-orchestration value proposition is DocuMind-specific reasoning (sound, but not externally validated); the Figma Slides `figma-use-slides` input contract is explicitly flagged LOW confidence within this otherwise MEDIUM-HIGH file |
+| Architecture | HIGH | Every integration point read directly from current source (`watcher.mjs`, `scheduler.mjs`, `registry-lock.mjs`, `env.mjs`, `schema.sql`, `server.mjs`, `mcp-server.mjs`) plus the sibling `AgentHub/src/index.ts`; only the multi-format single-invocation question is MEDIUM (needs the Phase 2 spike) |
+| Pitfalls | MEDIUM-HIGH | Grounded in direct codebase inspection plus official docs/GitHub issues for marp-cli, DeepL, and basic-ftp; explicitly flags where DocuMind-specific behavior is inferred rather than tested (e.g., PM2-environment PATH resolution differences) |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **ARCHITECTURE.md base image inconsistency:** The architecture research suggests `node:22-alpine` in its Dockerfile code blocks while simultaneously documenting why it works (compile native modules inside Alpine). STACK.md and PITFALLS.md both recommend `node:22-bookworm-slim` with higher-confidence sourcing. **Resolution for roadmap: use `node:22-bookworm-slim`.** Alpine introduces the musl/glibc risk documented in Pitfall 1; Debian slim eliminates that class of issue for a ~30MB image size increase that is not worth debating.
-
-- **better-sqlite3 Node 24 status:** Incompatibility is confirmed as of 2026-03-23 but may resolve in a future release. Reassess when considering upgrades beyond v3.2. Flag this in implementation notes.
-
-- **Stateful vs stateless MCP session mode:** ARCHITECTURE.md recommends stateful sessions (sessionId generator + transport Map) for multi-step tool operations; STACK.md notes stateless mode (`sessionIdGenerator: undefined`) is correct for single-tenant. These are not contradictory — stateful is correct for DocuMind's use case. Validate during Phase 4 implementation.
-
-- **Chokidar in git-clone mode:** Research confirms chokidar still provides value in git-clone mode (picks up `git pull` file changes). In git-clone mode, git writes occur entirely inside the container's own filesystem where inotify works correctly — `CHOKIDAR_USEPOLLING` is therefore not needed in git-clone mode. Confirm this behavior during Phase 3 testing before documenting.
+- **Loop-protection mechanism (RESOLVED in this document):** ARCHITECTURE.md and PITFALLS.md disagreed on whether to reuse `writingNow` as a second defensive layer. Reconciled above — glob exclusion is primary, a dedicated per-deck run-lock (not `writingNow`) handles overlap, content-hash is defense-in-depth. This should be treated as decided going into roadmap/phase planning, not re-litigated.
+- **Marp multi-format invocation (one call vs. three):** Needs a short spike in Phase 2 before the render stage's `execFile` pattern is finalized — build as three sequential/`Promise.all`'d calls as the safe baseline per ARCHITECTURE.md's recommendation, collapse only if the spike proves the config-driven single call works.
+- **FTP vs. FTPS vs. SFTP deploy protocol:** Genuinely unconfirmed (external dependency on hosting provider, not a documentation gap) — must be resolved before Phase 6 locks in `basic-ftp` as final rather than provisional.
+- **`.fr.md` tracked-vs-gitignored:** ARCHITECTURE.md flags this as an open decision point (recommends tracking, since it's diffable markdown and benefits the FTS5 index) that the roadmap/phase-planning step should explicitly confirm rather than assume.
+- **Figma Slides `use_figma` input contract:** Cannot be resolved until Figma MCP auth unblocks; Phase 7's Figma-related scope should stay a documented runbook until then, not a coded integration.
+- **DeepL Free-tier quota headroom at real usage volume:** No current data on actual deck-edit frequency; PITFALLS.md and STACK.md both recommend a quota pre-check before batch runs plus `deeplClient.getUsage()` monitoring rather than assuming Free tier is sufficient indefinitely.
 
 ## Sources
 
 ### Primary (HIGH confidence)
 
-- [WiseLibs/better-sqlite3 Issue #1384](https://github.com/WiseLibs/better-sqlite3/issues/1384) — Node 24 N-API 137 prebuilt binaries missing; open upstream issue
-
-- [WiseLibs/better-sqlite3 Discussion #1270](https://github.com/WiseLibs/better-sqlite3/discussions/1270) — Alpine vs Debian: maintainer explicitly recommends Debian slim
-
-- [Docker Hub node:22-bookworm-slim](https://hub.docker.com/layers/library/node/22-bookworm-slim/) — Active LTS tag confirmed
-
-- [MCP Specification 2025-03-26 — Transports](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports) — Streamable HTTP current standard, SSE deprecated; Origin header validation required
-
-- [GitHub Publishing Docker Images docs](https://docs.github.com/en/actions/publishing-packages/publishing-docker-images) — GHCR workflow with GITHUB_TOKEN and packages: write
-
-- [nodejs/docker-node BestPractices.md](https://github.com/nodejs/docker-node/blob/main/docs/BestPractices.md) — non-root user, signal handling, healthcheck patterns
-
-- [Express.js graceful shutdown guide](https://expressjs.com/en/advanced/healthcheck-graceful-shutdown.html) — SIGTERM via npm swallows signal; direct node exec required
-
-- [SQLite WAL official docs](https://www.sqlite.org/wal.html) — "WAL does not work over a network filesystem"
-
-- [chokidar Issue #1051](https://github.com/paulmillr/chokidar/issues/1051) — Docker volume mount inotify issue; `usePolling=true` is the documented fix
-
-- Codebase direct inspection — `daemon/server.mjs` line 56 (WAL confirmed), line 50 (macOS path fallback confirmed); `daemon/mcp-server.mjs` line 31 (WAL in MCP server); `config/constants.mjs` line 42 (`LOCAL_BASE_PATH` hardcoded); `processors/tree-processor.mjs` line 12 (`REPOS_ROOT` hardcoded); `scripts/scan/enhanced-scanner.mjs` lines 22-31 (14 hardcoded absolute paths); zero SIGTERM handlers across all 5 daemon files
-
-- MCP SDK installed in project — `StreamableHTTPServerTransport` confirmed present at `dist/esm/server/streamableHttp.js`
+- npm registry direct (`npm view`) — `@marp-team/marp-cli@4.4.1`, `deepl-node@1.27.0`, `basic-ftp@6.0.1` — versions, engines, dependency trees
+- [marp-team/marp-cli GitHub README](https://github.com/marp-team/marp-cli/blob/main/README.md) — CLI flags, config precedence, Docker/container auto-detection
+- [DeepLcom/deepl-node GitHub](https://github.com/DeepLcom/deepl-node) — `DeepLClient` API, `tagHandling`, glossary API (v2 vs. v3)
+- [DeepLcom/deepl-node Issue #26](https://github.com/DeepLcom/deepl-node/issues/26) — confirms no native Markdown handling exists, still open
+- Direct codebase inspection: `daemon/watcher.mjs`, `daemon/scheduler.mjs`, `daemon/registry-lock.mjs`, `config/env.mjs`, `scripts/db/schema.sql`, `daemon/server.mjs`, `daemon/mcp-server.mjs`, `processors/relink-processor.mjs`, `package.json`, `pnpm-lock.yaml`, `.planning/PROJECT.md`, `.planning/STATE.md`
+- `/Users/Shared/htdocs/github/DVWDesign/AgentHub/src/index.ts` (sibling repo) — confirmed `POST /api/discoveries` REST payload shape, port 3004
 
 ### Secondary (MEDIUM confidence)
 
-- [Node Best Practices — Graceful Shutdown](https://github.com/goldbergyoni/nodebestpractices/blob/master/sections/docker/graceful-shutdown.md) — terminus recommendation; SIGTERM forwarding behavior
-
-- [godaddy/terminus GitHub](https://github.com/godaddy/terminus) — createTerminus API reference
-
-- [kubernetes/git-sync](https://github.com/kubernetes/git-sync) — periodic git pull sidecar pattern reference for clone mode design
-
-- [How to Run SQLite in Docker](https://oneuptime.com/blog/post/2026-02-08-how-to-run-sqlite-in-docker-when-and-how/view) — named volume strategy for WAL safety
-
-- [MCP bearer token auth discussion #1247](https://github.com/modelcontextprotocol/modelcontextprotocol/discussions/1247) — bearer token acceptable for single-user deployments per MCP authorization docs
-
-- [simple-git npm](https://www.npmjs.com/package/simple-git) — v3.33.0 current; 7.9M weekly downloads vs 628K for isomorphic-git
+- [marp-cli Issue #631](https://github.com/marp-team/marp-cli/issues/631) — `SOFFICE_PATH` workaround for non-standard LibreOffice installs
+- [marp-cli Issue #671](https://github.com/marp-team/marp-cli/issues/671), [Issue #673](https://github.com/marp-team/marp-cli/issues/673), [Discussion #82](https://github.com/orgs/marp-team/discussions/82) — sandboxed-launch and `--pptx-editable` reproducibility caveats
+- [DeepL API — XML/HTML tag handling docs](https://developers.deepl.com/docs/xml-and-html-handling/html), [Multilingual Glossaries reference](https://developers.deepl.com/api-reference/multilingual-glossaries), [Error handling docs](https://developers.deepl.com/docs/best-practices/error-handling)
+- [izznat/deepmark](https://github.com/izznat/deepmark), [rockbenben/md-translator](https://github.com/rockbenben/md-translator), [hanabu/cmark-translate](https://github.com/hanabu/cmark-translate) — prior art confirming placeholder-swap is the standard community pattern (deepmark itself rejected as abandoned/incompatible — see STACK.md "What NOT to Use")
+- [patrickjuchli/basic-ftp](https://github.com/patrickjuchli/basic-ftp) — FTP/FTPS-only scope, download-count comparison vs. `ssh2-sftp-client`
+- [figma/mcp-server-guide — figma-use-slides skill](https://github.com/figma/mcp-server-guide/blob/main/skills/figma-use-slides/SKILL.md) — official repo, input contract not fully verified
 
 ### Tertiary (LOW confidence)
 
-- [Vaultwarden SQLite corruption discussion](https://github.com/dani-garcia/vaultwarden/discussions/2965) — WAL corruption reports on Docker bind mounts; corroborates SQLite official docs but is a different project
-
-- [MCP stdio Docker -i flag guide](https://mcpcat.io/guides/configuring-mcp-transport-protocols-docker-containers/) — `-i` required for stdin; `-t` corrupts binary JSON-RPC stream
+- Figma Slides push input contract (HTML vs. markdown vs. structured JSON) — flagged for phase-specific research once Figma MCP auth unblocks
+- PM2-specific `$PATH`/environment divergence from interactive shell for Chrome/`soffice` resolution — inferred from PM2/launchd's general daemon-environment behavior, not directly tested against this repo's PM2 config
 
 ---
-
-#### Research completed: 2026-03-23
-
-#### Ready for roadmap: yes
+*Research completed: 2026-07-10*
+*Ready for roadmap: yes*

@@ -1,857 +1,353 @@
-# Architecture Research
+# Architecture Research — v3.4 Presentation Pipeline
 
-**Domain:** Documentation Intelligence Platform — Docker Containerization + MCP HTTP Transport + Git-Clone Ingestion
-**Researched:** 2026-03-23
-**Confidence:** HIGH (codebase inspected directly; MCP SDK verified in installed node_modules; Docker/GHCR patterns verified via official docs)
+**Domain:** Daemon-orchestrated document pipeline (translate → render → deploy) bolted onto an existing chokidar/cron/SQLite service
+**Researched:** 2026-07-10
+**Confidence:** HIGH (integration points read directly from current source: `daemon/watcher.mjs`, `daemon/scheduler.mjs`, `config/env.mjs`, `scripts/db/schema.sql`, `daemon/server.mjs`, `daemon/mcp-server.mjs`, `daemon/registry-lock.mjs`, plus sibling repo `AgentHub/src/index.ts`) — MEDIUM on exact marp-cli multi-format CLI invocation (see note in Pattern 2)
 
----
-
-## Context: What This Milestone Adds
-
-The existing system (DocuMind v3.1) is a fully operational PM2-managed daemon. What v3.2 adds is a deployment layer that wraps everything in Docker, plus two mode changes:
-
-### New infrastructure components (net-new files):
-
-- `Dockerfile` — multi-stage Node.js image; builds on `node:22-alpine`; bakes `npm ci --omit=dev`; does NOT include PM2 (Docker replaces it)
-
-- `docker-compose.yml` — orchestrates the container with volumes, env vars, port mappings
-
-- `.dockerignore` — excludes `node_modules`, `data/*.db`, `.git`, `.planning`
-
-- `daemon/mcp-http.mjs` — new entry point: MCP over Streamable HTTP transport (separate from stdio)
-
-- `processors/git-ingestor.mjs` — new processor: clone/pull repos, feed paths to existing scanner
-
-- `config/profiles/docker.json` — Docker-specific context profile (inline `repositories` list, no external registry path)
-
-- `.github/workflows/docker-publish.yml` — CI workflow: build + push to GHCR on tag push
-
-### Modified existing components:
-
-- `daemon/server.mjs` — add graceful shutdown handlers (`SIGTERM`/`SIGINT`); add Docker health endpoint (`GET /health` already exists, add `db.prepare('SELECT 1').get()` liveness check)
-
-- `daemon/scheduler.mjs` — replace hardcoded cron intervals with `process.env.SCAN_INTERVAL` / `FULL_SCAN_CRON` etc.
-
-- `context/loader.mjs` — support `DOCUMIND_REPOS` env var as override for repository list when in git-clone mode
-
-- `ecosystem.config.cjs` — unchanged for local PM2 use; Docker bypasses this file entirely
-
-### Unchanged components (Docker just runs them):
-
-- All processors (`markdown-processor.mjs`, `pdf-processor.mjs`, `word-processor.mjs`, `keyword-processor.mjs`, `tree-processor.mjs`, `mermaid-processor.mjs`, `relink-processor.mjs`)
-
-- `graph/` — relations and queries untouched
-
-- `scripts/` — CLI tools unchanged; not in Docker image runtime path (but available if `docker exec` needed)
-
-- `data/documind.db` — mounted as a named volume; never baked into the image
-
----
+**Supersedes:** the previous version of this file (Kuzu dual-DB architecture for v3.3) — Kuzu was retired per ADR-001 (2026-07); that research is obsolete and has been replaced below.
 
 ## Standard Architecture
 
-### System Overview: PM2 Mode (Current, Unchanged)
+### System Overview
 
 ```text
+┌──────────────────────────────────────────────────────────────────────────┐
+│ TRIGGER SOURCES                                                          │
+│  Human edit (docs/slides/**/*.md)  │  RootDispatcher dispatch applied    │
+│  (Claude Code agent writes the same EN .md file — no special-case path)  │
+└───────────────────────────────────┬──────────────────────────────────────┘
+                                     ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│ WATCHER LAYER — daemon/watcher.mjs (MODIFIED)                            │
+│  chokidar → queueChange() → pendingChanges Set (5s debounce, dedup)      │
+│  → processPendingChanges() .md branch:                                   │
+│     if isSlidesEnSource(path)  → slidesProcessor.enqueue(path)  [NEW]    │
+│     else                       → indexMarkdown()                 [as-is]│
+└───────────────────────────────────┬──────────────────────────────────────┘
+                                     ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│ PIPELINE LAYER — processors/slides-processor.mjs (NEW)                   │
+│  per-deck in-flight Map (Marp renders take seconds; coalesce reruns)     │
+│  1. translateDeck()  — DeepL → writes  <name>.fr.md                      │
+│  2. renderDeck()     — marp-cli subprocess → .html/.pdf/.pptx per locale │
+│  3. deployDeck()     — basic-ftp upload (dry-run unless creds present)   │
+│  4. recordRun()      — writes slide_pipeline_runs row (ledger)           │
+│  5. notifyAgentHub() — HTTP POST to AgentHub REST API on success         │
+│  Every generated-file write wraps writingNow.add()/delete() (reused      │
+│  from daemon/registry-lock.mjs) so the watcher ignores its own writes.   │
+└───────────────────────────────────┬──────────────────────────────────────┘
+                                     ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│ DATA LAYER — SQLite (better-sqlite3)                                     │
+│  slide_pipeline_runs (NEW table)  │  documents (.fr.md indexed as-is)    │
+└──────────────────────────────────────────────────────────────────────────┘
 
-┌──────────────────────────────────────────────────────────┐
-│                  macOS Host Machine                       │
-│                                                           │
-│  PM2 Process Manager                                      │
-│  ┌───────────────────────────┐  ┌──────────────────────┐ │
-│  │  documind (server.mjs)    │  │  documind-mcp        │ │
-│  │  Express :9000            │  │  (mcp-server.mjs)    │ │
-│  │  + scheduler + watcher    │  │  stdio transport     │ │
-│  └───────────┬───────────────┘  └──────────────────────┘ │
-│              │                                            │
-│  ┌───────────▼───────────────────────────────────────┐   │
-│  │  data/documind.db  (WAL, on-disk)                  │   │
-│  └───────────────────────────────────────────────────┘   │
-│                                                           │
-│  Repo roots: /Users/Shared/htdocs/github/DVWDesign/...   │
-│  (chokidar watches these paths directly)                  │
-└──────────────────────────────────────────────────────────┘
-
-```
-
-### System Overview: Docker Mode (v3.2 Target)
-
-```text
-
-┌──────────────────────────────────────────────────────────┐
-│                  Host Machine                             │
-│                                                           │
-│  docker compose up                                        │
-│                                                           │
-│  ┌────────────────────────────────────────────────────┐  │
-│  │  DocuMind Container (node:22-alpine)                │  │
-│  │                                                     │  │
-│  │  ┌──────────────────────────────────────────────┐  │  │
-│  │  │  node daemon/server.mjs (PID 1 via dumb-init)│  │  │
-│  │  │  Express :9000 + scheduler                   │  │  │
-│  │  │  (no PM2, no chokidar in git-clone mode)     │  │  │
-│  │  └──────────────────┬───────────────────────────┘  │  │
-│  │                     │                               │  │
-│  │  ┌──────────────────▼───────────────────────────┐  │  │
-│  │  │  SQLite volume: /data/documind.db             │  │  │
-│  │  └───────────────────────────────────────────────┘  │  │
-│  │                                                     │  │
-│  │  Repo access (choose one per deployment):           │  │
-│  │  A) Volume mount: host repos → /repos in container  │  │
-│  │  B) Git clone: git-ingestor.mjs pulls into /repos   │  │
-│  │                                                     │  │
-│  │  MCP access (choose one per client):                │  │
-│  │  A) stdio: docker exec + pipe (local Claude Code)   │  │
-│  │  B) HTTP: GET/POST :9001/mcp (remote consumers)     │  │
-│  └────────────────────────────────────────────────────┘  │
-│                                                           │
-│  Named volumes:                                           │
-│  - documind_data → /data (SQLite + logs)                  │
-│  - documind_repos → /repos (git-clone target)             │
-└──────────────────────────────────────────────────────────┘
-
+Parallel entry points (both call the same processors/slides-processor.mjs):
+  scripts/publish-slides.mjs   — CLI: npm run slides:build / slides:deploy
+  daemon/server.mjs            — POST /slides/publish, GET /slides/runs
+  daemon/mcp-server.mjs        — get_slide_runs (read), publish_slides (write)
 ```
 
 ### Component Responsibilities
 
-| Component | Status | Responsibility | Communicates With |
+| Component | Responsibility | Status |
+| ----------- | ---------------- | -------- |
+| `daemon/watcher.mjs` | Detect EN deck changes, dedup/debounce, dispatch to pipeline vs. normal index | MODIFIED |
+| `processors/slides-processor.mjs` | Own the translate→render→deploy chain, ledger writes, loop guards | NEW |
+| `scripts/publish-slides.mjs` | Thin CLI wrapper (manual/CI runs), mirrors `scripts/fix-markdown.mjs` convention | NEW |
+| `scripts/db/migrations/00X-slide-pipeline-runs.sql` | Ledger table schema | NEW |
+| `config/env.mjs` | Centralize `DEEPL_API_KEY`, `SLIDES_FTP_*`, `SLIDES_SOFFICE_PATH` | MODIFIED |
+| `daemon/registry-lock.mjs` (`writingNow` Set) | Loop-protection primitive — reused, not duplicated | REUSED |
+| `daemon/scheduler.mjs` | Optional nightly drift check (stale render vs. EN hash) | MODIFIED (later phase, optional) |
+| `daemon/server.mjs` | Manual trigger + ledger read endpoints | MODIFIED |
+| `daemon/mcp-server.mjs` | Agent-facing read/write tools over the ledger | MODIFIED |
+| `.marprc.yml` | Shared Marp render config (theme defaults, output flags) | NEW |
+| `docs/slides/**` | EN `.md` (hand-edited) + generated `.fr.md`/`.html`/`.pdf`/`.pptx` (gitignored) | EXISTING (2 decks already present as E2E fixtures) |
+| AgentHub (`/api/discoveries`, port 3004) | Ecosystem discovery feed | EXTERNAL — REST, not MCP (see Anti-Pattern 3) |
 
-| --- | --- | --- | --- |
+## Recommended Project Structure
 
-| `daemon/server.mjs` | Modified | Express :9000 + graceful shutdown + health check liveness | DB, processors, scheduler, watcher |
-
-| `daemon/scheduler.mjs` | Modified | node-cron periodic scans; reads cron intervals from env vars | orchestrator, processors |
-
-| `daemon/watcher.mjs` | Unchanged | chokidar file watcher (active in volume-mount mode only) | processors, notifier |
-
-| `daemon/mcp-server.mjs` | Unchanged | MCP stdio server; 14 tools for Claude Code agents | DB, processors |
-
-| `daemon/mcp-http.mjs` | NEW | MCP Streamable HTTP server on :9001; same tools as stdio | DB, processors (same) |
-
-| `processors/git-ingestor.mjs` | NEW | Clone/pull git repos into /repos; trigger scan after pull | git, scanner, scheduler |
-
-| `config/profiles/docker.json` | NEW | Context profile for Docker mode: inline repo list, /repos paths | context/loader.mjs |
-
-| `Dockerfile` | NEW | Multi-stage build; node:22-alpine; bakes npm install | docker build |
-
-| `docker-compose.yml` | NEW | Volumes, env vars, port map, health check, restart policy | Docker |
-
-| `.github/workflows/docker-publish.yml` | NEW | Build + push GHCR on git tag; multi-arch (amd64 + arm64) | GitHub Actions, GHCR |
-
----
-
-## Docker Integration: How PM2 Is Replaced
-
-### PM2 in the current system
-
-PM2 manages two processes: `documind` (server.mjs) and `documind-mcp` (mcp-server.mjs). It provides process restart on crash, log rotation, and cluster management. In a container, all of this is unnecessary:
-
-- Docker's `restart: unless-stopped` handles crash restart
-
-- Docker logging captures stdout/stderr
-
-- One process per container is the container idiom
-
-### What replaces PM2
-
-The container runs `node daemon/server.mjs` as PID 1, wrapped with `dumb-init` to handle signal forwarding correctly. The MCP HTTP server runs as a second process started by `server.mjs` itself (not a separate PM2 app):
+This is an addition to an existing codebase, not a greenfield layout — shown as a diff against the current tree read in `daemon/`, `processors/`, `scripts/`, `config/`:
 
 ```text
-
-Dockerfile CMD:
-  ["dumb-init", "node", "daemon/server.mjs"]
-
-server.mjs startup (additions):
-
-  1. Start Express :9000 (existing)
-
-  2. If DOCUMIND_MCP_HTTP=true: import mcp-http.mjs, start :9001
-
-  3. Register SIGTERM handler for graceful shutdown
-
+DocuMind/
+├── daemon/
+│   ├── watcher.mjs                       # MODIFIED: isSlidesEnSource() predicate + dispatch
+│   ├── scheduler.mjs                     # MODIFIED (later): optional drift-check cron
+│   ├── server.mjs                        # MODIFIED: POST /slides/publish, GET /slides/runs
+│   ├── mcp-server.mjs                    # MODIFIED: get_slide_runs, publish_slides tools
+│   └── registry-lock.mjs                 # UNCHANGED — writingNow reused as-is
+├── processors/
+│   └── slides-processor.mjs              # NEW — translateDeck/renderDeck/deployDeck/recordRun
+├── scripts/
+│   ├── publish-slides.mjs                # NEW — CLI entry, flags: --translate/--render/--deploy/--dry-run
+│   └── db/migrations/
+│       └── 006-slide-pipeline-runs.sql   # NEW — ledger table
+├── config/
+│   └── env.mjs                           # MODIFIED — DEEPL_API_KEY, SLIDES_FTP_*, SLIDES_SOFFICE_PATH
+├── .marprc.yml                           # NEW — shared marp-cli config (theme, allowLocalFiles)
+├── docs/slides/
+│   ├── internal/2026-05-21-figma-ai-internal-deck.md       # EN source (hand-edited, tracked)
+│   ├── internal/2026-05-21-figma-ai-internal-deck.fr.md    # generated (tracked or ignored — see decision below)
+│   ├── internal/2026-05-21-figma-ai-internal-deck.{html,pdf,pptx}  # generated, GITIGNORED
+│   └── external/... (same pattern)
+├── .gitignore                            # MODIFIED — add docs/slides/**/*.{html,pdf,pptx}
+└── package.json                          # MODIFIED — marp-cli (dev), deepl-node, basic-ftp deps + slides:* scripts
 ```
 
-The stdio MCP server (`mcp-server.mjs`) is NOT started in Docker by default. It is only reachable via `docker exec -i documind node daemon/mcp-server.mjs`. In Docker mode, MCP consumers use HTTP instead.
+### Structure Rationale
 
-### Graceful shutdown additions to server.mjs
+- **`processors/slides-processor.mjs` as one module, not three:** matches the existing `processors/relink-processor.mjs` convention — one processor per *concern* (diagram relink), exporting several composable functions (`relinkDiagram`, `propagateRelinkAllRepos`, `syncRegistryFromDb`, `reverseSyncFromRegistry`). The slides pipeline is a single concern (publish a deck) with a linear stage sequence, so `translateDeck`/`renderDeck`/`deployDeck`/`recordRun` live together and are individually unit-testable and individually callable from the CLI script (`--render` only, `--deploy` only, etc.) without duplicating orchestration logic.
+- **`scripts/publish-slides.mjs` stays thin:** every existing `scripts/*.mjs` file in this repo is a CLI wrapper around a processor/orchestrator (`scripts/index-markdown.mjs` → `processors/markdown-processor.mjs`, `scripts/fix-markdown.mjs` → fix logic). Keeping the pipeline logic in `processors/` means the daemon (watcher), the CLI, the REST endpoint, and the MCP tool all call the exact same functions — no drift between "what the watcher does" and "what `npm run slides:build` does."
+- **New migration file, not a schema.sql edit:** `scripts/db/schema.sql` documents itself as reflecting "migrations through 005-remove-check-constraints" — the established pattern is additive migration files under `scripts/db/migrations/`, applied via `npm run db:migrate`. Follow that, don't hand-edit `schema.sql` directly (update it afterward to stay in sync, as the header comment implies).
+- **`.fr.md` tracked-vs-ignored is a real decision point:** `PROJECT.md` already commits to "EN Marp `.md` = only hand-edited artifact; FR/HTML/PDF/PPTX are generated, never edited." The render outputs are decided (gitignored). The `.fr.md` is ambiguous — recommend **tracking it in git** (it's markdown, diffable, reviewable, and DocuMind's FTS5 index benefits from having it as a real `documents` row) while still gitignoring the binary/HTML renders. Flag this as a decision the roadmap phase should confirm.
+
+## Architectural Patterns
+
+### Pattern 1: Filename-convention + `writingNow` + content-hash triple guard (loop protection)
+
+**What:** Three independent, cheap checks stacked so no single failure mode causes a translate/render loop.
+
+1. **Filename convention (primary, cheapest):** the watcher's slides-dispatch branch only fires for `docs/slides/**/*.md` paths that do **not** end in `.fr.md`. This is checked before anything else — a generated French deck can never re-trigger translation, even if `writingNow` or hashing fail.
+2. **`writingNow` Set (existing primitive, reused):** `daemon/registry-lock.mjs` already exports `writingNow = new Set()`, and `watcher.mjs`'s `queueChange()` already does `if (writingNow.has(filePath)) return;` before queuing. Every write the pipeline makes (`.fr.md`, `.html`, `.pdf`, `.pptx`) should `writingNow.add(path)` immediately before the write and `writingNow.delete(path)` after — held through chokidar's `awaitWriteFinish.stabilityThreshold` (2000ms) window, not just the write() call, since the fs event can arrive up to ~2s after the write completes.
+3. **Content-hash idempotency (defense-in-depth, matches `documents.content_hash` pattern already in schema):** `slide_pipeline_runs` stores the SHA-256 of the EN source at trigger time. Before running, compare against the hash from the last **successful** run for that deck; skip if unchanged. This catches cases where guard #2's timing window is missed (daemon restart mid-render, clock skew, etc.) and gives the pipeline a "did the EN content actually change" answer independent of mtime/fs-event noise.
+
+**When to use:** Any daemon feature where the watcher's own output could re-enter its own watch scope — this same pattern is worth generalizing later if more generate-and-watch features are added.
+
+**Trade-offs:** Three checks is more code than one, but each is O(1)/cheap, and the combination is why the diagram-registry reverse-sync feature (which has the identical "our own write must not re-trigger us" problem) hasn't had loop bugs — reuse its proven primitive rather than inventing a new one.
+
+**Example (watcher predicate):**
 
 ```javascript
+// daemon/watcher.mjs — new helper, used inside the existing '.md' case
+const FR_SUFFIX_RE = /\.fr\.md$/i;
 
-// daemon/server.mjs — additions only
-process.on('SIGTERM', async () => {
-  console.error('[server] SIGTERM received, shutting down gracefully');
-  db.close();              // flush SQLite WAL
-  server.close(() => {     // drain existing HTTP connections
-    process.exit(0);
-  });
-  setTimeout(() => process.exit(1), 10_000); // force exit after 10s
-});
+function isSlidesEnSource(filePath) {
+  return filePath.includes('/docs/slides/') && !FR_SUFFIX_RE.test(filePath);
+}
 
+// inside processPendingChanges(), '.md' case, before the DIAGRAM-REGISTRY check:
+if (isSlidesEnSource(change.path)) {
+  console.log(`[watcher] EN slide deck changed: ${change.path} — dispatching pipeline`);
+  slidesProcessor.enqueuePipelineRun(db, change.path, repoMatch, CTX, { trigger: 'watcher' });
+  // still index it — it's a real document too
+}
+await indexMarkdown(db, change.path, repoMatch, CTX);
 ```
 
----
+### Pattern 2: Subprocess execution via `execFile`, not npm scripts, not `npm run`
 
-## MCP HTTP Transport: Where It Sits
+**What:** `daemon/scheduler.mjs` already establishes the pattern for daemon-invoked subprocesses: `execFileAsync('npx', ['markdownlint-cli2', '--fix', '**/*.md'], { cwd, timeout })`. The slides pipeline should follow this exactly — `execFileAsync('npx', ['marp', enDeckPath, '--pdf', '--output', outPath], { cwd: ROOT, timeout: 120_000 })` — rather than shelling out to `npm run slides:build` (extra process layer, harder error propagation, npm's own stdout noise mixed into the pipeline's logs).
 
-### Current MCP architecture
+**When to use:** Any daemon-triggered subprocess. `npm run` scripts remain useful as the **human-facing** entry points (`slides:build`, `slides:deploy` in `package.json`), but they should be thin aliases to `node scripts/publish-slides.mjs ...`, and the daemon calls the underlying binary/script directly via `execFile`, never through `npm run`.
 
-`daemon/mcp-server.mjs` uses `StdioServerTransport` from `@modelcontextprotocol/sdk/server/stdio.js`. It reads JSON-RPC from stdin, writes to stdout. Claude Code spawns it as a subprocess via `.claude/mcp.json` in each repo.
+**Trade-offs / open question (MEDIUM confidence):** marp-cli's documented behavior is **one output format per invocation** driven by `--pdf` / `--pptx` / default-HTML flags — the README does not show a single command producing all three outputs simultaneously; the config file (`.marprc.yml`) does support setting `pdf: true`, `pptx: true`, etc. as **defaults** for CLI flags, but this needs a quick spike to confirm whether combining them in one invocation actually emits three files or just changes which single default applies. **Recommend building the render stage as three sequential (or `Promise.all`'d) `execFile` calls — one per format — as the safe, verified-correct baseline**, and only collapse to one config-driven call if a spike proves it works. Either way, `--pptx-editable` requires LibreOffice's `soffice` on `PATH` (confirmed gap in `.planning/STATE.md`) and marp-cli's PDF/PPTX/image conversion requires a Chromium-family browser — note `puppeteer` is **already a devDependency** here (for `@mermaid-js/mermaid-cli`), so a Chromium binary is likely already resolvable on this machine; point `--browser-path` at it if marp-cli's own browser auto-detection fails, rather than installing a second Chromium.
 
-### New: Streamable HTTP transport
+### Pattern 3: Daemon-to-daemon integration is REST, not MCP
 
-The installed SDK (`@modelcontextprotocol/sdk` v1.27.1) already ships `StreamableHTTPServerTransport` at:
+**What:** MCP tools (`mcp__agenthub__publish_discovery`) are invoked by an **LLM agent host** (Claude Code) that decides to call a tool mid-conversation. `daemon/watcher.mjs` runs as a plain Node process under PM2 with no LLM in the loop — it cannot "call an MCP tool." AgentHub is *also* a PM2-managed Express daemon (port 3004, confirmed in global CLAUDE.md service registry) with a plain REST surface: `POST /api/discoveries` accepting `{ repo_source, title, content, discovery_type, topics }` (read directly from `AgentHub/src/index.ts`). The DocuMind daemon should call that HTTP endpoint directly with `fetch()`, exactly the same way it would call any other internal service — not attempt to invoke an MCP tool from a headless process.
 
-```text
+**When to use:** Any daemon-initiated cross-repo notification. If a *Claude Code agent session* (not the daemon) is the one publishing (e.g., a `/gsd` command or CRON-triggered agent per the existing `docs/proposals/2026-05-21-figma-ai-presentation-preplan.md` meeting-spec pattern), MCP is correct there instead — the distinction is "who/what is making the call," not "which feature."
 
-@modelcontextprotocol/sdk/server/streamableHttp.js
+**Trade-offs:** One more env var to manage (`AGENTHUB_URL`, default `http://localhost:3004`), and a soft dependency on AgentHub being up — treat as non-fatal (`try/catch`, log-and-continue) so a down AgentHub never fails a slide deploy.
 
-```
-
-This is confirmed present in the installed node_modules. The class is `StreamableHTTPServerTransport`.
-
-### New file: daemon/mcp-http.mjs
-
-This is a new entry point, NOT a modification of `mcp-server.mjs`. It duplicates the tool registrations from `mcp-server.mjs` or better, imports them from a shared `daemon/mcp-tools.mjs` module (refactor opportunity, not required for v3.2 — see Anti-Patterns).
-
-Minimal structure for `mcp-http.mjs`:
+**Example:**
 
 ```javascript
-
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { randomUUID } from 'crypto';
-import express from 'express';
-
-const app = express();
-app.use(express.json());
-
-const transports = new Map(); // sessionId → transport
-
-app.all('/mcp', async (req, res) => {
-  const sessionId = req.headers['mcp-session-id'];
-  let transport;
-
-  if (req.method === 'POST' && !sessionId) {
-    // New session initialization
-    transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: () => randomUUID(),
+// processors/slides-processor.mjs
+async function notifyAgentHub(deckPath, deployTargets) {
+  try {
+    await fetch(`${AGENTHUB_URL}/api/discoveries`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        repo_source: 'DocuMind',
+        title: `Slides published: ${path.basename(deckPath)}`,
+        content: `Deployed to ${deployTargets.join(', ')}`,
+        discovery_type: 'pattern',
+        topics: ['slides', 'presentation-pipeline'],
+      }),
     });
-    const server = new McpServer({ name: 'DocuMind', version: '3.1.0' });
-    // register tools (same as mcp-server.mjs)
-    await server.connect(transport);
-    transports.set(transport.sessionId, transport);
-  } else {
-    transport = transports.get(sessionId);
-    if (!transport) { res.status(404).end(); return; }
-  }
-
-  await transport.handleRequest(req, res, req.body);
-});
-
-const MCP_HTTP_PORT = process.env.DOCUMIND_MCP_HTTP_PORT || 9001;
-app.listen(MCP_HTTP_PORT, () => {
-  console.error(`[mcp-http] Streamable HTTP transport on :${MCP_HTTP_PORT}/mcp`);
-});
-
-```
-
-**Why stateful mode (not stateless):** DocuMind MCP tools involve multi-step operations (lint + fix). Stateful sessions allow session context to be maintained. Stateless mode would require every call to re-initialize the DB connection — wasteful.
-
-### How Docker exposes MCP HTTP
-
-```yaml
-
-# docker-compose.yml
-
-ports:
-
-  - "9000:9000"   # REST API
-
-  - "9001:9001"   # MCP HTTP (only expose if remote access needed)
-
-```
-
-For local-only use, omit the 9001 port binding — it stays internal to the container network.
-
-### Updated .claude/mcp.json for HTTP mode
-
-Remote consumers configure their MCP client to use:
-
-```json
-
-{
-  "mcpServers": {
-    "documind": {
-      "url": "http://localhost:9001/mcp"
-    }
+  } catch (err) {
+    console.error('[slides-processor] AgentHub notify failed (non-fatal):', err.message);
   }
 }
-
 ```
 
-Local Claude Code (non-Docker) continues using stdio with `command: "node daemon/mcp-server.mjs"`.
+## Data Flow
 
----
-
-## Git-Clone Ingestion: How It Plugs In
-
-### The problem it solves
-
-In volume-mount mode, repo paths are hardcoded to `/Users/Shared/htdocs/github/DVWDesign/...` (the host machine's paths). In a CI environment or on a remote Linux server, those paths don't exist. Git-clone mode lets the container fetch repos itself.
-
-### Where it hooks in
-
-The ingestion point is the `context/loader.mjs` profile system. The profile already resolves `repoRoots` as an array of `{ name, path }` objects. Git-clone mode adds a step before the daemon starts:
+### Pipeline Run Flow
 
 ```text
-
-Container startup sequence (git-clone mode):
-
-1. docker-entrypoint.sh runs git-ingestor.mjs
-
-   → reads DOCUMIND_REPOS env var (JSON array of { name, url, branch })
-   → clones each repo into /repos/{name}/ if not present
-   → pulls if already present (git pull --ff-only)
-   → exits 0 if all succeed, 1 if any fail
-   ↓
-
-2. node daemon/server.mjs starts
-
-   → loads docker.json profile
-   → docker.json has inline repositories: [{ name, path: "/repos/{name}" }]
-   → ctx.repoRoots resolved from /repos/*
-   ↓
-
-3. scheduler.mjs runs initial scan on startup (not just on cron trigger)
-
-   → scans /repos/* via existing scan-all-repos logic
-   ↓
-
-4. Periodic re-pull (optional): scheduler adds a git-pull cron job
-
-   → every GIT_PULL_CRON (default: "0 * * * *") runs git pull in each /repos/{name}
-   → after pull, triggers incremental scan for changed files
-
+[EN deck saved]  (human, or agent applying a RootDispatcher dispatch)
+    ↓
+[chokidar 'change' event] → queueChange() → writingNow check → pendingChanges.add()
+    ↓ (5s debounce, per-file dedup via existing Set<JSON string>)
+[processPendingChanges()] → isSlidesEnSource(path)?
+    ↓ yes                                    ↓ no
+[slidesProcessor.enqueue(path)]      [indexMarkdown() only, as today]
+    ↓
+[per-deck in-flight guard] — already running for this path?
+    ↓ no                                    ↓ yes
+[run pipeline now]                  [mark pendingRerun=true, return —
+    ↓                                 re-invoke once when current run finishes]
+[recordRun: INSERT slide_pipeline_runs, status='running', source_hash=sha256(EN)]
+    ↓
+[compare source_hash to last SUCCESSFUL run's hash] — unchanged? → mark 'skipped', done
+    ↓ changed
+[translateDeck()] — DeepL, skip gracefully if DEEPL_API_KEY unset (log + continue EN-only)
+    ↓ writingNow.add(fr.md) → write → hold ~2.5s → writingNow.delete(fr.md)
+[renderDeck()] — marp-cli execFile per {EN, FR} × {html, pdf, pptx[-editable]}
+    ↓ writingNow.add(each output) → write → hold ~2.5s → writingNow.delete(each output)
+[deployDeck()] — basic-ftp; DRY RUN if SLIDES_FTP_HOST unset, else real upload
+    ↓
+[recordRun: UPDATE slide_pipeline_runs, status='completed'|'failed', stages JSON, duration_ms]
+    ↓ (only on full success)
+[notifyAgentHub()] — POST /api/discoveries (non-fatal on failure)
 ```
 
-### New file: processors/git-ingestor.mjs
+### Key Data Flows
 
-```javascript
+1. **Cross-agent content flow:** ProductMarketing's edits never touch DocuMind directly — they land as a RootDispatcher dispatch in `RootDispatcher/dispatches/pending/DocuMind/`, a Claude Code agent applies it (edits the EN `.md` file on disk per the standard dispatch-application protocol already in this repo's `CLAUDE.md`), and that file write is indistinguishable from a human edit to the watcher. No DocuMind-specific RootDispatcher integration code is needed — the filesystem + existing watcher is the integration.
+2. **Ledger as single source of truth for pipeline state:** `GET /slides/runs` (REST), `get_slide_runs` (MCP), and any future dashboard widget all read the same `slide_pipeline_runs` table — no separate in-memory status tracking that could drift from the DB (mirrors how `diagrams` table is already documented as "single source of truth" for the diagram registry in `global-rules.md`).
+3. **FR deck is both an output and an input:** the `.fr.md` written by `translateDeck()` is a pipeline *output*, but it also gets indexed into `documents` by the normal `indexMarkdown()` call the watcher already makes on every `.md` change — so French decks become full-text searchable via the existing FTS5 index for free, without special-casing.
 
-// processors/git-ingestor.mjs
-import { execFile } from 'child_process';
-import { promisify } from 'util';
-import fs from 'fs/promises';
-import path from 'path';
+## Data Model — `slide_pipeline_runs` (NEW)
 
-const exec = promisify(execFile);
-const REPOS_DIR = process.env.DOCUMIND_REPOS_DIR || '/repos';
+Reasoning for a new table instead of reusing `conversions`: `conversions.source_format` has a `CHECK` constraint limited to `docx|rtf|pdf|html|txt` (no `markdown`→`markdown` case for DeepL translation), and semantically `conversions` logs **one** file-format conversion event, while a slide-publish run is a **multi-stage orchestration** (translate + N renders + deploy) that needs stage-level status and a single row to query "is this deck's last run green." Overloading `conversions` would require weakening its constraint and losing the one-row-per-run query shape.
 
-export async function cloneOrPull(repos) {
-  // repos: Array<{ name: string, url: string, branch?: string }>
-  const results = [];
-  for (const repo of repos) {
-    const dest = path.join(REPOS_DIR, repo.name);
-    const exists = await fs.access(dest).then(() => true).catch(() => false);
-    if (exists) {
-      const { stdout } = await exec('git', ['-C', dest, 'pull', '--ff-only']);
-      results.push({ name: repo.name, action: 'pull', output: stdout.trim() });
-    } else {
-      const args = ['clone', '--depth=1'];
-      if (repo.branch) args.push('--branch', repo.branch);
-      args.push(repo.url, dest);
-      await exec('git', args);
-      results.push({ name: repo.name, action: 'clone', dest });
-    }
-  }
-  return results;
-}
+```sql
+CREATE TABLE IF NOT EXISTS slide_pipeline_runs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  deck_path TEXT NOT NULL,              -- EN source path (the ledger key)
+  repository TEXT NOT NULL,
+  trigger TEXT NOT NULL CHECK (trigger IN ('watcher', 'manual', 'dispatch', 'scheduler')),
+  source_hash TEXT NOT NULL,            -- SHA-256 of EN content at trigger time
+  status TEXT NOT NULL CHECK (status IN ('running', 'completed', 'failed', 'skipped')),
+  stages TEXT,                          -- JSON: { translate: {status,ms,error?}, render: {...}, deploy: {...} }
+  outputs TEXT,                         -- JSON: { fr_md, html, pdf, pptx, pptx_editable } paths
+  deploy_target TEXT,                   -- FTP remote path, or 'dry-run'
+  agenthub_notified BOOLEAN DEFAULT 0,
+  started_at TEXT NOT NULL,
+  completed_at TEXT,
+  duration_ms INTEGER,
+  error TEXT
+);
 
+CREATE INDEX IF NOT EXISTS idx_slide_runs_deck ON slide_pipeline_runs(deck_path);
+CREATE INDEX IF NOT EXISTS idx_slide_runs_status ON slide_pipeline_runs(status);
+CREATE INDEX IF NOT EXISTS idx_slide_runs_started ON slide_pipeline_runs(started_at DESC);
+
+-- Mirrors the existing `stale_diagrams` view pattern for a "last known good" lookup
+CREATE VIEW IF NOT EXISTS latest_slide_runs AS
+SELECT sr.*
+FROM slide_pipeline_runs sr
+INNER JOIN (
+  SELECT deck_path, MAX(started_at) AS max_started
+  FROM slide_pipeline_runs
+  GROUP BY deck_path
+) latest ON sr.deck_path = latest.deck_path AND sr.started_at = latest.max_started;
 ```
-
-### docker-entrypoint.sh
-
-```bash
-
-#!/bin/sh
-set -e
-
-# If git-clone mode is enabled, ingest repos before starting daemon
-
-if [ -n "$DOCUMIND_REPOS" ]; then
-  echo "[entrypoint] Git-clone mode: ingesting repos..."
-  node /app/scripts/ingest-repos.mjs
-fi
-
-exec "$@"
-
-```
-
-### Interaction with chokidar
-
-In git-clone mode, chokidar watches `/repos/*` (not the host filesystem). This is correct — changes arrive via `git pull`, not via user edits. The watcher still provides value: if git pull modifies files, the 5s debounce batch picks them up. However, the watcher is optional in git-clone mode; the scheduler's periodic scan is the primary ingestion trigger.
-
-**Decision:** Keep the watcher running in git-clone mode. It adds negligible overhead and catches any mid-cycle file changes. No code change required.
-
----
-
-## Environment Variable Configuration
-
-### Current env vars (in ecosystem.config.cjs)
-
-| Var | Current Default | Notes |
-
-| --- | --- | --- |
-
-| `PORT` | `9000` | Express listen port |
-
-| `NODE_ENV` | `production` | |
-
-| `DOCUMIND_DB` | `./data/documind.db` | SQLite path |
-
-| `DOCUMIND_PROFILE` | `./config/profiles/dvwdesign.json` | Context profile path |
-
-### New env vars (v3.2)
-
-| Var | Default | Purpose |
-
-| --- | --- | --- |
-
-| `DOCUMIND_MCP_HTTP` | `false` | If `true`, starts mcp-http.mjs alongside Express |
-
-| `DOCUMIND_MCP_HTTP_PORT` | `9001` | Port for MCP HTTP server |
-
-| `DOCUMIND_REPOS` | (unset) | JSON array of `{ name, url, branch }` for git-clone mode |
-
-| `DOCUMIND_REPOS_DIR` | `/repos` | Target dir for cloned repos |
-
-| `SCAN_INTERVAL` | `0 * * * *` | Cron expression for incremental scan |
-
-| `FULL_SCAN_CRON` | `0 2 * * *` | Cron expression for daily full scan |
-
-| `GIT_PULL_CRON` | `0 * * * *` | Cron expression for git pull refresh |
-
-### What changes in scheduler.mjs
-
-Replace hardcoded cron strings:
-
-```javascript
-
-// Before (hardcoded):
-cron.schedule('0 * * * *', () => runIncrementalScan(db));
-
-// After (env-configurable):
-const SCAN_INTERVAL = process.env.SCAN_INTERVAL || '0 * * * *';
-cron.schedule(SCAN_INTERVAL, () => runIncrementalScan(db));
-
-```
-
-This enables CI deployments to use `SCAN_INTERVAL=*/5 * * * *` for faster ingestion during tests.
-
----
-
-## Dockerfile Architecture
-
-### Multi-stage build
-
-```dockerfile
-
-# Stage 1: deps
-
-FROM node:22-alpine AS deps
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --omit=dev
-
-# Stage 2: runtime
-
-FROM node:22-alpine AS runtime
-RUN apk add --no-cache dumb-init git
-WORKDIR /app
-
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-
-# Don't bake DB or profile — they come from volumes/env
-
-RUN rm -f data/documind.db
-
-# Health check: Express /health endpoint
-
-HEALTHCHECK --interval=30s --timeout=5s --start-period=15s \
-  CMD wget -qO- http://localhost:9000/health || exit 1
-
-EXPOSE 9000 9001
-
-ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "daemon/server.mjs"]
-
-```
-
-### Why dumb-init
-
-Node.js as PID 1 does not handle SIGTERM properly — it ignores signals that it hasn't explicitly registered handlers for. `dumb-init` runs as PID 1, forwards signals to the Node.js process (PID 2), and reaps zombie processes. This is critical for `docker stop` to cleanly shut down the daemon.
-
-### Why better-sqlite3 works in Alpine
-
-`better-sqlite3` uses native bindings (compiled C++). `npm ci` in the Dockerfile rebuilds the bindings for the Alpine musl libc environment. The host machine's pre-compiled `node_modules/better-sqlite3/build/` is NOT copied — only the `node_modules` from the `deps` stage (which built on Alpine) transfers to the runtime stage. This is why the multi-stage build is required.
-
-### SQLite data volume
-
-The DB must NOT be baked into the image. It lives in a Docker named volume:
-
-```yaml
-
-# docker-compose.yml
-
-services:
-  documind:
-    volumes:
-
-      - documind_data:/app/data
-
-      - documind_repos:/repos  # only in git-clone mode
-
-volumes:
-  documind_data:
-  documind_repos:
-
-```
-
-In volume-mount mode (local dev), bind mount the host repos instead:
-
-```yaml
-
-volumes:
-
-  - documind_data:/app/data
-
-  - /Users/Shared/htdocs/github/DVWDesign:/repos:ro
-
-```
-
----
-
-## GHCR Publishing
-
-### GitHub Actions workflow
-
-```yaml
-
-# .github/workflows/docker-publish.yml
-
-name: Publish Docker Image
-on:
-  push:
-    tags: ['v*']
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-
-      - uses: actions/checkout@v4
-
-      - uses: docker/setup-buildx-action@v3
-
-      - uses: docker/login-action@v3
-
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: docker/build-push-action@v6
-
-        with:
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ghcr.io/dvwdesign/documind:${{ github.ref_name }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-```
-
-The `GITHUB_TOKEN` secret is automatically available — no extra secrets needed. Multi-arch (amd64 + arm64) means the image runs on both Intel/AMD cloud VMs and Apple Silicon Macs.
-
----
-
-## Data Flow Changes
-
-### Volume-Mount Mode (local dev)
-
-```text
-
-Host .md files change
-    ↓
-chokidar (running inside container, watching /repos/* = host bind-mount)
-    ↓ 5s debounce
-processPendingChanges() → markdown-processor.indexFile()
-    ↓
-SQLite /app/data/documind.db (in named volume)
-    ↓
-Express :9000 serves queries
-MCP HTTP :9001 serves agent queries
-
-```
-
-### Git-Clone Mode (CI / remote)
-
-```text
-
-docker-entrypoint.sh: git clone/pull → /repos/*
-    ↓
-node daemon/server.mjs starts
-    ↓
-scheduler: initial scan on startup
-    ↓
-markdown-processor.indexFile() × N files
-    ↓
-SQLite /app/data/documind.db
-    ↓
-Periodic: GIT_PULL_CRON fires
-    ↓
-git-ingestor.mjs: git pull each /repos/{name}
-    ↓
-chokidar detects changed files
-    ↓
-processPendingChanges() → re-index changed files
-
-```
-
-### MCP HTTP Request Flow
-
-```text
-
-Remote MCP client POST http://container:9001/mcp
-    (InitializeRequest, no session ID)
-    ↓
-StreamableHTTPServerTransport creates new session
-    → generates UUID session ID
-    → includes Mcp-Session-Id in response header
-    ↓
-McpServer processes tool call
-    → same DB queries as stdio version
-    ↓
-Response: SSE stream OR JSON (client's Accept header determines)
-    ↓
-Subsequent requests include Mcp-Session-Id header
-
-```
-
----
-
-## Suggested Build Order
-
-The build order is driven by dependencies between components. Each step is independently testable.
-
-```text
-
-Step 1: Dockerfile + docker-compose.yml + .dockerignore
-  → Can be validated with: docker compose up
-  → Tests: container starts, /health returns 200, DB initializes
-  → No code changes needed — just new files
-  → Confidence check: better-sqlite3 builds on Alpine
-
-Step 2: Graceful shutdown + health check liveness (daemon/server.mjs)
-  → Add SIGTERM/SIGINT handlers
-  → Enhance /health to include db.prepare('SELECT 1').get() liveness
-  → Tests: docker stop cleanly shuts down, /health returns 200 with db_ok: true
-  → Dependency: Step 1 must work so Docker can send SIGTERM
-
-Step 3: Environment variable config (daemon/scheduler.mjs + context/loader.mjs)
-  → Replace hardcoded cron strings with process.env fallbacks
-  → Add DOCUMIND_REPOS support to loader.mjs (or docker.json profile with inline repos)
-  → Tests: SCAN_INTERVAL env override changes cron behavior
-  → Dependency: Step 2 (container must be running to verify env vars work)
-
-Step 4: Git-clone mode (processors/git-ingestor.mjs + docker-entrypoint.sh)
-  → Write git-ingestor.mjs (clone/pull)
-  → Write docker-entrypoint.sh (calls ingestor if DOCUMIND_REPOS set)
-  → Write config/profiles/docker.json (inline repo list, /repos paths)
-  → Tests: set DOCUMIND_REPOS, verify repos appear in /repos and get scanned
-  → Dependency: Step 3 (env var support must exist for DOCUMIND_REPOS)
-
-Step 5: MCP HTTP transport (daemon/mcp-http.mjs)
-  → Write mcp-http.mjs using StreamableHTTPServerTransport
-  → Wire into server.mjs startup: if DOCUMIND_MCP_HTTP=true, start mcp-http
-  → Tests: connect MCP inspector to http://localhost:9001/mcp, verify tools respond
-  → Dependency: Step 2 (server.mjs must handle multiple processes cleanly)
-
-Step 6: GHCR publish workflow (.github/workflows/docker-publish.yml)
-  → Write GitHub Actions workflow
-  → Push a test tag to trigger it
-  → Tests: image appears on ghcr.io/dvwdesign/documind
-  → Dependency: Steps 1-5 complete (image must actually work)
-
-```
-
-**Why this order:** Steps 1-2 get a working container. Step 3 adds config flexibility before any mode-specific code. Step 4 (git-clone) and Step 5 (MCP HTTP) are independent of each other after Step 3 — they can be built in parallel. Step 6 only makes sense once the image is production-ready.
-
----
-
-## Component Boundaries: New vs Modified vs Unchanged
-
-| Component | Action | Why |
-
-| --- | --- | --- |
-
-| `Dockerfile` | NEW | Container build instructions |
-
-| `docker-compose.yml` | NEW | Local dev container orchestration |
-
-| `.dockerignore` | NEW | Exclude dev artifacts from image |
-
-| `daemon/mcp-http.mjs` | NEW | HTTP transport entry point |
-
-| `processors/git-ingestor.mjs` | NEW | Clone/pull processor |
-
-| `scripts/ingest-repos.mjs` | NEW | CLI wrapper for git-ingestor (called by entrypoint) |
-
-| `docker-entrypoint.sh` | NEW | Pre-start hook for git-clone mode |
-
-| `config/profiles/docker.json` | NEW | Docker-specific context profile |
-
-| `.github/workflows/docker-publish.yml` | NEW | GHCR CI/CD |
-
-| `daemon/server.mjs` | MODIFIED | Add SIGTERM handler, MCP HTTP startup, health liveness |
-
-| `daemon/scheduler.mjs` | MODIFIED | Replace hardcoded cron strings with env vars |
-
-| `context/loader.mjs` | MODIFIED (minor) | Support DOCUMIND_REPOS_DIR path prefix for git-clone repos |
-
-| `daemon/mcp-server.mjs` | UNCHANGED | Stdio MCP untouched; Docker mode uses mcp-http.mjs |
-
-| `daemon/watcher.mjs` | UNCHANGED | Works in both modes; watches /repos/* |
-
-| `daemon/hooks.mjs` | UNCHANGED | Hook routing unchanged |
-
-| `processors/*` | UNCHANGED | All 7 processors need no Docker-specific changes |
-
-| `graph/*` | UNCHANGED | Graph queries need no changes |
-
-| `scripts/*` | UNCHANGED | CLI tools available via docker exec |
-
-| `ecosystem.config.cjs` | UNCHANGED | Still used for PM2 local dev; Docker ignores it |
-
-| `data/documind.db` | VOLUME | Never in image; always a mounted volume |
-
----
-
-## Integration Points
-
-### Docker Container ↔ Host Filesystem
-
-| Mode | Integration | Notes |
-
-| --- | --- | --- |
-
-| Volume-mount (local dev) | Host `/Users/Shared/htdocs/github/DVWDesign` → `/repos` (bind mount, `:ro`) | Read-only is correct; DocuMind only reads repos, never writes back |
-
-| Git-clone (CI/remote) | Container writes to `/repos` named volume via `git clone` | No host filesystem dependency |
-
-| Data | Named volume `documind_data` → `/app/data` | DB persists across container restarts |
-
-### MCP HTTP ↔ Claude Code
-
-| Transport | Config Location | Use When |
-
-| --- | --- | --- |
-
-| stdio | `.claude/mcp.json` in each repo: `command: "node daemon/mcp-server.mjs"` | Local machine, PM2 or Docker with exec |
-
-| HTTP | `.claude/mcp.json`: `url: "http://localhost:9001/mcp"` | Containerized, CI, or remote consumers |
-
-### Scheduler ↔ Git Ingestor
-
-The scheduler gains one new cron job in git-clone mode: periodic `git pull`. This is separate from the existing scan crons — a pull runs first, then the incremental scan fires (or the watcher picks up the changed files). The scheduler calls `git-ingestor.mjs`'s `cloneOrPull()` function directly.
-
-### better-sqlite3 ↔ Docker Alpine
-
-`better-sqlite3` uses native Node.js addons compiled with node-gyp. The Dockerfile must run `npm ci --omit=dev` inside the Alpine build stage — not copy pre-compiled binaries from the host. Key Alpine dependencies: `python3`, `make`, `g++` (all available as `npm ci` build deps in the node:22-alpine base image by default). If Alpine base lacks them, add `RUN apk add --no-cache python3 make g++` before `npm ci`.
-
----
-
-## Anti-Patterns
-
-### Anti-Pattern 1: Baking the SQLite DB into the image
-
-**What people do:** Run `COPY data/documind.db /app/data/documind.db` in the Dockerfile.
-
-**Why it's wrong:** Every `docker build` creates a new image with the baked-in DB state. The DB is not updated by container restarts — it resets to the build-time snapshot on each pull. DB state must be externalized to a volume.
-
-**Do this instead:** `RUN rm -f data/documind.db` in the Dockerfile to ensure no accidental baking. Mount as a named volume.
-
-### Anti-Pattern 2: Running PM2 inside Docker
-
-**What people do:** `npm install -g pm2 && pm2 start ecosystem.config.cjs` as the Docker CMD.
-
-**Why it's wrong:** PM2 inside Docker adds a supervisor-of-supervisors pattern. Docker is already the supervisor. PM2 interferes with signal forwarding (SIGTERM goes to PM2, which may not pass it to Node.js). PM2 log rotation duplicates Docker log management.
-
-**Do this instead:** `dumb-init node daemon/server.mjs` as the CMD. One process per container.
-
-### Anti-Pattern 3: Copying mcp-server.mjs tool logic into mcp-http.mjs verbatim
-
-**What people do:** Duplicate all 14 tool registrations from `mcp-server.mjs` into `mcp-http.mjs` as a copy-paste.
-
-**Why it's wrong:** Two places to update when tools change. Tool behavior diverges between stdio and HTTP modes. v3.1 already happened — there are 14 tools; divergence is a real risk.
-
-**Do this instead:** Extract tool registrations into `daemon/mcp-tools.mjs` (a shared module). Both `mcp-server.mjs` and `mcp-http.mjs` import and call `registerTools(server, db, ctx)`. This is a refactor opportunity in v3.2 — not strictly required but highly recommended.
-
-### Anti-Pattern 4: Exposing MCP HTTP on 0.0.0.0 without validation
-
-**What people do:** Start `app.listen(9001)` with no Origin header validation.
-
-**Why it's wrong:** The MCP specification (2025-03-26) explicitly requires Origin header validation to prevent DNS rebinding attacks. Any web page could call the MCP endpoint from a browser if it's exposed without validation.
-
-**Do this instead:** Bind to `127.0.0.1` when running locally, or add Origin validation middleware. The SDK's `@modelcontextprotocol/sdk/server/middleware/hostHeaderValidation.js` is available in the installed node_modules.
-
-### Anti-Pattern 5: Cloning repos at Docker build time
-
-**What people do:** `RUN git clone https://github.com/DVWDesign/...` in the Dockerfile.
-
-**Why it's wrong:** Cloned content is baked into the image layer. The image becomes stale the moment repos are updated. A 500MB image rebuild is needed to get new commits.
-
-**Do this instead:** Clone at container startup via `docker-entrypoint.sh`. The named volume `/repos` persists across container restarts; subsequent starts do `git pull` (fast) instead of `git clone` (slow).
-
----
 
 ## Scaling Considerations
 
-This is a single-user internal tool. The Docker milestone targets CI readiness and portability, not horizontal scale.
+This is a solo-user internal tool (per `PROJECT.md` constraints: "no auth needed, just Dave"), so classic user-count scaling doesn't apply. The realistic axes are **deck count**, **render frequency**, and **external API limits**:
 
-| Scale | Architecture |
+| Concern | Today (2 decks) | Growth (10-20 decks) | Heavy use (frequent edits/day) |
+| --------- | ------------------ | ------------------------ | ---------------------------------- |
+| Marp render time | Seconds per format, fine synchronously | Still fine — per-deck in-flight guard prevents pile-up | Debounce (5s) + coalesce-on-rerun already absorbs rapid-save bursts |
+| DeepL API | Free/low tier likely sufficient | Watch character-count quota; glossary calls are cheap, cached per deck | Consider caching: skip translation if only non-text directives changed (future optimization, not MVP) |
+| FTP deploy | Dry-run only (no creds yet) | One deploy per successful pipeline run — fine | If deploys become frequent, consider only uploading files whose local hash changed vs. last successful deploy (avoid redundant transfer) |
+| SQLite ledger | Negligible | Negligible — same order of magnitude as `scan_history` | `slide_pipeline_runs` grows unbounded like `scan_history` already does; no pruning exists for that table either — not a new problem to solve here |
 
-| --- | --- |
+### Scaling Priorities
 
-| Solo local (current) | PM2 daemon on macOS. Docker is an optional deployment path. |
+1. **First real bottleneck:** DeepL glossary/character quota if many decks are edited frequently — mitigate later by hashing per-slide content and only re-translating changed sections (not needed for MVP; the whole-deck retranslate is simplest and correct).
+2. **Second:** concurrent renders if two different decks are edited within the same debounce window — the per-deck in-flight Map naturally supports this (different keys, no contention), so this is already handled by the design, not a future risk.
 
-| CI server (v3.2 target) | Single container on a Linux VM or GitHub Actions service. SQLite on a persistent volume. |
+## Anti-Patterns
 
-| Team use (Step #3 precursor) | Add auth to Express and MCP HTTP. Consider multiple containers behind a load balancer — would require migrating from SQLite to PostgreSQL or Turso, as SQLite's single-writer constraint makes horizontal scale impossible. |
+### Anti-Pattern 1: Trigger the pipeline from the generic `.md` watcher branch without the `.fr.md` exclusion
 
-**First bottleneck in containerized mode:** SQLite single-writer. In the current solo-use scenario this is fine. If multiple CI pipelines write to the DB simultaneously (e.g., parallel GitHub Action runs sharing the same volume), writes will serialize and pipelines will slow. The fix: either one container at a time (adequate for v3.2) or switch to Turso (future SaaS path).
+**What people do:** Add "if a `.md` file changed under `docs/slides/`, run the pipeline" without excluding the pipeline's own translation output.
+**Why it's wrong:** `translateDeck()` writing `deck.fr.md` is itself a `.md` change under `docs/slides/` — without the suffix exclusion this immediately loops (translate → write .fr.md → watcher sees .md change → translate the French text back into "French" → write → loop), even with `writingNow` guarding the synchronous window, because the loop would resume once `writingNow` clears.
+**Do this instead:** The filename-convention check (`isSlidesEnSource`) must be the first, unconditional gate — not just a hash/lock check. See Pattern 1.
 
----
+### Anti-Pattern 2: Overload the `conversions` table for pipeline audit history
+
+**What people do:** Reuse the existing `conversions` table (already has `status`, `error`, `metadata` columns) to avoid a migration.
+**Why it's wrong:** `conversions.source_format` CHECK constraint doesn't include `markdown`, and the table models "one format conversion," not "a multi-stage pipeline run" — you'd end up needing 4+ rows per pipeline run (translate, render-html, render-pdf, render-pptx, deploy) with no natural way to query "what's the current state of deck X's last publish" without a self-join, which is exactly what `slide_pipeline_runs` + `latest_slide_runs` give you directly.
+**Instead:** New table (see Data Model section above) — small, additive, matches the existing `scan_history` row-per-run pattern already used for scheduler jobs.
+
+### Anti-Pattern 3: Call MCP tools from the daemon process
+
+**What people do:** Because `mcp__agenthub__publish_discovery` is documented as "pre-approved, call directly," it's tempting to wire the daemon to call it after a successful deploy.
+**Why it's wrong:** MCP tools exist inside an agent's tool-call loop; `daemon/watcher.mjs` and `processors/*.mjs` run as plain Node code with no MCP client and no LLM host attached. There is nothing to "call" — the tool only exists in a Claude Code session's context.
+**Instead:** Call AgentHub's REST endpoint directly (`POST http://localhost:3004/api/discoveries`) — see Pattern 3.
+
+### Anti-Pattern 4: Block the watcher's debounce callback on a synchronous multi-format render
+
+**What people do:** Run render stages in a tight `for` loop with `execFileSync`, inside the same tick as `processPendingChanges()`.
+**Why it's wrong:** `processPendingChanges()` already handles multiple queued changes (markdown indexing, diagram reverse-sync) in the same batch — a slow synchronous Marp render (which can take several seconds per format, longer with `--pptx-editable`) would stall indexing of unrelated files queued in the same debounce window.
+**Instead:** Use `execFileAsync` (already the established pattern via `promisify(execFile)` in `scheduler.mjs`) so the render stage yields the event loop; keep the per-deck in-flight Map so a slow render doesn't get double-triggered, but don't let it block processing of other queued file changes.
+
+## Integration Points
+
+### External Services
+
+| Service | Integration Pattern | Notes |
+| --------- | --------------------- | ------- |
+| DeepL API | `deepl-node` client (NEW dependency), `DEEPL_API_KEY` from `config/env.mjs` | Missing key today (confirmed gap in `.planning/STATE.md`) — pipeline must degrade gracefully (skip translate stage, log, continue render EN-only) rather than fail the whole run |
+| marp-cli | `execFileAsync('npx', ['marp', ...])` subprocess (NEW devDependency `@marp-team/marp-cli`) | Requires a Chromium-family browser for PDF/PPTX/image output — `puppeteer` already a devDependency here (for `@mermaid-js/mermaid-cli`), likely reusable via `--browser-path` |
+| LibreOffice (`soffice`) | Shelled out to by marp-cli itself for `--pptx-editable`, not called directly by DocuMind | Confirmed not on `PATH` (`.planning/STATE.md`); resolve via `SLIDES_SOFFICE_PATH` env pointing at `/Applications/LibreOffice.app/Contents/MacOS/soffice`, or skip `--pptx-editable` gracefully if unresolvable |
+| FTP host | `basic-ftp` client (already present as a `pnpm.overrides` security-patch entry in `package.json` — promote to a real `dependencies` entry) | Dry-run by default (no `SLIDES_FTP_HOST` set); real upload only when host/user/pass all present |
+| AgentHub REST API (port 3004) | Plain `fetch()` `POST /api/discoveries` | NOT via MCP — see Pattern 3/Anti-Pattern 3. Non-fatal on failure. |
+| Figma Slides (`use_figma` MCP) | Manual runbook / slash-command, NOT part of the daemon loop | Blocked on Figma MCP auth per `PROJECT.md`; MCP tools require an agent session, so this can never be daemon-automated the way translate/render/deploy are — design it as an agent-invoked follow-up step, not a pipeline stage |
+| RootDispatcher | No code integration — dispatch application is a file write, indistinguishable from a human edit | See "Key Data Flows" #1 |
+
+### Internal Boundaries
+
+| Boundary | Communication | Notes |
+| ---------- | --------------- | ------- |
+| `watcher.mjs` ↔ `slides-processor.mjs` | Direct function call (`enqueuePipelineRun(db, path, repo, ctx, opts)`) | Same pattern as `watcher.mjs` ↔ `relink-processor.mjs` today |
+| `slides-processor.mjs` ↔ SQLite | Direct `better-sqlite3` calls, same `db` handle passed down from `server.mjs` | No new DB connection — reuse the singleton |
+| `scripts/publish-slides.mjs` ↔ `slides-processor.mjs` | Direct import, opens its own short-lived `db` handle (matches `scripts/index-markdown.mjs` convention for standalone CLI runs) | Needed so `npm run slides:build` works without the daemon running |
+| `server.mjs` (`POST /slides/publish`) ↔ `slides-processor.mjs` | Direct call, manual-trigger REST parity with `POST /scan` | For dashboard/manual re-run use |
+| `mcp-server.mjs` (`get_slide_runs`, `publish_slides`) ↔ SQLite / `slides-processor.mjs` | Same dual pattern as existing `get_diagrams`/`register_diagram` read+write tool pairs | Agent-facing surface for Claude Code sessions |
+| `slides-processor.mjs` ↔ AgentHub | HTTP `fetch()`, non-fatal | See Pattern 3 |
+
+## Suggested Build Order
+
+Dependency-ordered — each phase's tools are needed by the phase after it:
+
+1. **Foundation:** `slide_pipeline_runs` migration + `config/env.mjs` additions (`DEEPL_API_KEY`, `SLIDES_FTP_*`, `SLIDES_SOFFICE_PATH`) + `.marprc.yml` + `.gitignore` rules for rendered outputs + remove the stale May-21 committed binaries. Everything downstream needs config and a place to record runs.
+2. **Render stage in isolation:** `renderDeck()` callable from `scripts/publish-slides.mjs --render-only` against the two existing fixture decks, no watcher/translate/deploy involved yet. Proves the `execFile`/marp-cli subprocess pattern and resolves the multi-format-invocation question flagged in Pattern 2 (spike before committing to one-call-vs-three-calls).
+3. **Translate stage:** `translateDeck()` with graceful no-key skip, writes `.fr.md`. Independently testable via CLI flag; unblocked even before `DEEPL_API_KEY` lands (skip path is the default state today).
+4. **Ledger wiring:** `recordRun()` around stages 2+3, `latest_slide_runs` view. Needed before watcher integration so a bad trigger is debuggable via the DB rather than only console logs.
+5. **Watcher integration:** `isSlidesEnSource()` + per-deck in-flight Map + `writingNow` guards wired into `daemon/watcher.mjs`, calling the already-proven stage functions. This is where loop-protection is proven end-to-end — test by editing a fixture deck and confirming exactly one pipeline run fires, `.fr.md`'s own write does not re-trigger, and a second rapid edit coalesces rather than double-runs.
+6. **Deploy stage:** `deployDeck()` via `basic-ftp`, dry-run-by-default. Independent of translate/render logic but naturally consumes their output paths — build after 2/3 so there's something real to deploy.
+7. **AgentHub notification:** `notifyAgentHub()` call after a successful deploy. Trivial once 6 exists; low risk, build last of the core loop.
+8. **Surface area:** `POST /slides/publish` + `GET /slides/runs` on `server.mjs`, `get_slide_runs`/`publish_slides` on `mcp-server.mjs`. Depends on 1 (ledger) and 5/6 (callable pipeline) already existing.
+9. **Figma Slides runbook:** documented as an agent-invoked manual step (slash command or `docs/` runbook), explicitly decoupled from the automated loop — build whenever Figma MCP auth is resolved; not a blocker for 1-8.
+10. **Optional hardening (future):** nightly drift-check cron in `scheduler.mjs` comparing EN `source_hash` to `latest_slide_runs`, flagging decks whose render/deploy is behind their source — same shape as the existing `stale_diagrams` view, deferred until the core loop has run in production for a while.
 
 ## Sources
 
-- Direct codebase inspection: `daemon/mcp-server.mjs`, `daemon/server.mjs`, `ecosystem.config.cjs`, `context/loader.mjs`, `context/schema.mjs`, `config/profiles/dvwdesign.json` (HIGH confidence)
-
-- MCP SDK installed in project: `@modelcontextprotocol/sdk` v1.27.1 — `StreamableHTTPServerTransport` confirmed at `dist/esm/server/streamableHttp.js` (HIGH confidence)
-
-- MCP Specification (2025-03-26): [Transports — Streamable HTTP](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports) — Origin header validation requirement confirmed (HIGH confidence)
-
-- Docker Node.js best practices: [9 Tips for Containerizing Your Node.js Application](https://www.docker.com/blog/9-tips-for-containerizing-your-node-js-application/) (MEDIUM confidence)
-
-- better-sqlite3 Alpine Docker: [Discussion #1270](https://github.com/WiseLibs/better-sqlite3/discussions/1270) — `npm ci` in Alpine stage required (MEDIUM confidence, consistent with native addon rebuild requirement)
-
-- GHCR multi-arch publish: [Publishing Multi-Arch Docker images to GHCR using Buildx and GitHub Actions](https://dev.to/pradumnasaraf/publishing-multi-arch-docker-images-to-ghcr-using-buildx-and-github-actions-2k7j) (MEDIUM confidence)
-
-- dumb-init for signal handling: Standard Node.js container practice, consistent across multiple official Docker guides (HIGH confidence — well-established pattern)
+- `.planning/PROJECT.md` (this repo) — v3.4 milestone scope, decisions table, prereq gaps
+- `.planning/STATE.md` (this repo) — confirmed gaps (DEEPL_API_KEY, FTP creds, soffice PATH, Figma MCP auth), test fixture decks
+- `daemon/watcher.mjs` (this repo) — chokidar config, debounce/dedup mechanism, `writingNow` usage, `.md`/.pdf/.docx/.rtf watch patterns
+- `daemon/scheduler.mjs` (this repo) — `execFileAsync` subprocess pattern, cron job structure
+- `daemon/registry-lock.mjs` (this repo) — `writingNow` Set, the existing loop-protection primitive
+- `daemon/server.mjs` (this repo) — REST endpoint conventions (`POST /scan`, `POST /convert`, etc.)
+- `daemon/mcp-server.mjs` (this repo) — 14 existing `server.registerTool()` calls, read/write tool pairing convention
+- `config/env.mjs` (this repo) — centralized env var pattern, `.env` loading via `process.loadEnvFile()`
+- `scripts/db/schema.sql` (this repo) — `conversions`, `documents`, `diagrams`, `scan_history` table shapes; `stale_diagrams`/`pending_relinks` view pattern reused for `latest_slide_runs`
+- `processors/relink-processor.mjs` (this repo, referenced) — multi-function-per-concern processor convention
+- `docs/proposals/2026-05-21-figma-ai-presentation-preplan.md` (this repo) — original Marp deck decision rationale, existing fixture decks' provenance
+- `package.json` (this repo) — confirmed `basic-ftp >=5.3.0` already present as a `pnpm.overrides` security-patch entry (transitive dep somewhere), `puppeteer` already a devDependency (Chromium reuse opportunity)
+- `/Users/Shared/htdocs/github/DVWDesign/AgentHub/src/index.ts` (sibling repo) — confirmed `POST /api/discoveries` REST payload shape `{ repo_source, title, content, discovery_type, topics }`, port 3004 per global CLAUDE.md service registry
+- [marp-team/marp-cli README](https://github.com/marp-team/marp-cli/blob/main/README.md) — confirmed one-format-per-invocation via `--pdf`/`--pptx` flags, `--pptx-editable` requires LibreOffice Impress + a browser, config file supports per-format boolean keys (exact multi-format-in-one-call behavior needs a spike — MEDIUM confidence, flagged in Pattern 2)
 
 ---
-
-### Architecture research for: DocuMind v3.2 — Docker + MCP HTTP + Git-Clone Ingestion
-
-### Researched: 2026-03-23
+*Architecture research for: DocuMind v3.4 Presentation Pipeline*
+*Researched: 2026-07-10*

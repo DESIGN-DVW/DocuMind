@@ -1,6 +1,5 @@
 # Dependencies
 node_modules/
-package-lock.json
 
 # Generated index files
 index/
@@ -27,8 +26,10 @@ Thumbs.db
 *.tmp
 .cache/
 
-# Reports
+# Reports (exclude test/build output, but allow docs/ deliverables)
 reports/
+!docs/reports/
+!docs/reports/**
 
 # Database files
 *.db
@@ -36,5 +37,18 @@ reports/
 *.sqlite3
 data/
 
+# Kuzu graph database directories
+data/kuzu-smoke-test/
+data/documind.kuzu/
+
 # Environment variables (local paths must not be committed)
 .env
+.env.local
+
+# Session recovery files (local only)
+.claude/sessions/
+
+# Presentation pipeline: rendered exports are regenerated on demand, never committed
+docs/slides/**/*.html
+docs/slides/**/*.pdf
+docs/slides/**/*.pptx

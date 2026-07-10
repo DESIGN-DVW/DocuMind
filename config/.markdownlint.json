@@ -43,7 +43,16 @@
       "sup",
       "sub",
       "img",
-      "a"
+      "a",
+      "table",
+      "thead",
+      "tbody",
+      "tr",
+      "th",
+      "td",
+      "caption",
+      "colgroup",
+      "col"
     ]
   },
   "MD034": true,

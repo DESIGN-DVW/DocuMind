@@ -26,6 +26,7 @@ const IGNORE_PATTERNS = [
   '**/.next/**',
   '**/.cache/**',
   '**/index/**',
+  '**/.claude/worktrees/**',
 ];
 
 const DEBOUNCE_MS = 5000;

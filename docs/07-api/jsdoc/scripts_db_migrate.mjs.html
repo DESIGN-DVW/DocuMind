@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <meta charset="utf-8">
+    <title>scripts/db/migrate.mjs - Documentation</title>
+    
+    
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+    <script src="scripts/nav.js" defer></script>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav >
+    
+    
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-backfill-classifications.html">backfill-classifications</a><ul class='methods'><li data-type='method'><a href="module-backfill-classifications.html#.backfillClassifications">backfillClassifications</a></li><li data-type='method'><a href="module-backfill-classifications.html#~classifyPath">classifyPath</a></li></ul></li><li><a href="module-backfill-summaries.html">backfill-summaries</a><ul class='methods'><li data-type='method'><a href="module-backfill-summaries.html#.backfillSummaries">backfillSummaries</a></li><li data-type='method'><a href="module-backfill-summaries.html#~extractSummary">extractSummary</a></li></ul></li><li><a href="module-config_constants.html">config/constants</a><ul class='methods'><li data-type='method'><a href="module-config_constants.html#.getAllRepositoryNames">getAllRepositoryNames</a></li><li data-type='method'><a href="module-config_constants.html#.getGitHubUrl">getGitHubUrl</a></li><li data-type='method'><a href="module-config_constants.html#.getLocalPath">getLocalPath</a></li><li data-type='method'><a href="module-config_constants.html#.isActiveRepository">isActiveRepository</a></li><li data-type='method'><a href="module-config_constants.html#.isLocalOnly">isLocalOnly</a></li></ul></li><li><a href="module-config_env.html">config/env</a></li><li><a href="module-scripts_fix-github-org-references.html">scripts/fix-github-org-references</a></li><li><a href="module-scripts_propagate-org-fixes.html">scripts/propagate-org-fixes</a></li><li><a href="module-scripts_validate-custom-errors.html">scripts/validate-custom-errors</a><ul class='methods'><li data-type='method'><a href="module-scripts_validate-custom-errors.html#~runValidation">runValidation</a></li><li data-type='method'><a href="module-scripts_validate-custom-errors.html#~validateFile">validateFile</a></li><li data-type='method'><a href="module-scripts_validate-custom-errors.html#~validateMixedListTypes">validateMixedListTypes</a></li><li data-type='method'><a href="module-scripts_validate-custom-errors.html#~validateMultipleH1">validateMultipleH1</a></li><li data-type='method'><a href="module-scripts_validate-custom-errors.html#~validateReferenceLinks">validateReferenceLinks</a></li><li data-type='method'><a href="module-scripts_validate-custom-errors.html#~validateTableConsistency">validateTableConsistency</a></li></ul></li></ul><h3>Global</h3><ul><li><a href="global.html#ALL_TARGET_REPOS">ALL_TARGET_REPOS</a></li><li><a href="global.html#MARKDOWNLINT_CONFIG">MARKDOWNLINT_CONFIG</a></li><li><a href="global.html#OBSOLETE_RULE_FILES">OBSOLETE_RULE_FILES</a></li><li><a href="global.html#analyzeDirectory">analyzeDirectory</a></li><li><a href="global.html#backupDatabase">backupDatabase</a></li><li><a href="global.html#blockType">blockType</a></li><li><a href="global.html#calculateMaxDepth">calculateMaxDepth</a></li><li><a href="global.html#copyIfExists">copyIfExists</a></li><li><a href="global.html#countFiles">countFiles</a></li><li><a href="global.html#detectPackageManager">detectPackageManager</a></li><li><a href="global.html#detectTechnologies">detectTechnologies</a></li><li><a href="global.html#findDuplicates">findDuplicates</a></li><li><a href="global.html#findMarkdownFiles">findMarkdownFiles</a></li><li><a href="global.html#findSimilarDocuments">findSimilarDocuments</a></li><li><a href="global.html#fixExcessiveHorizontalRules">fixExcessiveHorizontalRules</a></li><li><a href="global.html#fixFile">fixFile</a></li><li><a href="global.html#fixListIndentation">fixListIndentation</a></li><li><a href="global.html#fixNestedCodeBlocks">fixNestedCodeBlocks</a></li><li><a href="global.html#fixSkippedHeadingLevels">fixSkippedHeadingLevels</a></li><li><a href="global.html#fixTableSeparatorSpacing">fixTableSeparatorSpacing</a></li><li><a href="global.html#fixTableSeparators">fixTableSeparators</a></li><li><a href="global.html#fixTrailingSpaces">fixTrailingSpaces</a></li><li><a href="global.html#formatBytes">formatBytes</a></li><li><a href="global.html#generateSchema">generateSchema</a></li><li><a href="global.html#getCanonicalDocument">getCanonicalDocument</a></li><li><a href="global.html#getCategoryStats">getCategoryStats</a></li><li><a href="global.html#getDeviationStats">getDeviationStats</a></li><li><a href="global.html#getDirectorySize">getDirectorySize</a></li><li><a href="global.html#getGlobalStats">getGlobalStats</a></li><li><a href="global.html#getLearningPatterns">getLearningPatterns</a></li><li><a href="global.html#getLineNumber">getLineNumber</a></li><li><a href="global.html#getLintingIssues">getLintingIssues</a></li><li><a href="global.html#getLintingStats">getLintingStats</a></li><li><a href="global.html#getRecentlyModified">getRecentlyModified</a></li><li><a href="global.html#getRepoName">getRepoName</a></li><li><a href="global.html#getRepoType">getRepoType</a></li><li><a href="global.html#getRepositoryStats">getRepositoryStats</a></li><li><a href="global.html#getScanHistory">getScanHistory</a></li><li><a href="global.html#getUnresolvedDeviations">getUnresolvedDeviations</a></li><li><a href="global.html#hasDevDep">hasDevDep</a></li><li><a href="global.html#listCanonicalDocuments">listCanonicalDocuments</a></li><li><a href="global.html#main">main</a></li><li><a href="global.html#mergeCustomRules">mergeCustomRules</a></li><li><a href="global.html#processRepository">processRepository</a></li><li><a href="global.html#propagateToRepo">propagateToRepo</a></li><li><a href="global.html#results">results</a></li><li><a href="global.html#safeTimestamp">safeTimestamp</a></li><li><a href="global.html#searchByFilename">searchByFilename</a></li><li><a href="global.html#searchDocuments">searchDocuments</a></li><li><a href="global.html#validateInternalLinks">validateInternalLinks</a></li></ul>
+    
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">scripts/db/migrate.mjs</h1>
+    
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>#!/usr/bin/env node
+
+/**
+ * DocuMind Database Migration Runner
+ *
+ * Applies numbered SQL migrations to the live database in sequence.
+ * Each migration is tracked in the schema_migrations table.
+ * A timestamped backup is created before any migrations are applied.
+ *
+ * Usage: node scripts/db/migrate.mjs
+ */
+
+import Database from 'better-sqlite3';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import chalk from 'chalk';
+import { loadProfile } from '../../context/loader.mjs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const DB_PATH = path.join(__dirname, '../../data/documind.db');
+const MIGRATIONS_DIR = path.join(__dirname, 'migrations');
+
+/**
+ * Create a filesystem-safe ISO timestamp string.
+ * Replaces colons and dots with dashes for use in filenames.
+ */
+function safeTimestamp() {
+  return new Date().toISOString().replace(/[:.]/g, '-');
+}
+
+/**
+ * Copy a file if it exists. Silently skips if source does not exist.
+ */
+function copyIfExists(src, dest) {
+  if (fs.existsSync(src)) {
+    fs.copyFileSync(src, dest);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Create a timestamped backup of the database and its WAL/SHM files.
+ * Returns the backup path used.
+ */
+function backupDatabase(dbPath) {
+  const ts = safeTimestamp();
+  const backupPath = `${dbPath}.bak-${ts}`;
+
+  fs.copyFileSync(dbPath, backupPath);
+  copyIfExists(`${dbPath}-wal`, `${backupPath}-wal`);
+  copyIfExists(`${dbPath}-shm`, `${backupPath}-shm`);
+
+  return backupPath;
+}
+
+// ─── Main ────────────────────────────────────────────────────────────────────
+
+try {
+  console.log(chalk.blue('\n  DocuMind Database Migration\n'));
+  console.log('  ' + '━'.repeat(58));
+  console.log(chalk.gray(`  DB: ${DB_PATH}`));
+
+  // Ensure data directory exists
+  const dataDir = path.dirname(DB_PATH);
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+    console.log(chalk.green('  Created data directory'));
+  }
+
+  // Step 1: Backup existing database (if it exists)
+  let backupPath = null;
+  if (fs.existsSync(DB_PATH)) {
+    backupPath = backupDatabase(DB_PATH);
+    console.log(chalk.gray(`  Backup: ${path.basename(backupPath)}`));
+  } else {
+    console.log(chalk.yellow('  No existing database found — creating fresh DB'));
+  }
+
+  console.log('');
+
+  // Step 2: Open database
+  const db = new Database(DB_PATH);
+  db.pragma('foreign_keys = ON');
+  db.pragma('journal_mode = WAL');
+
+  // Step 3: Bootstrap schema_migrations table
+  // Run inline (not from file) so the tracking table exists before we read it
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      version TEXT PRIMARY KEY NOT NULL,
+      applied_at TEXT NOT NULL,
+      description TEXT
+    )
+  `);
+
+  // Step 4: Read applied versions into a Set
+  const appliedVersions = new Set(
+    db
+      .prepare('SELECT version FROM schema_migrations')
+      .all()
+      .map(row => row.version)
+  );
+
+  // Step 5: Read migration files sorted lexicographically
+  if (!fs.existsSync(MIGRATIONS_DIR)) {
+    console.log(chalk.yellow('  No migrations directory found — nothing to apply'));
+    db.close();
+    process.exit(0);
+  }
+
+  const migrationFiles = fs
+    .readdirSync(MIGRATIONS_DIR)
+    .filter(f => f.endsWith('.sql'))
+    .sort();
+
+  if (migrationFiles.length === 0) {
+    console.log(chalk.yellow('  No migration files found — nothing to apply'));
+    db.close();
+    process.exit(0);
+  }
+
+  // Check for --backfill flag (forces backfill even when no new migrations applied)
+  const forceBackfill = process.argv.includes('--backfill');
+
+  // Step 6: Apply pending migrations
+  let appliedCount = 0;
+  let skippedCount = 0;
+
+  for (const filename of migrationFiles) {
+    const version = filename.replace(/\.sql$/, '');
+
+    if (appliedVersions.has(version)) {
+      console.log(chalk.gray(`  [skip] ${filename}`));
+      skippedCount++;
+      continue;
+    }
+
+    const sqlPath = path.join(MIGRATIONS_DIR, filename);
+    const sql = fs.readFileSync(sqlPath, 'utf-8');
+
+    // Wrap migration + tracking in a single transaction
+    const applyMigration = db.transaction(() => {
+      db.exec(sql);
+      db.prepare(
+        `
+        INSERT INTO schema_migrations (version, applied_at, description)
+        VALUES (?, ?, ?)
+      `
+      ).run(version, new Date().toISOString(), filename);
+    });
+
+    applyMigration();
+
+    console.log(chalk.green(`  [apply] ${filename}`));
+    appliedCount++;
+  }
+
+  // Step 7: Post-migration backfill (runs when new migrations applied, or --backfill forced)
+  if (appliedCount > 0 || forceBackfill) {
+    console.log(chalk.blue('\nRunning post-migration backfill...'));
+
+    // Load context profile for classification rules
+    const ctx = await loadProfile();
+    console.log(chalk.gray(`  Using profile: ${ctx.profileId}`));
+
+    const { backfillSummaries } = await import('./backfill/backfill-summaries.mjs');
+    const summaryCount = backfillSummaries(db);
+    console.log(chalk.green(`  Backfilled ${summaryCount} document summaries`));
+
+    const { backfillClassifications } = await import('./backfill/backfill-classifications.mjs');
+    const classCount = backfillClassifications(db, ctx);
+    console.log(chalk.green(`  Backfilled ${classCount} document classifications`));
+
+    // FTS5 rebuild after bulk writes (mandatory — prevents stale index after bulk UPDATEs)
+    console.log(chalk.blue('  Rebuilding FTS5 index...'));
+    db.exec("INSERT INTO documents_fts(documents_fts) VALUES('rebuild')");
+    console.log(chalk.green('  FTS5 index rebuilt'));
+  }
+
+  // Step 8: Summary
+  console.log('');
+  console.log('  ' + '━'.repeat(58));
+  if (appliedCount > 0) {
+    console.log(chalk.green(`  Applied: ${appliedCount} migration(s)`));
+  }
+  if (skippedCount > 0) {
+    console.log(chalk.gray(`  Skipped: ${skippedCount} already-applied migration(s)`));
+  }
+  if (appliedCount === 0 &amp;&amp; skippedCount === 0) {
+    console.log(chalk.gray('  No migrations to apply'));
+  }
+  if (forceBackfill) {
+    console.log(chalk.blue('  Mode:    --backfill (forced)'));
+  }
+  if (backupPath) {
+    console.log(chalk.gray(`  Backup:  ${path.basename(backupPath)}`));
+  }
+  console.log(chalk.green('\n  Migration complete.\n'));
+
+  db.close();
+} catch (error) {
+  console.error(chalk.red('\n  Migration failed:'));
+  console.error(chalk.red(error.message));
+  console.error(error.stack);
+  process.exit(1);
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+    
+    
+</div>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Sat Jul 11 2026 01:34:36 GMT+0200 (Central European Summer Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/polyfill.js"></script>
+<script src="scripts/linenumber.js"></script>
+
+
+
+</body>
+</html>

@@ -7,7 +7,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import { z } from 'zod';
 import { loadProfile } from '../context/loader.mjs';
-import { findRelated } from '../graph/relations.mjs';
+import { findRelated } from '../graph/sqlite-traversal.mjs';
 import { createRequire } from 'module';
 import fs from 'fs/promises';
 import { indexMarkdown } from '../processors/markdown-processor.mjs';
@@ -21,7 +21,9 @@ import {
 import { writingNow } from './registry-lock.mjs';
 
 const require = createRequire(import.meta.url);
-const { sync: markdownlintSync, applyFixes } = require('markdownlint');
+// markdownlint >= 0.35 moved the sync API to the 'markdownlint/sync' subpath
+const { lint: markdownlintSync } = require('markdownlint/sync');
+const { applyFixes } = require('markdownlint');
 
 import {
   ROOT,
@@ -171,15 +173,19 @@ server.registerTool(
   'get_related',
   {
     description:
-      'Get documents related to a given document ID (from search_docs results) via relationship graph traversal. Returns paths, relationship types, and traversal depth up to N hops.',
+      'Get documents related to a given document ID via graph traversal. Supports reverse traversal to find documents that reference this one.',
     inputSchema: {
       doc_id: z.number().int().describe('Document ID to traverse from'),
       hops: z.number().int().min(1).max(3).default(2).describe('Maximum traversal depth (1-3)'),
+      direction: z
+        .enum(['forward', 'reverse', 'both'])
+        .default('forward')
+        .describe('Traversal direction: forward (outgoing), reverse (incoming), both'),
     },
   },
-  async ({ doc_id, hops }) => {
+  async ({ doc_id, hops, direction }) => {
     try {
-      const results = findRelated(db, doc_id, hops).slice(0, 200);
+      const results = findRelated(db, doc_id, hops, direction);
       return {
         content: [
           {
@@ -668,7 +674,7 @@ server.registerTool(
 
       const customRules = [];
       try {
-        customRules.push(require(path.join(RULES_DIR, 'force-align-table-columns.cjs')));
+        customRules.push(require(path.join(RULES_DIR, 'no-blank-lines-in-tables.cjs')));
         customRules.push(require(path.join(RULES_DIR, 'table-separator-spacing.cjs')));
       } catch {
         /* custom rules optional */
@@ -747,7 +753,7 @@ server.registerTool(
 
       const customRules = [];
       try {
-        customRules.push(require(path.join(RULES_DIR, 'force-align-table-columns.cjs')));
+        customRules.push(require(path.join(RULES_DIR, 'no-blank-lines-in-tables.cjs')));
         customRules.push(require(path.join(RULES_DIR, 'table-separator-spacing.cjs')));
       } catch {
         /* custom rules optional */
@@ -1198,9 +1204,8 @@ if (MCP_MODE === 'stdio') {
   const { app } = await import('./server.mjs');
 
   // --- Mount StreamableHTTPServerTransport ---
-  const { StreamableHTTPServerTransport } = await import(
-    '@modelcontextprotocol/sdk/server/streamableHttp.js'
-  );
+  const { StreamableHTTPServerTransport } =
+    await import('@modelcontextprotocol/sdk/server/streamableHttp.js');
 
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: undefined, // stateless — no session tracking

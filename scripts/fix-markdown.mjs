@@ -11,6 +11,7 @@
 
 import fs from 'fs/promises';
 import path from 'path';
+import { pathToFileURL } from 'url';
 import { LOCAL_BASE_PATH } from '../config/constants.mjs';
 
 // ============================================================================
@@ -176,17 +177,26 @@ function isBoldItalicParagraph(line) {
 }
 
 function isBlockElement(line) {
-  const trimmed = line.trim();
-  return (
-    /^#{1,6}\s/.test(trimmed) ||
-    /^[-*+]\s/.test(trimmed) ||
-    /^\d+\.\s/.test(trimmed) ||
-    /^```/.test(trimmed) ||
-    /^>/.test(trimmed) ||
-    /^---$/.test(trimmed) ||
-    /^\|/.test(trimmed)
-  );
+  return blockType(line) !== null;
 }
+
+/**
+ * Classify a line's block type. Consecutive lines of a "groupable" type
+ * (table, list, quote) belong to the same block and must NOT be separated
+ * by blank lines — a blank line inside a table breaks rendering entirely.
+ */
+function blockType(line) {
+  const trimmed = line.trim();
+  if (/^#{1,6}\s/.test(trimmed)) return 'heading';
+  if (/^```/.test(trimmed)) return 'fence';
+  if (/^[-*+]\s/.test(trimmed) || /^\d+\.\s/.test(trimmed)) return 'list';
+  if (/^>/.test(trimmed)) return 'quote';
+  if (/^---$/.test(trimmed)) return 'hr';
+  if (/^\|/.test(trimmed)) return 'table';
+  return null;
+}
+
+const GROUPABLE_TYPES = new Set(['table', 'list', 'quote']);
 
 // ============================================================================
 // Fix Functions (same as FigmailAPP version)
@@ -194,26 +204,59 @@ function isBlockElement(line) {
 
 export function fixLineBreaks(lines) {
   const fixed = [];
+  let inCodeBlock = false;
 
-  for (let i = 0; i < lines.length; i++) {
+  // Skip YAML frontmatter entirely
+  let start = 0;
+  if (lines[0] && lines[0].trim() === '---') {
+    const close = lines.findIndex((l, idx) => idx > 0 && l.trim() === '---');
+    if (close !== -1) {
+      for (let i = 0; i <= close; i++) fixed.push(lines[i]);
+      start = close + 1;
+    }
+  }
+
+  for (let i = start; i < lines.length; i++) {
     const current = lines[i];
-    const previous = lines[i - 1];
+    const previous = i > 0 ? lines[i - 1] : undefined;
     const next = lines[i + 1];
 
-    const currentIsBlock = isBlockElement(current);
-    const previousIsBlock = previous ? isBlockElement(previous) : false;
+    const currentType = blockType(current);
 
+    // Inside fenced code blocks: pass lines through untouched
+    if (inCodeBlock) {
+      fixed.push(current);
+      if (currentType === 'fence') {
+        inCodeBlock = false;
+        // Closing fence needs a blank line after (MD031)
+        if (next !== undefined && next.trim() !== '') {
+          fixed.push('');
+        }
+      }
+      continue;
+    }
+
+    const previousType = previous !== undefined ? blockType(previous) : null;
     const currentIsBlank = current.trim() === '';
     const previousIsBlank = previous ? previous.trim() === '' : true;
     const nextIsBlank = next ? next.trim() === '' : true;
 
-    if (currentIsBlock && !previousIsBlank && previous !== undefined) {
+    // Consecutive rows of the same groupable block (table/list/quote) must
+    // stay tight — a blank line between table rows breaks the table.
+    const continuesGroup = GROUPABLE_TYPES.has(currentType) && previousType === currentType;
+
+    if (currentType && !previousIsBlank && previous !== undefined && !continuesGroup) {
       fixed.push('');
     }
 
     fixed.push(current);
 
-    if (currentIsBlock && !nextIsBlank && next !== undefined && !isBlockElement(next)) {
+    if (currentType === 'fence') {
+      inCodeBlock = true;
+      continue;
+    }
+
+    if (currentType && !nextIsBlank && next !== undefined && !isBlockElement(next)) {
       fixed.push('');
     }
 
@@ -475,4 +518,9 @@ async function main() {
   console.log('\n✓ Done!\n');
 }
 
-main().catch(console.error);
+// Only run the CLI when executed directly — this module is also imported by
+// daemon/mcp-server.mjs for its fix functions, and importing must never
+// trigger a repository-wide fix pass.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch(console.error);
+}

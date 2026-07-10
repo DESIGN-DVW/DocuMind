@@ -1,320 +1,205 @@
 # Feature Research
 
-**Domain:** Docker containerization + MCP HTTP transport + GHCR publishing for a Node.js documentation daemon
-**Researched:** 2026-03-23
-**Confidence:** HIGH (Docker/Node.js practices from official nodejs/docker-node docs); HIGH (MCP transport from
-official modelcontextprotocol.io spec); MEDIUM (git-clone ingestion patterns from community sources);
-HIGH (GHCR publishing from official GitHub docs)
-
----
+**Domain:** Docs-as-code presentation pipeline (Marp markdown decks → translated, rendered, deployed slides)
+**Researched:** 2026-07-10
+**Confidence:** MEDIUM-HIGH (Marp/DeepL mechanics verified against official docs/GitHub; daemon-orchestration and Figma Slides specifics partly inferred from community sources — flagged per item)
 
 ## Context Note
 
-This research covers ONLY the new v3.2 features. DocuMind v3.1 already ships:
-REST API on port 9000, MCP stdio server with 14 tools, SQLite FTS5 with graph/keywords/diagrams,
-PM2 daemon, cron scheduler, and context profiles. The features below are what v3.2 adds.
-
-The primary consumer shifts with this milestone: from a local macOS PM2 daemon callable by Claude Code
-to a portable Docker image runnable anywhere — CI pipelines, remote Linux servers, other developers'
-machines — while keeping local Claude Code integration fully functional.
-
----
+This file replaces the prior (v3.3 Kuzu graph DB) research content, which is obsolete — Kuzu was
+retired per ADR-001 (2026-07, SQLite recursive CTEs cover graph traversal). This research covers the
+v3.4 Presentation Pipeline milestone only: automated translate → render → deploy pipeline for Marp
+markdown decks, agent-orchestrated by the DocuMind daemon. Already built and NOT re-researched: markdown
+indexing/lint/fix, chokidar watcher + cron scheduler, MCP tools, diagram registry, REST API.
 
 ## Feature Landscape
 
 ### Table Stakes (Users Expect These)
 
-"Users" here means: (1) the developer running `docker compose up` expecting a working service,
-(2) a CI pipeline consuming DocuMind as a service container, (3) a remote MCP client connecting
-over HTTP. Missing any of these makes the container feel broken or untrustworthy.
+Features any docs-as-code slide pipeline (translate → render → deploy) is assumed to have. Missing these = the pipeline feels broken or unsafe to trust as "single source of truth."
 
 | Feature | Why Expected | Complexity | Notes |
+| --------- | -------------- | ------------ | ------- |
+| Marp render to HTML/PDF/PPTX from one command | Every docs-as-code slide tool (Marp, reveal-md, Slidev) treats multi-format export as baseline; `marp-cli` supports `--pdf`, `--pptx`, `--html`, `--images` natively via CLI flags or `.marprc.yml` config | LOW | `marp-cli` is the whole point of the tool — no custom rendering logic needed, just flag orchestration in `slides:build` npm script |
+| `.marprc.yml` central config (theme paths, output dirs, allow-local-files) | Docs-as-code tools externalize build config so CI and local runs stay identical | LOW | One file, checked into repo; avoids CLI flag drift between manual runs and daemon-triggered runs |
+| Front-matter/directive preservation during translation | Marp decks use YAML front-matter (`marp: true`, `theme:`, `paginate:`, `style: \|` CSS block) and inline HTML-comment directives (`<!-- _class: hero -->`, `<!-- markdownlint-disable -->`) as **structural**, not prose — a naive full-text translation call will mangle or translate these and break rendering | MEDIUM-HIGH | This is the highest-risk table-stakes feature. See "Translation-Fidelity Expectations" below — DeepL has no native Markdown/Marp awareness (confirmed via `deepl-node` GitHub issue #26, still open) |
+| Code fence / inline code preservation | Fenced blocks (`` ```text ``, `` ```diagram ``) and inline code spans (`` `slides:build` ``) must survive translation byte-identical — DeepL's plain-text mode will translate code content or corrupt fence markers (community reports of ` ``` ` becoming ` `` ` after MT) | MEDIUM | Requires placeholder-swap strategy (extract → protect → translate → restore), not raw API passthrough |
+| Proper-noun / brand-term protection | Product and brand names (DVWDesign, Figma, Marp, DeepL, MCP, DocuMind, FigJam, PPTX) must never be auto-translated or transliterated | MEDIUM | DeepL glossary API (`POST /v3/glossaries`, `glossary_id` on translate calls) is purpose-built for this — confirmed official capability |
+| Table structure preservation (GFM pipes/separators) | DocuMind's own DVW001/DVW002 lint rules require no blank lines mid-table and minimal `\| - \|` separators — a translated table that reflows cell width or inserts a blank line breaks the deck AND fails the repo's own lint gate | MEDIUM | Only cell **text** should be translated; pipe/separator syntax is structural and must pass through untouched |
+| Incremental rebuild (skip unchanged decks) | Standard docs-as-code CI behavior — MkDocs `--dirty`, Hugo, and static-site pipelines all skip unchanged source to keep builds fast; DocuMind already has a `content_hash` pattern for markdown indexing that this can reuse | LOW-MEDIUM | Reuse existing `content_hash` column/pattern rather than inventing a new mechanism — hash the EN `.md` to decide whether to re-translate/re-render |
+| Deploy dry-run mode | Every FTP-deploy tool surveyed (`ftp-deploy`, `@samkirkland/ftp-deploy` GitHub Action) ships a dry-run flag that lists what *would* change without touching the remote — non-negotiable when creds don't exist yet | LOW | Matches the milestone's explicit gap (FTP creds pending) — dry-run must be the default until `.env` creds land |
+| Deploy manifest / state tracking | `@samkirkland/ftp-deploy` tracks a `.ftp-deploy-sync-state.json` so only diffed files upload on subsequent runs — avoids full-tree re-upload every deploy | MEDIUM | Needed for both correctness (avoid clobbering) and status reporting (what shipped, when) |
+| Status/log output per pipeline run | Any daemon-orchestrated multi-stage pipeline (translate → render → deploy) needs a per-stage pass/fail/skip record — otherwise silent partial failures (e.g., translate OK, deploy blocked on missing creds) are invisible | LOW-MEDIUM | DocuMind already has a `scan_runs` table pattern for scheduler jobs — reuse the same shape (run id, stage, status, timestamp, error) for pipeline runs |
+| Watcher loop protection | chokidar (already used by DocuMind's watcher) will re-trigger on its own generated output unless explicitly ignored — confirmed pattern from chokidar docs/issues: function-form `ignored`, `awaitWriteFinish`, and debounce | MEDIUM | Must ignore `*.fr.md`, `/dist`, `/html`, `/pdf`, `/pptx` output globs, or the daemon will translate→render→write→re-detect→re-translate forever |
 
-| ------- | ------------ | ---------- | ----- |
+### Differentiators (Competitive Advantage)
 
-| Non-root user in container | Security requirement for any published image; Docker Hub and GHCR scan for root-run containers; kubernetes clusters often block root pods | LOW | Node.js official images ship a `node` user (uid 1000). One `USER node` line in Dockerfile. Existing dependency: `better-sqlite3` needs write access to `/data` — chown the volume mount path. |
-
-| Graceful shutdown (SIGTERM handler) | Docker `stop` sends SIGTERM; if ignored, Docker force-kills after 10s and in-flight SQLite writes are corrupted | MEDIUM | `process.on('SIGTERM', ...)` must close better-sqlite3 connection, drain active cron jobs, close Express server. Node.js must run as PID 1 via `CMD ["node", ...]` not npm scripts (npm swallows signals). |
-
-| HEALTHCHECK instruction in Dockerfile | Docker Compose and GitHub Actions service containers wait for healthy status before routing traffic; without it, dependent services start against an unready daemon | LOW | `HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD curl -f http://localhost:9000/health \|\| exit 1`. DocuMind already has `/health` endpoint — this is pure Dockerfile wiring. |
-
-| .dockerignore file | Without it, COPY sends node_modules (100MB+), .git history, .env secrets, data/documind.db into build context — slow builds and potential credential leaks | LOW | Must exclude: `node_modules/`, `.git/`, `data/`, `*.env`, `.env*`, `config/context-profile.json` (runtime config), `markdown.bbprojectd/`, `docs/` if not needed at runtime. |
-
-| Named volume for SQLite database | Without a volume, the database is destroyed on every container restart — all indexed documents lost | LOW | Mount `documind-data:/app/data`. WAL mode (already enabled in DocuMind) works correctly in single-container Docker volumes. Do NOT share this volume across multiple containers simultaneously — SQLite single-writer constraint. |
-
-| Environment variable configuration | Config embedded in image = can't run in different environments without rebuilding; environment variables are the standard 12-factor app pattern for containerized services | MEDIUM | Must externalize: `REPO_MODE` (volume\|clone), `REPO_PATHS` or `GIT_REPOS`, `PORT` (default 9000), `CRON_HOURLY_ENABLED`, `CRON_DAILY_ENABLED`. Existing context profile JSON system is the right abstraction — extend it to accept env-var overrides. |
-
-| Multi-stage Dockerfile (deps vs runtime) | Production image should not ship dev dependencies (markdownlint-cli2, @mermaid-js/mermaid-cli, jsdoc, husky) — these add 200-400MB and attack surface | MEDIUM | Stage 1: `npm ci` with full dependencies for build/compile. Stage 2: `npm ci --omit=dev` for runtime. DocuMind is pure JS/mjs — no transpile step. Main win is excluding devDeps and tools. Target image size: under 200MB. |
-
-| docker-compose.yml for single-command startup | `docker compose up` is the expected UX for any containerized dev service; without it, users must manually pass volumes and env vars | LOW | Must cover: port mapping, named volume, env vars with defaults, healthcheck options, depends_on ordering if sidecar pattern used. Provide `docker-compose.yml` (dev, with volume mount) and `docker-compose.ci.yml` (CI, with git-clone mode). |
-
-| Published image on GHCR | Consumers expect `docker pull ghcr.io/dvwdesign/documind:latest` to just work; without GHCR, every user must build locally | LOW | Naming: `ghcr.io/dvwdesign/documind`. Tag strategy: `latest` + semantic version tags (`v3.2.0`). Auth: `GITHUB_TOKEN` in CI workflow with `packages: write` permission. Visibility: public for open distribution. |
-
-| CI build + push GitHub Actions workflow | Without automated publishing, image gets stale immediately; manual push is error-prone | MEDIUM | Workflow triggers: push to `master` + version tags. Uses `docker/build-push-action` + `docker/login-action`. Build multi-arch (`linux/amd64`, `linux/arm64`) via buildx so macOS M-series and Linux CI both work. Cache layers with `cache-from: type=gha`. |
-
-**Confidence:** HIGH — non-root, signal handling, healthcheck, .dockerignore patterns from official
-nodejs/docker-node BestPractices.md (github.com/nodejs/docker-node). GHCR workflow from official
-GitHub Docs. Multi-stage build sizing from 2025 community benchmarks (multiple concordant sources).
-
----
-
-### Differentiators (DocuMind-Specific Advantage)
-
-These go beyond "works in Docker" to make the image genuinely useful for the target use cases:
-CI pipelines and remote deployment where local file mounts are not possible.
+Not required to be "a working slides pipeline," but this is where the DocuMind-specific value shows: agent-orchestrated, single-user, ecosystem-integrated.
 
 | Feature | Value Proposition | Complexity | Notes |
-
 | ------- | ----------------- | ---------- | ----- |
-
-| Dual repo access mode (volume-mount vs git-clone) | Volume mount works for local dev; git-clone works for CI and remote servers where repos are not mounted. Supporting both modes in one image means one image serves all environments. | HIGH | `REPO_MODE=volume`: reads from `/repos/{name}` volume mounts (current behavior, just containerized). `REPO_MODE=clone`: on startup, clones configured repos to `/app/repos/`, runs periodic `git pull` on cron. Context profile lists repos with `url` + `branch` fields for clone mode. Dependency: git must be installed in image for clone mode. |
-
-| MCP HTTP transport (StreamableHTTP on POST /mcp) | Allows remote MCP clients to call DocuMind tools without stdio subprocess; required for CI and remote deployment where Claude Code cannot spawn a local subprocess | MEDIUM | Already partially designed in STACK.md. Mount `StreamableHTTPServerTransport` on `POST /mcp` in existing Express server. Stateless mode (`sessionIdGenerator: undefined`) = correct for single-tenant. Existing read + write tools all work unchanged. |
-
-| Bearer token auth on MCP HTTP endpoint | MCP over HTTP with no auth = anyone on the network can call lint/fix/index tools; for a tool that writes to repos, that is unacceptable | LOW | Simple middleware: check `Authorization: Bearer <token>` header on `/mcp` route. Token configured via `MCP_AUTH_TOKEN` env var. If env var unset, HTTP MCP is disabled entirely (stdio still works). No OAuth needed for solo-user deployment — bearer token is sufficient. |
-
-| Periodic git pull for clone mode repos | Without periodic pull, cloned repos go stale — the whole point of DocuMind is fresh indexing | MEDIUM | Wire a cron job (every 15 min or configurable) that runs `git pull --ff-only` on each cloned repo. On pull success, trigger incremental scan of changed files. On conflict/error, log and continue — do not crash the daemon. SSH key or HTTPS token for private repos configurable via `GIT_AUTH_TOKEN` env var. |
-
-| Semantic version image tags + latest alias | `latest` alone makes rollback impossible; `v3.2.0` tags plus `latest` allows consumers to pin a specific version while still getting auto-updates if desired | LOW | CI workflow: tag with `${{ github.ref_name }}` on version tag push + always retag `latest` on master merge. GitHub Actions `docker/metadata-action` handles this automatically. |
-
-**Confidence:** MEDIUM — dual-mode pattern is DocuMind-specific synthesis; no single reference confirms
-exactly this approach. git-clone periodic sync pattern from kubernetes/git-sync (well-established sidecar
-project). MCP HTTP bearer auth from modelcontextprotocol.io security docs and community discussion #1247.
-
----
+| Daemon-orchestrated trigger (chokidar + cron, no manual CI) | Most docs-as-code slide setups rely on a human running `npm run build` or a GitHub Action on push. DocuMind already runs a persistent watcher + scheduler — wiring the pipeline into that means decks publish themselves the moment the EN source changes, with zero manual step | MEDIUM | Direct extension of existing `daemon/watcher.mjs` — this is the actual differentiator, everything else is standard tooling |
+| Glossary-backed DeepL translation (not just tag-handling) | Generic markdown-translator tools (md-translator, OpenL) protect syntax but don't guarantee brand-term consistency across every deck; a shared DeepL glossary (`glossary_id`) keeps "DocuMind," "MCP," "FigJam" etc. identical across all decks and re-translations, forever | LOW-MEDIUM | One-time glossary creation via DeepL API, referenced on every translate call — cheap to build, high consistency payoff |
+| ProductMarketing content updates arriving as RootDispatcher dispatches | Other repo agents can propose slide content changes without touching this repo directly or bypassing the "EN is the only hand-edited source" rule — dispatch lands as a diff/PR-like artifact into `docs/slides/`, pipeline picks it up automatically | MEDIUM | Depends on RootDispatcher dispatch mechanism (already built ecosystem-wide) — this repo just needs to treat `dispatches/pending/DocuMind/` as a trigger source, same as existing dispatch protocol |
+| Editable PPTX via LibreOffice (`soffice`) | Marp's own PPTX export is image-per-slide (uneditable) — confirmed via Marp CLI docs/community reports. Routing through `soffice --headless --convert-to pptx` (or `--pptx-editable` flag path) produces text-editable PowerPoint, which matters for a sales/pitch-deck use case where a human may want to tweak a slide post-export | MEDIUM-HIGH | Known prereq gap: `soffice` not on PATH — this differentiator is currently blocked, same class of gap as DeepL/FTP/Figma creds |
+| Figma Slides push as canonical "live" document | Official Figma MCP now ships a `figma-use-slides` skill (confirmed via `figma/mcp-server-guide` repo) that lets `use_figma` update a Slides deck against a template from markdown/content — turning the pipeline's terminal stage into a real, presentable Figma file instead of a static HTML page nobody visits live | HIGH | Currently blocked on Figma MCP auth per milestone context — ship as a documented runbook now, automate once auth unblocks. This is the single highest long-term differentiator (competitors stop at static HTML/PDF) |
+| AgentHub `publish_discovery` on successful deploy | Other repos/agents in the ecosystem learn "a new deck shipped" without polling — standard DVWDesign ecosystem pattern already used elsewhere, applied here for the first time to a content pipeline rather than code | LOW | Pure integration work — AgentHub publish call already exists as a pattern, just needs a deploy-stage hook |
+| Single `slides:build` command spanning EN+FR+all formats | Reduces the entire pipeline surface to one invocable command for both manual (`npm run slides:build`) and daemon-triggered paths — no drift between "what a human runs" and "what the watcher runs" | LOW | Straightforward npm script composition once render/translate stages exist independently |
 
 ### Anti-Features (Commonly Requested, Often Problematic)
 
 | Feature | Why Requested | Why Problematic | Alternative |
-
-| ------- | ------------- | --------------- | ----------- |
-
-| Running as root in container | "It's simpler, avoids permission issues" | GHCR and container registries flag root-run images; Kubernetes blocks them by policy; it is a security anti-pattern with no justification for a Node.js service | Use built-in `node` user (uid 1000). Chown `/app/data` to `node` in Dockerfile. One-time setup, no ongoing complexity. |
-
-| Using npm start as CMD | "That's what package.json scripts are for" | npm does not forward SIGTERM to child processes. Container stop sends SIGTERM to npm, npm ignores it, Docker waits 10s and SIGKILL — no graceful shutdown, SQLite writes may corrupt | `CMD ["node", "daemon/server.mjs"]` directly. Signals reach Node.js. Works identically to `npm run daemon:dev` for startup behavior. |
-
-| Bundling SQLite DB in image | "Ship everything in one image for simplicity" | Database is ephemeral state — it belongs in a volume. Baking it in means every image update wipes the index. Also bloats the image layer cache unnecessarily. | Named volume `documind-data:/app/data`. Container is stateless; data persists independently. |
-
-| git inside the image for one-off clone at build time | "Clone repos at image build time so they're always present" | Bakes repo snapshots into the image — they go stale the moment they're built. Also embeds git credentials in image layers (security risk). | Clone mode: clone at container startup, not build time. Credentials passed via env vars at runtime, never embedded in image. |
-
-| Kubernetes / Helm charts in v3.2 | "If you're dockerizing, go full cloud-native" | DocuMind is a single-node, single-user service. Kubernetes adds orchestration complexity with zero value at this scale. SQLite single-writer constraint makes horizontal scaling impossible without a database swap. | `docker compose up` on a remote server covers the legitimate use case. Revisit if SaaS path chosen in v4.x. |
-
-| OAuth 2.1 on MCP HTTP endpoint | "The MCP spec recommends OAuth 2.1 for remote servers" | OAuth 2.1 requires authorization server, PKCE flow, token refresh — 2-3 weeks of infrastructure for a single-user tool. The spec recommends OAuth for multi-tenant; for single-user, bearer token is explicitly acceptable. | Bearer token via `MCP_AUTH_TOKEN` env var. Simple, auditable, revokable by rotating the env var. |
-
-| Multi-container compose with separate MCP process | "Separation of concerns — MCP and REST should be independent services" | DocuMind's MCP server shares SQLite state with the REST daemon. Running them in separate containers requires network RPC, introducing latency, failure modes, and sync complexity for zero architectural gain. | Mount both transports from the same process (already the design). Single container, two transports. |
-
-| Alpine base image for Node.js | "Alpine is smallest — always use it" | `better-sqlite3` uses native bindings compiled with node-gyp. Alpine uses musl libc; the prebuilt binaries in the npm package expect glibc. Alpine requires rebuilding native dependencies from source during `npm ci`, significantly slowing CI builds. | Use `node:22-bookworm-slim` (Debian-based, glibc) instead. Slim is 60% smaller than full `node:22` and avoids the musl/glibc native binding problem entirely. |
-
----
+| ------- | ------------- | ---------------- | ----------- |
+| WYSIWYG / browser-based slide editor | "Let non-technical stakeholders edit slides directly" | Directly contradicts the milestone's core decision: EN Marp `.md` is the *only* hand-edited artifact. A WYSIWYG editor writing back to rendered HTML/PPTX creates a second source of truth and breaks the translate/render/deploy determinism the whole pipeline depends on | Edit the EN `.md` in any text editor / Claude Code; use Figma Slides (once live) as the presentation-layer editing surface for last-mile tweaks, never as the source |
+| Multi-language beyond French | "While we're translating, why not ES/DE/JA too?" | Milestone explicitly scopes to "French always required" — every additional language multiplies glossary maintenance, translation-fidelity test surface, and render/deploy matrix size for zero validated demand | Ship EN+FR pipeline first; if a second language is ever needed, the translation stage is already generalized (DeepL supports target-language param) — add it as its own future milestone, not scope creep now |
+| Real-time / live-reload slide preview server | Feels natural for a "docs-as-code" workflow (like Hugo/Vite dev servers) | Marp CLI already ships `marp -s` server mode for local preview — building a custom live-reload layer duplicates an existing tool for a single-user setup where `marp --preview` or the VS Code Marp extension already solves it | Use `marp-cli`'s built-in `--server`/`--preview` flag locally; no custom infra needed |
+| Continuous re-render on every keystroke/save | "Instant feedback while editing" | For a daemon-orchestrated pipeline (not a live dev server), firing translate+render+deploy on every keystroke would spam the DeepL API (metered/costly), hammer the FTP host, and risk the exact watcher loop this milestone explicitly calls out as needing protection | Debounce watcher events (chokidar `awaitWriteFinish` + short debounce window); trigger pipeline on settled file-save, not per-keystroke |
+| Auto-translating arbitrary repo docs through this pipeline | "We already have DeepL wired up, why not translate all 620+ docs?" | Scope explosion — this milestone is `docs/slides/` only. General doc translation has different fidelity requirements (no Marp directives, different table conventions) and belongs to a separate future milestone if ever pursued | Keep the translation stage scoped to `docs/slides/**/*.md`; if broader doc translation is wanted later, treat it as a new pipeline, not an extension of this one |
+| Allowing direct hand-edits to generated `.fr.md`, HTML, PDF, or PPTX outputs | "I just need to fix one typo in the French deck quickly" | Silently overwritten on the next EN-triggered pipeline run — creates a false sense of persistence and eventually a "why did my fix disappear" support burden | Fix the typo (or glossary entry) in the EN source or DeepL glossary; let the pipeline regenerate. If a typo is FR-only (bad translation), fix via glossary override, not manual `.fr.md` edit |
 
 ## Feature Dependencies
 
 ```text
+Marp toolchain (marp-cli + .marprc.yml)
+    └──requires──> nothing new (pure devDependency + config)
 
-[Docker image — non-root user + signal handling + healthcheck]
-    └── is prerequisite for ──> [GHCR publishing] (image must be production-quality before publishing)
-    └── is prerequisite for ──> [CI GitHub Actions workflow] (CI builds the image)
-    └── is prerequisite for ──> [GitHub Actions service container usage]
+DeepL translation stage (EN → .fr.md)
+    └──requires──> Marp toolchain (defines what "preserve directive" even means — need to parse front-matter/directives before protecting them)
+    └──requires──> DEEPL_API_KEY (known gap)
+    └──requires──> Glossary created in DeepL account (proper-noun protection)
 
-[Named volume for SQLite]
-    └── is prerequisite for ──> [docker-compose.yml] (compose defines the volume)
-    └── is prerequisite for ──> [data persistence across deploys]
+Render stage (EN + FR → HTML/PDF/PPTX)
+    └──requires──> Marp toolchain
+    └──requires (FR branch only)──> DeepL translation stage output (.fr.md must exist before FR render)
+    └──requires (editable PPTX)──> soffice on PATH (known gap)
 
-[Environment variable configuration]
-    └── is prerequisite for ──> [dual repo access mode] (REPO_MODE switches behavior)
-    └── is prerequisite for ──> [CI compatibility] (CI passes env vars, not mounted configs)
-    └── enhances ──> [context profile system] (env vars can override profile fields)
+FTP deploy stage
+    └──requires──> Render stage output (HTML files to upload)
+    └──requires──> FTP credentials in .env (known gap)
+    └──enhances (dry-run)──> Deploy manifest (diff against previous state)
 
-[Dual repo access mode — volume vs clone]
-    └── volume mode requires ──> [docker-compose.yml with volume mounts] (repos mounted at /repos/)
-    └── clone mode requires ──> [git installed in image] (apt-get install git in Dockerfile)
-    └── clone mode requires ──> [periodic git pull cron job] (freshness depends on pulls)
-    └── clone mode requires ──> [GIT_AUTH_TOKEN env var] (private repos need credentials)
+Figma Slides push
+    └──requires──> Figma MCP auth unblocked (known gap — runbook only until then)
+    └──may require──> Render stage output OR raw EN/FR markdown (unconfirmed which figma-use-slides skill consumes — LOW confidence, verify during phase research)
 
-[MCP HTTP transport — StreamableHTTP on POST /mcp]
-    └── requires ──> [existing MCP stdio server] (same McpServer instance, new transport)
-    └── requires ──> [bearer token auth middleware] (HTTP MCP with no auth is unacceptable)
-    └── enables ──> [remote MCP clients] (CI and remote servers can call tools)
-    └── enables ──> [GitHub Actions service container with MCP] (workflow steps can call tools)
+Daemon watcher orchestration (trigger on deck change)
+    └──requires──> Existing chokidar watcher (daemon/watcher.mjs)
+    └──requires──> Watcher loop protection (ignore .fr.md, /dist, /html, /pdf, /pptx globs)
+    └──requires──> Incremental rebuild / content-hash check (avoid re-running unchanged decks)
+    └──enhances──> All four pipeline stages (translate/render/deploy/Figma) — this is the glue, not a stage itself
 
-[Bearer token auth on MCP HTTP]
-    └── requires ──> [MCP_AUTH_TOKEN env var] (token configured at runtime)
-    └── is prerequisite for ──> [public GHCR image] (can't ship a write-capable image with no auth)
+ProductMarketing dispatch → EN source updates
+    └──requires──> Existing RootDispatcher dispatch mechanism (ecosystem-wide, already built)
+    └──enhances──> Daemon watcher orchestration (dispatch-applied change is just another EN .md change that triggers the pipeline)
 
-[GHCR publishing]
-    └── requires ──> [GitHub Actions CI workflow] (automated build + push)
-    └── requires ──> [production-quality image] (non-root + healthcheck + graceful shutdown)
-    └── requires ──> [packages: write permission] (GITHUB_TOKEN must have write:packages scope)
+AgentHub publish_discovery on deploy
+    └──requires──> FTP deploy stage (or Figma push) reaching a terminal success state
+    └──enhances──> Ecosystem awareness (not a hard pipeline dependency — pipeline works without it, just less visible)
 
-[GitHub Actions CI workflow]
-    └── requires ──> [docker/build-push-action] (standard buildx action)
-    └── requires ──> [docker/login-action with GITHUB_TOKEN] (authentication to GHCR)
-    └── enhances ──> [multi-arch build] (linux/amd64 + linux/arm64 via buildx)
-
+Deploy manifest / state tracking ──conflicts──> "always full re-upload" naive approach
+    (manifest-based diffing is strictly better once dry-run mode proves the diff logic is correct)
 ```
 
 ### Dependency Notes
 
-- **node:22-bookworm-slim not node:22-alpine**: `better-sqlite3` uses native C++ bindings. Alpine's musl libc breaks prebuilt binaries. This is the single most common DocuMind-specific Docker pitfall — use `node:22-bookworm-slim` (Debian glibc). HIGH confidence — confirmed by better-sqlite3 GitHub issues and musl/glibc native binding documentation.
+- **DeepL translation requires Marp toolchain first, not just DeepL API access:** you cannot design the placeholder-protection scheme (front-matter, directives, code fences) without first enumerating exactly which Marp syntax elements exist in the corpus — this argues for building/finalizing the Marp render stage's understanding of directives *before* writing the translation-preservation logic, even though translation logically "comes before" render in the pipeline order.
+- **FR render requires translation stage output:** the render stage is otherwise stage-order-agnostic (EN render has zero dependency on translation), so EN rendering can be built, tested, and shipped independently of DeepL entirely — useful sequencing if DeepL API key delivery is delayed.
+- **Watcher loop protection requires incremental rebuild (content-hash) to be reliable, not just glob-ignore:** glob-ignore alone (`ignored: '**/*.fr.md'`) prevents the watcher from *reacting* to generated files, but content-hash comparison is what prevents *needless re-translation* of an EN deck whose content hasn't actually changed (e.g., a `touch` or metadata-only save). Both are needed; glob-ignore is the safety net, content-hash is the efficiency layer.
+- **Figma Slides push dependency is genuinely uncertain (LOW confidence):** the `figma-use-slides` skill's actual input contract (rendered HTML? raw markdown? structured JSON?) wasn't confirmed from public sources during this research pass — flag for phase-specific research when the Figma MCP auth gap is resolved, since it determines whether Figma push depends on the render stage or can bypass it.
+- **AgentHub publish is a soft dependency, not a hard one:** deploy can succeed with FTP creds present and AgentHub notification omitted (e.g., AgentHub temporarily down) — treat as best-effort, non-blocking, not a pipeline gate.
 
-- **Clone mode requires git at startup, not build time**: Repos are cloned when the container starts using credentials passed via env vars. This avoids embedding credentials in image layers and ensures repos are always at HEAD, not a snapshot from build time.
+## Translation-Fidelity Expectations (What Must Survive Round-Trip Untouched)
 
-- **MCP HTTP needs auth before GHCR publish**: DocuMind's write tools (lint, fix, index, scan) modify files in mounted repos. Publishing an image where these are callable with no auth would be irresponsible. Bearer token auth is the minimum bar before making the image public.
+Concrete, testable rules derived from the example deck (`docs/slides/external/2026-05-21-figma-ai-pitch-deck.md`) and DeepL's documented capabilities:
 
-- **Graceful shutdown protects SQLite**: better-sqlite3 WAL mode creates `-wal` and `-shm` sidecar files. If the process is SIGKILL'd without a clean checkpoint, the WAL file is left in an inconsistent state. SIGTERM → close DB connection → Docker stop works correctly.
-
----
+1. **YAML front-matter keys and structural values** — `marp: true`, `theme: default`, `paginate: true`, the entire `style: |` CSS block — must be byte-identical in `.fr.md`. Only genuinely human-facing string values inside front-matter (e.g., `footer: "DVWDesign — Figma AI Framework — 2026"`) are candidates for translation, and that's a product decision to make explicit (default recommendation: **do not translate footer/brand strings** — treat as proper-noun-adjacent, protect via glossary or placeholder).
+2. **Inline directive comments** — `<!-- _class: hero -->`, `<!-- markdownlint-disable MD025 MD024 MD036 -->` — pass through verbatim; these are not prose and DeepL's tag_handling has no awareness of Marp comment-directive syntax.
+3. **Fenced code blocks** (`` ```text ``, `` ```diagram ``, `` ```bash `` etc.) — content inside fences must not be sent through translation at all; extract-protect-restore, not tag_handling alone (confirmed risk: fence markers themselves have been reported corrupted by naive DeepL passthrough).
+4. **Inline code spans** (`` `slides:build` ``, `` `curate_diagram` ``) — preserved verbatim.
+5. **Proper nouns / brand and product terms** — DVWDesign, Figma, Figma Agent, Marp, MCP, DocuMind, FigJam, DeepL, PPTX, Claude Code, and any other product name appearing in the corpus — pinned via a DeepL glossary (`entries_format: tsv`, EN→FR pairs mapping each term to itself) so they're immune to future MT model drift, not just a one-time manual fix.
+6. **Email addresses and URLs** (`david@dvw.design`) — untouched; standard DeepL behavior for non-linguistic tokens, but should be explicitly tested, not assumed.
+7. **Numeric metrics and units** (`8×`, `620+`, `< 100ms`, `€3,500–6,000`) — the numbers/symbols themselves untouched; only surrounding prose translated. Currency symbols must not be localized (stay `€`, do not become alternate formatting).
+8. **GFM table syntax** — pipe/separator rows (`| - | - |`) untouched; only cell *text content* translated. Post-translation output must still pass DVW001/DVW002 lint (no blank lines inserted mid-table, no padding added) — this should be an automated check in the pipeline, not a manual review step.
+9. **Heading markers** (`#`, `##`) untouched; only text after the marker translated.
+10. **Slide-separator horizontal rules** (`---` used as Marp slide breaks) must never be reinterpreted as a second YAML front-matter boundary by the translation step — this is a parsing-order risk specific to Marp's dual use of `---`.
+11. **`.fr.md` is always fully regenerated, never diffed/patched** — because partial-patch translation of a multi-hundred-line deck risks context loss (DeepL's per-request context differs from a full-document translate), the safest default is: any EN change → full re-translation of that deck, not incremental sentence-level patching. This trades a bit of DeepL API cost for correctness; revisit only if API costs become a real constraint at current single-user scale.
 
 ## MVP Definition
 
-v3.2 MVP = a single `docker compose up` that starts DocuMind with local repos mounted, healthy API
-on port 9000, MCP HTTP available with bearer auth, and a published GHCR image that CI can pull.
+### Launch With (v1 — matches milestone's "Active" scope)
 
-### Launch With (v3.2)
+- [ ] Marp toolchain (`marp-cli` devDependency, `.marprc.yml`, `slides:*` npm scripts) — foundation everything else builds on
+- [ ] DeepL translation stage with placeholder-protection for directives/code/proper nouns — the single highest-risk, highest-value piece; must be correct before anything downstream trusts `.fr.md`
+- [ ] Single `slides:build` rendering EN + FR → HTML/PDF/PPTX — proves the full local pipeline works end-to-end without deploy
+- [ ] FTP deploy stage in dry-run mode (real deploy activates once creds land) — ships the deploy *logic* now so it's a config flip, not a build project, once creds arrive
+- [ ] Daemon watcher trigger with debounce + loop protection (ignore generated globs, content-hash check) — this is the actual product differentiator per PROJECT.md, must not be deferred to "v1.x"
+- [ ] Deploy manifest / run-status tracking (reuse `scan_runs`-style table pattern) — needed from day one so dry-run output is inspectable, not just console noise
 
-- [ ] Dockerfile with non-root user, multi-stage build (deps → runtime), `node:22-bookworm-slim` base — image quality gates
+### Add After Validation (v1.x)
 
-- [ ] .dockerignore excluding node_modules, .git, data/, .env, markdown.bbprojectd — build context hygiene
+- [ ] Figma Slides live push automation via `use_figma` — trigger: Figma MCP auth unblocked
+- [ ] Editable PPTX via `soffice`/LibreOffice — trigger: `soffice` installed and on PATH
+- [ ] Real FTP deploy (flip dry-run off) — trigger: FTP creds land in `.env`
+- [ ] AgentHub `publish_discovery` on deploy — trigger: deploy stage proven reliable in dry-run for at least one full cycle
+- [ ] ProductMarketing dispatch → EN source auto-apply — trigger: at least one manual dispatch-to-slide-edit cycle validated by hand first
 
-- [ ] Graceful shutdown: `process.on('SIGTERM', ...)` closes DB + Express + drains crons — data integrity
+### Future Consideration (v2+)
 
-- [ ] HEALTHCHECK in Dockerfile pointing to existing `/health` endpoint — container orchestration compatibility
-
-- [ ] Named volume for `/app/data` (SQLite DB) in docker-compose.yml — data persistence
-
-- [ ] Environment variable configuration: `REPO_MODE`, `PORT`, `MCP_AUTH_TOKEN`, `CRON_*` flags — portability
-
-- [ ] docker-compose.yml with volume-mount mode, env var defaults, healthcheck — local dev UX
-
-- [ ] MCP HTTP transport: `StreamableHTTPServerTransport` mounted on `POST /mcp` in Express — remote access
-
-- [ ] Bearer token middleware on `/mcp` route, disabled if `MCP_AUTH_TOKEN` unset — security gate
-
-- [ ] GHCR GitHub Actions workflow: build + push on master + version tags, multi-arch — published image
-
-- [ ] docker-compose.ci.yml with git-clone mode, `REPO_MODE=clone`, `GIT_REPOS` list — CI compatibility
-
-### Add After Validation (v3.2.x)
-
-- [ ] Periodic git pull cron in clone mode — trigger: CI deployments show stale index after first sync
-
-- [ ] `docker-compose.remote.yml` for remote Linux server deployment — trigger: someone wants to run on a VPS
-
-- [ ] SSH key auth for private git repos in clone mode — trigger: need to clone private DVWDesign repos in CI
-
-- [ ] Image scan in CI workflow (Trivy or Docker Scout) — trigger: GHCR scan flags vulnerabilities
-
-### Future Consideration (v4+)
-
-- [ ] Kubernetes Helm chart — only if SaaS path confirmed; SQLite is the blocker (need Turso or Postgres first)
-
-- [ ] Multi-arch ARM build optimization — current buildx QEMU emulation is slow; native ARM runner if justified
-
-- [ ] Image signing with cosign — if distributing to enterprises who require supply chain verification
-
----
+- [ ] Additional target languages beyond FR — defer until a validated business need exists (explicitly out of current scope)
+- [ ] Onboarding other repos'/teams' decks onto this same pipeline — defer until DocuMind's own pipeline has run reliably through several real deploy cycles
+- [ ] Glossary self-service management (UI or MCP tool to add/edit DeepL glossary terms without touching DeepL dashboard) — defer until glossary size/change-frequency justifies tooling investment
 
 ## Feature Prioritization Matrix
 
 | Feature | User Value | Implementation Cost | Priority |
+| ------- | ---------- | -------------------- | -------- |
+| Marp toolchain + `slides:build` | HIGH | LOW | P1 |
+| Translation-preservation (directives/code/proper nouns) | HIGH | HIGH | P1 |
+| Daemon watcher orchestration + loop protection | HIGH | MEDIUM | P1 |
+| FTP deploy dry-run + manifest | MEDIUM | MEDIUM | P1 |
+| Deploy/pipeline run-status tracking | MEDIUM | LOW | P1 |
+| DeepL glossary for proper nouns | HIGH | LOW | P1 |
+| Editable PPTX (`soffice`) | MEDIUM | MEDIUM | P2 |
+| Real FTP deploy (creds live) | HIGH | LOW (once creds exist) | P2 |
+| ProductMarketing dispatch → EN source | MEDIUM | MEDIUM | P2 |
+| AgentHub discovery on deploy | LOW-MEDIUM | LOW | P2 |
+| Figma Slides live push | HIGH (long-term) | HIGH | P2 (blocked → runbook now, automate later) |
+| Multi-language beyond FR | LOW (unvalidated demand) | HIGH | P3 |
 
-| ------- | ---------- | ------------------- | -------- |
+**Priority key:**
 
-| Dockerfile (non-root, slim, healthcheck, graceful shutdown) | HIGH | LOW (1 file, ~30 lines) | P1 |
+- P1: Must have for v3.4 launch
+- P2: Should have, activates as external blockers (creds/auth/binaries) clear
+- P3: Nice to have, future consideration — not in current milestone
 
-| .dockerignore | HIGH (build speed + security) | LOW (1 file) | P1 |
+## Competitor / Reference Pattern Analysis
 
-| Named volume for SQLite | HIGH (data persistence) | LOW (docker-compose config) | P1 |
-
-| docker-compose.yml (volume-mount mode) | HIGH (local dev UX) | LOW | P1 |
-
-| Environment variable configuration | HIGH (portability) | MEDIUM (audit all hardcoded paths) | P1 |
-
-| MCP HTTP transport (StreamableHTTP) | HIGH (remote access) | LOW (wiring only, SDK already installed) | P1 |
-
-| Bearer token auth on /mcp | HIGH (security) | LOW (middleware, ~20 lines) | P1 |
-
-| GHCR GitHub Actions workflow | HIGH (publishability) | MEDIUM (CI workflow authoring) | P1 |
-
-| docker-compose.ci.yml (clone mode) | MEDIUM (CI compatibility) | MEDIUM (new startup logic) | P2 |
-
-| Periodic git pull in clone mode | MEDIUM (freshness) | MEDIUM (cron + error handling) | P2 |
-
-| Multi-arch build (amd64 + arm64) | MEDIUM (M-series Mac + Linux CI) | LOW (buildx flag, handled by action) | P2 |
-
-| SSH key auth for private repos | LOW (public repos work without it) | MEDIUM (secret mounting in container) | P3 |
-
-| Kubernetes Helm chart | LOW (no k8s use case yet) | HIGH | P3 |
-
-### Priority key:
-
-- P1: Must have for v3.2 milestone completion
-
-- P2: Add once core container is proven working
-
-- P3: Future consideration — not before v4.0
-
----
-
-## Competitor / Reference Implementation Analysis
-
-DocuMind is not competing with container registries or CI platforms. The reference here is
-"how do comparable Node.js daemon projects Docker themselves?"
-
-| Feature | node-docker-good-defaults (Bret Fisher) | Express.js official health check guide | DocuMind v3.2 Approach |
-
-| ------- | --------------------------------------- | --------------------------------------- | ---------------------- |
-
-| Base image | node:lts-slim | Not specified | node:22-bookworm-slim (glibc, no Alpine — native bindings) |
-
-| Non-root user | USER node | Not specified | USER node, chown /app/data |
-
-| Signal handling | CMD ["node", ...] | process.on('SIGTERM', ...) with http.server.close() | Both: CMD + SIGTERM handler that closes DB + Express |
-
-| Health check | HEALTHCHECK in Dockerfile | /health endpoint returning 200 | Existing /health endpoint + HEALTHCHECK instruction |
-
-| MCP transport | N/A | N/A | StreamableHTTP on POST /mcp, same Express server |
-
-| Auth | N/A | N/A | Bearer token middleware, env var controlled |
-
-| Data persistence | Named volume | N/A | Named volume documind-data:/app/data |
-
-| GHCR publishing | docker/build-push-action | N/A | GITHUB_TOKEN + packages: write + multi-arch buildx |
-
----
+| Feature | Docusaurus i18n (+ MT tools) | MkDocs + static-i18n | DocuMind v3.4 Approach |
+| ------- | ----------------------------- | ---------------------- | ------------------------ |
+| Translation trigger | Manual export → drop into i18n folder, or CI step on PR | Manual `mkdocs build` per locale, plugin-assisted | Daemon watcher auto-triggers on EN deck save — no manual/CI step needed (single-user differentiator) |
+| Code/front-matter preservation | Third-party MT tools (md-translator, OpenL) use placeholder-swap; Docusaurus itself doesn't translate, just routes locale folders | Plugin-dependent, varies | Custom placeholder-swap tailored to Marp's specific directive/comment syntax (no off-the-shelf tool understands Marp specifically) |
+| Deploy | Git-push → CI → static host (Netlify/Vercel/GH Pages) | Same pattern, CI-driven | FTP push (older/simpler hosting model, matches existing DVWDesign web host) with dry-run gate |
+| "Live" presentation surface | None — static HTML only | None — static HTML only | Figma Slides push (unique to this pipeline — no docs-as-code competitor reference found targeting Figma Slides as a deploy target) |
+| Incremental rebuild | Framework-level (only changed MDX rebuilt) | `--dirty` flag, monorepo plugin | Content-hash reuse of existing DocuMind `content_hash` pattern — consistent with how the rest of the platform already avoids redundant work |
 
 ## Sources
 
-- Node.js Docker best practices (official, HIGH confidence): [github.com/nodejs/docker-node/blob/main/docs/BestPractices.md](https://github.com/nodejs/docker-node/blob/main/docs/BestPractices.md)
-
-- Docker graceful shutdown + SIGTERM (official Express docs, HIGH confidence): [expressjs.com/en/advanced/healthcheck-graceful-shutdown.html](https://expressjs.com/en/advanced/healthcheck-graceful-shutdown.html)
-
-- Node.js graceful shutdown in Docker best practices (community, MEDIUM confidence): [github.com/goldbergyoni/nodebestpractices — graceful-shutdown.md](https://github.com/goldbergyoni/nodebestpractices/blob/master/sections/docker/graceful-shutdown.md)
-
-- Docker non-root user 2026 (MEDIUM confidence): [oneuptime.com — docker-run-non-root-user](https://oneuptime.com/blog/post/2026-01-16-docker-run-non-root-user/view)
-
-- GHCR working with container registry (official GitHub Docs, HIGH confidence): [docs.github.com — working-with-the-container-registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
-
-- MCP Streamable HTTP transport spec (official, HIGH confidence): [modelcontextprotocol.io — transports](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports)
-
-- MCP transport future roadmap 2026 (official MCP blog, HIGH confidence): [blog.modelcontextprotocol.io — 2026-mcp-roadmap](http://blog.modelcontextprotocol.io/posts/2026-mcp-roadmap/)
-
-- MCP HTTP transport in production (MEDIUM confidence): [medium.com — implementing-mcp-with-streamable-http-transport-in-prod](https://medium.com/ai-in-plain-english/implementing-mcp-with-streamable-http-transport-in-prod-23ca9c6731ca)
-
-- MCP bearer token auth best practices (official MCP discussions, MEDIUM confidence): [github.com/modelcontextprotocol/modelcontextprotocol/discussions/1247](https://github.com/modelcontextprotocol/modelcontextprotocol/discussions/1247)
-
-- MCP authorization docs (official, HIGH confidence): [modelcontextprotocol.io/docs/tutorials/security/authorization](https://modelcontextprotocol.io/docs/tutorials/security/authorization)
-
-- kubernetes/git-sync sidecar pattern (official, HIGH confidence): [github.com/kubernetes/git-sync](https://github.com/kubernetes/git-sync)
-
-- SQLite in Docker — named volumes + WAL (MEDIUM confidence): [oneuptime.com — how-to-run-sqlite-in-docker](https://oneuptime.com/blog/post/2026-02-08-how-to-run-sqlite-in-docker-when-and-how/view)
-
-- Docker multi-stage Node.js image optimization 2025 (MEDIUM confidence): [markaicode.com — nodejs-docker-optimization-2025](https://markaicode.com/nodejs-docker-optimization-2025/)
-
-- .dockerignore Node.js best practices (MEDIUM confidence): [github.com/goldbergyoni/nodebestpractices — docker-ignore.md](https://github.com/goldbergyoni/nodebestpractices/blob/master/sections/docker/docker-ignore.md)
+- [Marp CLI (marp-team/marp-cli) — GitHub](https://github.com/marp-team/marp-cli) — HIGH confidence, official repo
+- [Marp: Markdown Presentation Ecosystem](https://marp.app/) — HIGH confidence, official site
+- [Marpit Directives documentation](https://marpit.marp.app/directives) — HIGH confidence, official docs
+- [marp-team/marp directives.md](https://github.com/marp-team/marp/blob/main/website/docs/guide/directives.md) — HIGH confidence, official source
+- [DeepL API — XML and HTML handling](https://developers.deepl.com/docs/xml-and-html-handling/html) — HIGH confidence, official docs
+- [DeepL API — Multilingual Glossaries reference](https://developers.deepl.com/api-reference/multilingual-glossaries) — HIGH confidence, official docs
+- [DeepL Help Center — Use a glossary with DeepL API](https://support.deepl.com/hc/en-us/articles/4405021321746-Use-a-glossary-with-DeepL-API) — HIGH confidence, official support docs
+- [deepl-node GitHub Issue #26 — Feature Request: Markdown Handling](https://github.com/DeepLcom/deepl-node/issues/26) — MEDIUM confidence, confirms no native markdown support (open issue as of research date)
+- [md-translator — GitHub](https://github.com/rockbenben/md-translator) — MEDIUM confidence, community tool confirming placeholder-swap as the standard pattern for markdown+MT
+- [chokidar — GitHub](https://github.com/paulmillr/chokidar) — HIGH confidence, official repo (already a DocuMind dependency)
+- [ftp-deploy — npm](https://www.npmjs.com/package/ftp-deploy) — MEDIUM confidence, widely-used reference implementation
+- [SamKirkland/FTP-Deploy-Action — GitHub](https://github.com/SamKirkland/FTP-Deploy-Action) — MEDIUM confidence, confirms dry-run + manifest-state pattern
+- [figma/mcp-server-guide — figma-use-slides skill](https://github.com/figma/mcp-server-guide/blob/main/skills/figma-use-slides/SKILL.md) — MEDIUM confidence, official Figma repo but input-contract details not fully verified in this pass — flag for later phase research
+- [Docusaurus i18n Introduction](https://docusaurus.io/docs/i18n/introduction) — MEDIUM confidence, reference pattern comparison only
+- Project source examined directly: `docs/slides/external/2026-05-21-figma-ai-pitch-deck.md` (existing example deck — used to derive concrete translation-fidelity rules)
 
 ---
-
-### Feature research for: DocuMind v3.2 — Docker containerization + MCP HTTP + GHCR publishing
-
-### Researched: 2026-03-23
+*Feature research for: DocuMind v3.4 Presentation Pipeline*
+*Researched: 2026-07-10*

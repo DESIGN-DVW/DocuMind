@@ -1,0 +1,1970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <meta charset="utf-8">
+    <title>config/env - Documentation</title>
+    
+    
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+    <script src="scripts/nav.js" defer></script>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav >
+    
+    
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-backfill-classifications.html">backfill-classifications</a><ul class='methods'><li data-type='method'><a href="module-backfill-classifications.html#.backfillClassifications">backfillClassifications</a></li><li data-type='method'><a href="module-backfill-classifications.html#~classifyPath">classifyPath</a></li></ul></li><li><a href="module-backfill-summaries.html">backfill-summaries</a><ul class='methods'><li data-type='method'><a href="module-backfill-summaries.html#.backfillSummaries">backfillSummaries</a></li><li data-type='method'><a href="module-backfill-summaries.html#~extractSummary">extractSummary</a></li></ul></li><li><a href="module-config_constants.html">config/constants</a><ul class='methods'><li data-type='method'><a href="module-config_constants.html#.getAllRepositoryNames">getAllRepositoryNames</a></li><li data-type='method'><a href="module-config_constants.html#.getGitHubUrl">getGitHubUrl</a></li><li data-type='method'><a href="module-config_constants.html#.getLocalPath">getLocalPath</a></li><li data-type='method'><a href="module-config_constants.html#.isActiveRepository">isActiveRepository</a></li><li data-type='method'><a href="module-config_constants.html#.isLocalOnly">isLocalOnly</a></li></ul></li><li><a href="module-config_env.html">config/env</a></li><li><a href="module-scripts_fix-github-org-references.html">scripts/fix-github-org-references</a></li><li><a href="module-scripts_propagate-org-fixes.html">scripts/propagate-org-fixes</a></li><li><a href="module-scripts_validate-custom-errors.html">scripts/validate-custom-errors</a><ul class='methods'><li data-type='method'><a href="module-scripts_validate-custom-errors.html#~runValidation">runValidation</a></li><li data-type='method'><a href="module-scripts_validate-custom-errors.html#~validateFile">validateFile</a></li><li data-type='method'><a href="module-scripts_validate-custom-errors.html#~validateMixedListTypes">validateMixedListTypes</a></li><li data-type='method'><a href="module-scripts_validate-custom-errors.html#~validateMultipleH1">validateMultipleH1</a></li><li data-type='method'><a href="module-scripts_validate-custom-errors.html#~validateReferenceLinks">validateReferenceLinks</a></li><li data-type='method'><a href="module-scripts_validate-custom-errors.html#~validateTableConsistency">validateTableConsistency</a></li></ul></li></ul><h3>Global</h3><ul><li><a href="global.html#ALL_TARGET_REPOS">ALL_TARGET_REPOS</a></li><li><a href="global.html#MARKDOWNLINT_CONFIG">MARKDOWNLINT_CONFIG</a></li><li><a href="global.html#OBSOLETE_RULE_FILES">OBSOLETE_RULE_FILES</a></li><li><a href="global.html#analyzeDirectory">analyzeDirectory</a></li><li><a href="global.html#backupDatabase">backupDatabase</a></li><li><a href="global.html#blockType">blockType</a></li><li><a href="global.html#calculateMaxDepth">calculateMaxDepth</a></li><li><a href="global.html#copyIfExists">copyIfExists</a></li><li><a href="global.html#countFiles">countFiles</a></li><li><a href="global.html#detectPackageManager">detectPackageManager</a></li><li><a href="global.html#detectTechnologies">detectTechnologies</a></li><li><a href="global.html#findDuplicates">findDuplicates</a></li><li><a href="global.html#findMarkdownFiles">findMarkdownFiles</a></li><li><a href="global.html#findSimilarDocuments">findSimilarDocuments</a></li><li><a href="global.html#fixExcessiveHorizontalRules">fixExcessiveHorizontalRules</a></li><li><a href="global.html#fixFile">fixFile</a></li><li><a href="global.html#fixListIndentation">fixListIndentation</a></li><li><a href="global.html#fixNestedCodeBlocks">fixNestedCodeBlocks</a></li><li><a href="global.html#fixSkippedHeadingLevels">fixSkippedHeadingLevels</a></li><li><a href="global.html#fixTableSeparatorSpacing">fixTableSeparatorSpacing</a></li><li><a href="global.html#fixTableSeparators">fixTableSeparators</a></li><li><a href="global.html#fixTrailingSpaces">fixTrailingSpaces</a></li><li><a href="global.html#formatBytes">formatBytes</a></li><li><a href="global.html#generateSchema">generateSchema</a></li><li><a href="global.html#getCanonicalDocument">getCanonicalDocument</a></li><li><a href="global.html#getCategoryStats">getCategoryStats</a></li><li><a href="global.html#getDeviationStats">getDeviationStats</a></li><li><a href="global.html#getDirectorySize">getDirectorySize</a></li><li><a href="global.html#getGlobalStats">getGlobalStats</a></li><li><a href="global.html#getLearningPatterns">getLearningPatterns</a></li><li><a href="global.html#getLineNumber">getLineNumber</a></li><li><a href="global.html#getLintingIssues">getLintingIssues</a></li><li><a href="global.html#getLintingStats">getLintingStats</a></li><li><a href="global.html#getRecentlyModified">getRecentlyModified</a></li><li><a href="global.html#getRepoName">getRepoName</a></li><li><a href="global.html#getRepoType">getRepoType</a></li><li><a href="global.html#getRepositoryStats">getRepositoryStats</a></li><li><a href="global.html#getScanHistory">getScanHistory</a></li><li><a href="global.html#getUnresolvedDeviations">getUnresolvedDeviations</a></li><li><a href="global.html#hasDevDep">hasDevDep</a></li><li><a href="global.html#listCanonicalDocuments">listCanonicalDocuments</a></li><li><a href="global.html#main">main</a></li><li><a href="global.html#mergeCustomRules">mergeCustomRules</a></li><li><a href="global.html#processRepository">processRepository</a></li><li><a href="global.html#propagateToRepo">propagateToRepo</a></li><li><a href="global.html#results">results</a></li><li><a href="global.html#safeTimestamp">safeTimestamp</a></li><li><a href="global.html#searchByFilename">searchByFilename</a></li><li><a href="global.html#searchDocuments">searchDocuments</a></li><li><a href="global.html#validateInternalLinks">validateInternalLinks</a></li></ul>
+    
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">config/env</h1>
+    
+
+    
+
+
+
+
+<section>
+
+<header>
+    
+        
+            
+        
+    
+</header>
+
+<article>
+    
+        <div class="container-overview">
+        
+            
+                <div class="description usertext"><p>Centralized environment configuration for DocuMind</p>
+<p>This is the single source of truth for all runtime configuration.
+It loads .env via Node 22's built-in process.loadEnvFile() and
+exports all config as named constants with sensible defaults.</p>
+<p>IMPORTANT: This module must NOT import from config/constants.mjs
+to avoid circular dependencies.</p></div>
+            
+
+            
+                
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>Centralized environment configuration for DocuMind</p>
+<p>This is the single source of truth for all runtime configuration.
+It loads .env via Node 22's built-in process.loadEnvFile() and
+exports all config as named constants with sensible defaults.</p>
+<p>IMPORTANT: This module must NOT import from config/constants.mjs
+to avoid circular dependencies.</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="config_env.mjs.html">config/env.mjs</a>, <a href="config_env.mjs.html#line1">line 1</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            
+        
+        </div>
+    
+
+    
+
+    
+
+    
+    
+    
+
+     
+
+    
+
+    
+        <h3 class="subsection-title">Members</h3>
+
+        
+            
+<h4 class="name" id=".CRON_DAILY"><span class="type-signature type-signature-static, constant">(static, constant) </span>CRON_DAILY<span class="type-signature"> :string</span></h4>
+
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>Cron expression for full scan + analysis (default: daily at 2 AM)</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="config_env.mjs.html">config/env.mjs</a>, <a href="config_env.mjs.html#line127">line 127</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description usertext">
+    <p>Cron expression for full scan + analysis (default: daily at 2 AM)</p>
+</div>
+
+
+
+    <h5 class="h5-types">Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">string</span>
+
+
+
+        </li>
+    </ul>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".CRON_HEARTBEAT"><span class="type-signature type-signature-static, constant">(static, constant) </span>CRON_HEARTBEAT<span class="type-signature"> :string</span></h4>
+
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>Cron expression for file watcher heartbeat check (default: every 15 min)</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="config_env.mjs.html">config/env.mjs</a>, <a href="config_env.mjs.html#line115">line 115</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description usertext">
+    <p>Cron expression for file watcher heartbeat check (default: every 15 min)</p>
+</div>
+
+
+
+    <h5 class="h5-types">Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">string</span>
+
+
+
+        </li>
+    </ul>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".CRON_HOURLY"><span class="type-signature type-signature-static, constant">(static, constant) </span>CRON_HOURLY<span class="type-signature"> :string</span></h4>
+
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>Cron expression for incremental scan (default: every hour)</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="config_env.mjs.html">config/env.mjs</a>, <a href="config_env.mjs.html#line121">line 121</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description usertext">
+    <p>Cron expression for incremental scan (default: every hour)</p>
+</div>
+
+
+
+    <h5 class="h5-types">Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">string</span>
+
+
+
+        </li>
+    </ul>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".CRON_LINT"><span class="type-signature type-signature-static, constant">(static, constant) </span>CRON_LINT<span class="type-signature"> :string</span></h4>
+
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>Cron expression for markdown lint + auto-fix pass (default: daily at 3 AM)
+Runs after the daily full scan (2 AM). Skipped if DOCUMIND_CRON_LINT=false.</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="config_env.mjs.html">config/env.mjs</a>, <a href="config_env.mjs.html#line146">line 146</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description usertext">
+    <p>Cron expression for markdown lint + auto-fix pass (default: daily at 3 AM)
+Runs after the daily full scan (2 AM). Skipped if DOCUMIND_CRON_LINT=false.</p>
+</div>
+
+
+
+    <h5 class="h5-types">Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">string</span>
+
+
+
+        </li>
+    </ul>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".CRON_RELINK"><span class="type-signature type-signature-static, constant">(static, constant) </span>CRON_RELINK<span class="type-signature"> :string</span></h4>
+
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>Cron expression for relink processor check (default: every 6 hours)</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="config_env.mjs.html">config/env.mjs</a>, <a href="config_env.mjs.html#line139">line 139</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description usertext">
+    <p>Cron expression for relink processor check (default: every 6 hours)</p>
+</div>
+
+
+
+    <h5 class="h5-types">Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">string</span>
+
+
+
+        </li>
+    </ul>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".CRON_WEEKLY"><span class="type-signature type-signature-static, constant">(static, constant) </span>CRON_WEEKLY<span class="type-signature"> :string</span></h4>
+
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>Cron expression for PDF re-index + keyword refresh (default: weekly Sunday 3 AM)</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="config_env.mjs.html">config/env.mjs</a>, <a href="config_env.mjs.html#line133">line 133</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description usertext">
+    <p>Cron expression for PDF re-index + keyword refresh (default: weekly Sunday 3 AM)</p>
+</div>
+
+
+
+    <h5 class="h5-types">Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">string</span>
+
+
+
+        </li>
+    </ul>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".DB_PATH"><span class="type-signature type-signature-static, constant">(static, constant) </span>DB_PATH<span class="type-signature"> :string</span></h4>
+
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>Absolute path to the SQLite database file</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="config_env.mjs.html">config/env.mjs</a>, <a href="config_env.mjs.html#line58">line 58</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description usertext">
+    <p>Absolute path to the SQLite database file</p>
+</div>
+
+
+
+    <h5 class="h5-types">Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">string</span>
+
+
+
+        </li>
+    </ul>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".DEEPL_API_KEY"><span class="type-signature type-signature-static, constant">(static, constant) </span>DEEPL_API_KEY<span class="type-signature"> :string|null</span></h4>
+
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>DeepL API key for EN -&gt; FR slide translation.
+Null means the translate stage is unavailable.</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="config_env.mjs.html">config/env.mjs</a>, <a href="config_env.mjs.html#line183">line 183</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description usertext">
+    <p>DeepL API key for EN -&gt; FR slide translation.
+Null means the translate stage is unavailable.</p>
+</div>
+
+
+
+    <h5 class="h5-types">Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">string</span>
+|
+
+<span class="param-type">null</span>
+
+
+
+        </li>
+    </ul>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".FTP_HOST"><span class="type-signature type-signature-static, constant">(static, constant) </span>FTP_HOST<span class="type-signature"> :string|null</span></h4>
+
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>FTP host for slide deploy. Null when unset.</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="config_env.mjs.html">config/env.mjs</a>, <a href="config_env.mjs.html#line189">line 189</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description usertext">
+    <p>FTP host for slide deploy. Null when unset.</p>
+</div>
+
+
+
+    <h5 class="h5-types">Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">string</span>
+|
+
+<span class="param-type">null</span>
+
+
+
+        </li>
+    </ul>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".FTP_PASSWORD"><span class="type-signature type-signature-static, constant">(static, constant) </span>FTP_PASSWORD<span class="type-signature"> :string|null</span></h4>
+
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>FTP password for slide deploy. Null when unset.
+Null FTP credentials (host/user/password) mean deploy stays in dry-run mode (DPLY-02).</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="config_env.mjs.html">config/env.mjs</a>, <a href="config_env.mjs.html#line202">line 202</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description usertext">
+    <p>FTP password for slide deploy. Null when unset.
+Null FTP credentials (host/user/password) mean deploy stays in dry-run mode (DPLY-02).</p>
+</div>
+
+
+
+    <h5 class="h5-types">Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">string</span>
+|
+
+<span class="param-type">null</span>
+
+
+
+        </li>
+    </ul>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".FTP_REMOTE_PATH"><span class="type-signature type-signature-static, constant">(static, constant) </span>FTP_REMOTE_PATH<span class="type-signature"> :string</span></h4>
+
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>Remote path on the web host where rendered slides are published.</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="config_env.mjs.html">config/env.mjs</a>, <a href="config_env.mjs.html#line208">line 208</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description usertext">
+    <p>Remote path on the web host where rendered slides are published.</p>
+</div>
+
+
+
+    <h5 class="h5-types">Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">string</span>
+
+
+
+        </li>
+    </ul>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".FTP_USER"><span class="type-signature type-signature-static, constant">(static, constant) </span>FTP_USER<span class="type-signature"> :string|null</span></h4>
+
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>FTP username for slide deploy. Null when unset.</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="config_env.mjs.html">config/env.mjs</a>, <a href="config_env.mjs.html#line195">line 195</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description usertext">
+    <p>FTP username for slide deploy. Null when unset.</p>
+</div>
+
+
+
+    <h5 class="h5-types">Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">string</span>
+|
+
+<span class="param-type">null</span>
+
+
+
+        </li>
+    </ul>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".MCP_CORS_ORIGINS"><span class="type-signature type-signature-static, constant">(static, constant) </span>MCP_CORS_ORIGINS<span class="type-signature"> :string</span></h4>
+
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>Allowed CORS origins for MCP HTTP endpoint (comma-separated).
+Empty string disables CORS headers. Use '*' to allow all origins.</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="config_env.mjs.html">config/env.mjs</a>, <a href="config_env.mjs.html#line172">line 172</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description usertext">
+    <p>Allowed CORS origins for MCP HTTP endpoint (comma-separated).
+Empty string disables CORS headers. Use '*' to allow all origins.</p>
+</div>
+
+
+
+    <h5 class="h5-types">Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">string</span>
+
+
+
+        </li>
+    </ul>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".MCP_MODE"><span class="type-signature type-signature-static, constant">(static, constant) </span>MCP_MODE<span class="type-signature"> :string</span></h4>
+
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>MCP transport mode.
+'stdio' — JSON-RPC over stdin/stdout for local Claude Code (default).
+'http'  — Streamable HTTP on Express /mcp route for remote consumers.</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="config_env.mjs.html">config/env.mjs</a>, <a href="config_env.mjs.html#line158">line 158</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description usertext">
+    <p>MCP transport mode.
+'stdio' — JSON-RPC over stdin/stdout for local Claude Code (default).
+'http'  — Streamable HTTP on Express /mcp route for remote consumers.</p>
+</div>
+
+
+
+    <h5 class="h5-types">Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">string</span>
+
+
+
+        </li>
+    </ul>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".MCP_TOKEN"><span class="type-signature type-signature-static, constant">(static, constant) </span>MCP_TOKEN<span class="type-signature"> :string|null</span></h4>
+
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>Bearer token(s) for MCP HTTP auth (comma-separated for multiple consumers).
+Required when MCP_MODE is 'http'. Null when unset.</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="config_env.mjs.html">config/env.mjs</a>, <a href="config_env.mjs.html#line165">line 165</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description usertext">
+    <p>Bearer token(s) for MCP HTTP auth (comma-separated for multiple consumers).
+Required when MCP_MODE is 'http'. Null when unset.</p>
+</div>
+
+
+
+    <h5 class="h5-types">Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">string</span>
+|
+
+<span class="param-type">null</span>
+
+
+
+        </li>
+    </ul>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".PORT"><span class="type-signature type-signature-static, constant">(static, constant) </span>PORT<span class="type-signature"> :number</span></h4>
+
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>HTTP server port</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="config_env.mjs.html">config/env.mjs</a>, <a href="config_env.mjs.html#line48">line 48</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description usertext">
+    <p>HTTP server port</p>
+</div>
+
+
+
+    <h5 class="h5-types">Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">number</span>
+
+
+
+        </li>
+    </ul>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".PROFILE_PATH"><span class="type-signature type-signature-static, constant">(static, constant) </span>PROFILE_PATH<span class="type-signature"> :string</span></h4>
+
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>Absolute path to the active repository profile JSON</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="config_env.mjs.html">config/env.mjs</a>, <a href="config_env.mjs.html#line68">line 68</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description usertext">
+    <p>Absolute path to the active repository profile JSON</p>
+</div>
+
+
+
+    <h5 class="h5-types">Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">string</span>
+
+
+
+        </li>
+    </ul>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".REPOS_DIR"><span class="type-signature type-signature-static, constant">(static, constant) </span>REPOS_DIR<span class="type-signature"> :string|null</span></h4>
+
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>Base directory containing all repositories to scan.
+When set, DocuMind discovers repos by walking this directory.
+When null, the profile/registry defines which repos to scan.</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="config_env.mjs.html">config/env.mjs</a>, <a href="config_env.mjs.html#line83">line 83</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description usertext">
+    <p>Base directory containing all repositories to scan.
+When set, DocuMind discovers repos by walking this directory.
+When null, the profile/registry defines which repos to scan.</p>
+</div>
+
+
+
+    <h5 class="h5-types">Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">string</span>
+|
+
+<span class="param-type">null</span>
+
+
+
+        </li>
+    </ul>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".REPOS_LIST"><span class="type-signature type-signature-static, constant">(static, constant) </span>REPOS_LIST<span class="type-signature"> :Array.&lt;string>|null</span></h4>
+
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>Explicit list of repository names to scan (comma-separated in env).
+When set, only these repos are scanned regardless of REPOS_DIR.
+When null, all repos discovered via REPOS_DIR or profile are used.</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="config_env.mjs.html">config/env.mjs</a>, <a href="config_env.mjs.html#line93">line 93</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description usertext">
+    <p>Explicit list of repository names to scan (comma-separated in env).
+When set, only these repos are scanned regardless of REPOS_DIR.
+When null, all repos discovered via REPOS_DIR or profile are used.</p>
+</div>
+
+
+
+    <h5 class="h5-types">Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">Array.&lt;string></span>
+|
+
+<span class="param-type">null</span>
+
+
+
+        </li>
+    </ul>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".REPO_MODE"><span class="type-signature type-signature-static, constant">(static, constant) </span>REPO_MODE<span class="type-signature"> :string</span></h4>
+
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>Repository ingestion mode.
+'mount' — repos are provided via host bind mount (default, macOS dev).
+'clone' — repos are cloned from GitHub on startup (Docker production).</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="config_env.mjs.html">config/env.mjs</a>, <a href="config_env.mjs.html#line105">line 105</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description usertext">
+    <p>Repository ingestion mode.
+'mount' — repos are provided via host bind mount (default, macOS dev).
+'clone' — repos are cloned from GitHub on startup (Docker production).</p>
+</div>
+
+
+
+    <h5 class="h5-types">Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">string</span>
+
+
+
+        </li>
+    </ul>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".ROOT"><span class="type-signature type-signature-static, constant">(static, constant) </span>ROOT<span class="type-signature"> :string</span></h4>
+
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>Absolute path to the DocuMind project root</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="config_env.mjs.html">config/env.mjs</a>, <a href="config_env.mjs.html#line27">line 27</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description usertext">
+    <p>Absolute path to the DocuMind project root</p>
+</div>
+
+
+
+    <h5 class="h5-types">Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">string</span>
+
+
+
+        </li>
+    </ul>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".SOFFICE_PATH"><span class="type-signature type-signature-static, constant">(static, constant) </span>SOFFICE_PATH<span class="type-signature"> :string</span></h4>
+
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>Absolute path to the LibreOffice soffice binary (needed for editable PPTX export).
+Consumers (Phase 24) must check the path resolves before use and warn if not.</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="config_env.mjs.html">config/env.mjs</a>, <a href="config_env.mjs.html#line215">line 215</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description usertext">
+    <p>Absolute path to the LibreOffice soffice binary (needed for editable PPTX export).
+Consumers (Phase 24) must check the path resolves before use and warn if not.</p>
+</div>
+
+
+
+    <h5 class="h5-types">Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">string</span>
+
+
+
+        </li>
+    </ul>
+
+
+
+
+
+
+        
+    
+
+    
+
+    
+
+    
+</article>
+
+</section>
+
+
+
+
+    
+    
+</div>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Sat Jul 11 2026 01:34:36 GMT+0200 (Central European Summer Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/polyfill.js"></script>
+<script src="scripts/linenumber.js"></script>
+
+
+
+</body>
+</html>

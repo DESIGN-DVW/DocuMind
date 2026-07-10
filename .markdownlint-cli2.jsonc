@@ -1,25 +1,39 @@
-// markdownlint-cli2 configuration
-// Auto-discovered by: CLI, VSCode extension, lint-staged
-// Combines standard rules + DVW custom rules with auto-fix support
+// markdownlint-cli2 configuration — canonical source in RootDispatcher
+// Deployed to every repo root by: node scripts/sync-markdown-config.mjs
+// DO NOT edit deployed copies directly — edit here and re-run the sync script
 {
-  // Standard markdownlint rules
-  "config": {
-    "extends": "./config/.markdownlint.json"
-  },
-
-  // Custom rules with fixInfo (auto-fixable via --fix)
   "customRules": [
     "./config/rules/table-separator-spacing.cjs",
-    "./config/rules/force-align-table-columns.cjs"
+    "./config/rules/no-blank-lines-in-tables.cjs"
   ],
-
-  // Paths to ignore
+  "config": {
+    "MD013": false,
+    "MD060": false
+  },
   "ignores": [
     "node_modules",
-    "index",
     ".git",
     "dist",
     "build",
-    ".planning"
+    ".planning",
+    ".claude",
+    "temp",
+    "tmp",
+    "backup",
+    "backups",
+    "archive",
+    "_archive",
+    "archives",
+    "docs/slides",
+    "config/markdownlint"
+  ],
+  "overrides": [
+    {
+      "globs": ["docs/slides/**/*.md"],
+      "config": {
+        "MD025": false,
+        "MD036": false
+      }
+    }
   ]
 }

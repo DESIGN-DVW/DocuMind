@@ -11,6 +11,13 @@ import path from 'path';
 import crypto from 'crypto';
 import matter from 'gray-matter';
 
+const toISOSafe = v => {
+  if (v == null) return null;
+  if (v instanceof Date) return v.toISOString();
+  const s = String(v).trim();
+  return s || null;
+};
+
 /**
  * Extract a plain-text summary from frontmatter or content.
  * Priority 1: frontmatter.description (up to 500 chars)
@@ -104,8 +111,9 @@ export async function processMarkdown(filePath) {
       filename: path.basename(filePath),
       category,
       summary,
-      version: frontmatter.version || null,
-      created_at: frontmatter.created || frontmatter.date || stat.birthtime.toISOString(),
+      version: frontmatter.version != null ? String(frontmatter.version) : null,
+      created_at:
+        toISOSafe(frontmatter.created ?? frontmatter.date) ?? stat.birthtime.toISOString(),
       modified_at: stat.mtime.toISOString(),
       file_size: stat.size,
       line_count: lines.length,

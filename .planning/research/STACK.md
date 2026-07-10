@@ -1,431 +1,115 @@
 # Stack Research
 
-**Domain:** Docker containerization + MCP HTTP transport + git-clone ingestion + GHCR publishing
-**Researched:** 2026-03-23
-**Confidence:** HIGH (Docker/Node base image, GHCR CI), MEDIUM (MCP HTTP transport current pattern, simple-git), LOW (better-sqlite3 Node 24 status — active upstream issue)
+**Domain:** Automated slide-deck publishing pipeline (Marp render → DeepL translate → FTP deploy) bolted onto an existing Node 20 ESM documentation daemon
+**Researched:** 2026-07-10
+**Confidence:** HIGH (all three core packages verified directly against the npm registry; behavioral details verified against official READMEs/GitHub issues; DeepL markdown-handling gap confirmed by community consensus + official issue tracker)
 
----
-
-## Context
-
-DocuMind v3.1 ships with a validated stack (Node 20+, Express 5, better-sqlite3, MCP SDK 1.27.1, zod 3.25.0). This research answers one question: **what additions and changes are needed for v3.2 — Docker containerization, MCP dual-mode transport, git-clone repo ingestion, environment-based config, graceful shutdown, and GHCR publishing?**
-
-The answer: three new npm packages, no version bumps required, and specific Docker build decisions driven by better-sqlite3 native module constraints.
-
----
+This document covers ONLY the v3.4 additions. Everything already validated (SQLite FTS5, chokidar, node-cron, Express 5, MCP server, markdownlint toolchain, mammoth/turndown/pdf-parse) is out of scope — see `.planning/PROJECT.md` "Validated" section. This file supersedes the prior (2026-04-07) Kuzu/LangChain stack research, which is obsolete now that Kuzu has been retired per ADR-001.
 
 ## Recommended Stack
 
-### New Dependencies (Net-New to package.json)
-
-| Library | Version | Purpose | Why Recommended |
-
-| ------- | ------- | ------- | --------------- |
-
-| `simple-git` | `^3.33.0` | Git clone/pull for remote repo ingestion | 7.9M weekly downloads vs 628K for isomorphic-git. Wraps native git CLI — faster for large repos, no pure-JS overhead. Native CLI dependency is a non-issue in Docker where git is installed. Simpler API for clone/pull/status use cases. |
-
-| `dotenv` | `^16.4.7` | Environment variable loading from `.env` files | Zero-dependency. Works with Docker `env_file:` compose directive and `--env-file` flag. The `process.env` fallback means Docker-injected env vars override `.env` naturally — correct behavior for containerized config. Node 20.6+ has `--env-file` native flag but dotenv is still needed for programmatic loading and `.env.example` workflow. |
-
-### New Dev Dependencies
-
-| Library | Version | Purpose | Why Recommended |
-
-| ------- | ------- | ------- | --------------- |
-
-| `@godaddy/terminus` | `^4.12.1` | Graceful shutdown + health check middleware | Handles SIGTERM/SIGINT, drains in-flight requests, runs cleanup hooks (close DB connection, flush file watcher). Used by Node Best Practices guide. Integrates with Express via `createTerminus(server, { healthChecks, onSignal, onShutdown })`. Prevents SQLite WAL corruption on abrupt stops. |
-
-### Existing Dependencies — No Changes Required
-
-All existing runtime dependencies stay. The MCP SDK (`@modelcontextprotocol/sdk@^1.27.1`) already ships `StreamableHTTPServerTransport` — no separate package needed for HTTP transport. The `@modelcontextprotocol/express` middleware package exists but is a thin optional wrapper; mount directly via `StreamableHTTPServerTransport` as already documented in v3.0 STACK.md.
-
-| Existing | Current Version | Status |
-
-| -------- | --------------- | ------ |
-
-| `@modelcontextprotocol/sdk` | `^1.27.1` | Stays — already includes HTTP transport |
-
-| `better-sqlite3` | `^12.6.2` | Stays — but drives Docker base image choice (see below) |
-
-| `express` | `^5.2.1` | Stays |
-
-| `zod` | `^3.25.0` | Stays |
-
----
-
-## Docker Base Image Decision
-
-### Use `node:22-bookworm-slim` for both build and runtime stages.
-
-Do NOT use Alpine. Do NOT use Node 24.
-
-### Why node:22, not node:24
-
-better-sqlite3 prebuilt binaries are missing for Node 24 / N-API 137 (tracked in [WiseLibs/better-sqlite3#1384](https://github.com/WiseLibs/better-sqlite3/issues/1384)). Node 24 compilation from source fails with deprecated V8 API errors on the current published versions of better-sqlite3. Node 22 is Active LTS (codename "Jod", supported through 2027) — it is the correct production target.
-
-**Confidence:** MEDIUM — Node 24 incompatibility verified via multiple GitHub issues. Node 22 LTS status verified via official Docker Hub tags. This may resolve in a future better-sqlite3 release; re-evaluate when upgrading beyond v3.2.
-
-### Why bookworm-slim, not Alpine
-
-better-sqlite3 links against glibc. Alpine uses musl libc, which causes `fcntl64: symbol not found` and similar relocation errors at runtime. Even with a multi-stage build that compiles on Debian and copies binaries to Alpine, the linked glibc symbols break on musl. Community consensus: "Use Debian slim — image will be slightly larger but everything just works out of the box." ([WiseLibs/better-sqlite3 discussion #1270](https://github.com/WiseLibs/better-sqlite3/discussions/1270))
-
-`node:22-bookworm-slim` adds ~30MB vs Alpine but eliminates an entire class of native module debugging.
-
-### Multi-Stage Build Pattern
-
-```dockerfile
-
-# Stage 1: builder — compiles native modules
-
-FROM node:22-bookworm-slim AS builder
-WORKDIR /app
-
-# Install build tools required by better-sqlite3
-
-RUN apt-get update && apt-get install -y \
-    python3 make g++ git \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY package*.json ./
-RUN npm ci --include=dev
-
-COPY . .
-
-# Stage 2: runtime — clean image, no build tools
-
-FROM node:22-bookworm-slim AS runtime
-WORKDIR /app
-
-RUN apt-get update && apt-get install -y \
-    git curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy compiled node_modules (including better-sqlite3.node binary)
-
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package*.json ./
-COPY . .
-
-# Non-root user for security
-
-RUN groupadd -r documind && useradd -r -g documind documind \
-    && chown -R documind:documind /app
-USER documind
-
-EXPOSE 9000
-HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:9000/health || exit 1
-
-# Use node directly (not npm) so SIGTERM propagates correctly
-
-CMD ["node", "daemon/server.mjs"]
-
-```
-
-**Critical:** `CMD ["node", "daemon/server.mjs"]` not `CMD ["npm", "run", "daemon:dev"]`. npm does not forward SIGTERM to the Node process — the container will hang on `docker stop` and eventually force-kill, risking SQLite WAL corruption.
-
-**Critical:** `git` must be in the runtime stage (not just builder). simple-git shells out to the native git CLI — if git is absent at runtime, clone/pull fails silently.
-
----
-
-## MCP HTTP Transport — Current State
-
-### Transport Status (2026)
-
-SSE (`/sse` + `/messages` dual endpoint) is deprecated as of MCP spec 2025-03-26. Streamable HTTP (`POST /mcp`, single endpoint, optional SSE upgrade) is the current standard. The existing SDK version (`^1.27.1`) supports `StreamableHTTPServerTransport` — no package change needed.
-
-**Confidence:** HIGH — [MCP spec 2025-03-26 transports](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports) confirms Streamable HTTP as current, SSE as deprecated.
-
-### Dual-Mode Transport (Stdio + HTTP)
-
-Run both transports from the same process. Stdio for local Claude Code, HTTP for containerized/remote consumers. The existing v3.0 STACK.md documents the correct mount pattern — no changes needed.
-
-Do NOT implement the deprecated SSE transport. Even though the SDK maintains backward compat, new implementations should use Streamable HTTP only.
-
----
-
-## Environment-Based Configuration
-
-### Pattern: Native Node + dotenv fallback
-
-```javascript
-
-// In daemon/server.mjs — load at startup
-import 'dotenv/config';  // no-op if vars already set by Docker
-
-const config = {
-  port:      parseInt(process.env.PORT ?? '9000'),
-  repoMode:  process.env.REPO_MODE ?? 'volume',       // 'volume' | 'clone'
-  repoRoots: (process.env.REPO_ROOTS ?? '').split(':').filter(Boolean),
-  cloneBase: process.env.CLONE_BASE ?? '/repos',
-  cronHourly: process.env.CRON_HOURLY ?? '0 * * * *',
-  cronDaily:  process.env.CRON_DAILY  ?? '0 2 * * *',
-  cronWeekly: process.env.CRON_WEEKLY ?? '0 3 * * 0',
-};
-
-```
-
-`dotenv/config` only populates `process.env` keys not already set — Docker `environment:` and `env_file:` injections take precedence naturally.
-
-**No additional library.** `dotenv` is sufficient. Do not add `convict`, `config`, or `nconf` — they add complexity without benefit for a single-tenant daemon.
-
----
-
-## Graceful Shutdown Pattern
-
-### Why @godaddy/terminus
-
-`@godaddy/terminus` is the established Express graceful shutdown library (Node Best Practices guide). It handles:
-
-1. Routes `/health` and `/readiness` checks
-
-2. On SIGTERM: stops accepting new requests, waits for in-flight to drain
-
-3. Runs `onSignal` callbacks (close SQLite connection, stop chokidar watcher, flush cron jobs)
-
-4. Exits cleanly
-
-SQLite WAL mode keeps a write-ahead log. If the process is force-killed mid-write, the WAL may be in an inconsistent state. `terminus` prevents this by ensuring `db.close()` runs before exit.
-
-```javascript
-
-import { createTerminus } from '@godaddy/terminus';
-
-createTerminus(server, {
-  healthChecks: {
-    '/health': async () => ({ status: 'ok', uptime: process.uptime() }),
-  },
-  onSignal: async () => {
-    db.close();
-    watcher.close();
-    // cron jobs stop automatically when process exits
-  },
-  timeout: 10000,  // 10s drain window
-});
-
-```
-
-**Alternative considered:** Bare `process.on('SIGTERM', ...)`. This works but requires manually handling drain timing and health check endpoints. terminus is 15 lines vs ~80 lines of error-prone manual handling. Worth the dependency.
-
----
-
-## GHCR Publishing — GitHub Actions
-
-### Actions Required
-
-| Action | Version | Purpose |
-
-| ------ | ------- | ------- |
-
-| `docker/login-action` | `v3` | Authenticate to ghcr.io using `GITHUB_TOKEN` |
-
-| `docker/metadata-action` | `v5` | Generate tags (semver, latest, sha) from git refs |
-
-| `docker/setup-buildx-action` | `v3` | Enable multi-platform builds via BuildKit |
-
-| `docker/setup-qemu-action` | `v3` | QEMU for cross-platform (arm64 on amd64 runner) |
-
-| `docker/build-push-action` | `v6` | Build + push to GHCR with caching |
-
-### Workflow Pattern
-
-```yaml
-
-name: Publish to GHCR
-on:
-  push:
-    tags: ['v*']
-
-jobs:
-  publish:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-
-      - uses: actions/checkout@v4
-
-      - uses: docker/setup-qemu-action@v3
-
-      - uses: docker/setup-buildx-action@v3
-
-      - uses: docker/login-action@v3
-
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: docker/metadata-action@v5
-
-        id: meta
-        with:
-          images: ghcr.io/${{ github.repository }}
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha
-
-      - uses: docker/build-push-action@v6
-
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-```
-
-`GITHUB_TOKEN` is auto-created per workflow run — no secret configuration needed for GHCR. The `packages: write` permission is required.
-
-**Confidence:** HIGH — official [GitHub Publishing Docker Images docs](https://docs.github.com/en/actions/publishing-packages/publishing-docker-images) confirm this pattern.
-
----
-
-## docker-compose.yml Pattern (Volume Mount Mode)
-
-```yaml
-
-services:
-  documind:
-    build: .
-    image: ghcr.io/dvwdesign/documind:latest
-    ports:
-
-      - "9000:9000"
-
-    volumes:
-
-      - ./data:/app/data                          # SQLite database persistence
-
-      - /Users/Shared/htdocs/github:/repos:ro     # Local repo access (volume mode)
-
-    environment:
-
-      - REPO_MODE=volume
-
-      - REPO_ROOTS=/repos/DVWDesign/DocuMind:/repos/DVWDesign/RootDispatcher
-
-      - PORT=9000
-
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-
-```
-
-For git-clone mode (CI/remote), set `REPO_MODE=clone` and provide `REPO_URLS` instead of `REPO_ROOTS`. The clone processor uses simple-git to fetch repos into `CLONE_BASE` at startup and on the hourly cron.
-
----
-
-## What NOT to Use
-
-| Avoid | Why | Use Instead |
-
-| ----- | --- | ----------- |
-
-| `node:24-*` base image | better-sqlite3 prebuilt binaries missing for N-API 137; compilation from source fails with deprecated V8 API. Active upstream issue as of 2026-03. | `node:22-bookworm-slim` (Active LTS) |
-
-| `node:*-alpine` base image | musl libc incompatible with better-sqlite3 glibc-linked binaries. Results in `fcntl64: symbol not found` at runtime even with multi-stage builds. | `node:22-bookworm-slim` (Debian glibc) |
-
-| `isomorphic-git` | Pure JS reimplementation of git — slower for large repos, 10x fewer downloads than simple-git. Only useful in browser environments, which Docker containers are not. | `simple-git` |
-
-| `CMD ["npm", "run", "daemon:start"]` | npm does not forward SIGTERM to child Node process. Container hangs on `docker stop`, eventually force-killed, risks SQLite WAL corruption. | `CMD ["node", "daemon/server.mjs"]` |
-
-| SSE transport (`/sse` endpoint) | Deprecated in MCP spec 2025-03-26. Dual-endpoint design requires persistent connections that complicate health checks and load balancers. | `StreamableHTTPServerTransport` on `POST /mcp` |
-
-| `@modelcontextprotocol/express` middleware | Thin optional wrapper around `StreamableHTTPServerTransport`. Adds a dependency for what is 3 lines of code. DocuMind already mounts transports directly. | Direct `StreamableHTTPServerTransport` mount |
-
-| `convict` / `nconf` for config | Schema-heavy config frameworks designed for complex multi-environment apps. Single-tenant daemon with Docker `ENV` injection needs `dotenv` + plain object, not a config DSL. | `dotenv` + `process.env` |
-
-| Pre-copying `node_modules` from host into image | Compiled native addon binaries are architecture-specific. Copying macOS-compiled `better_sqlite3.node` into a Linux container will fail. | Always run `npm ci` inside the builder stage |
-
----
+### Core Technologies
+
+| Technology | Version | Purpose | Why Recommended |
+| ------------ | --------- | --------- | ----------------- |
+| `@marp-team/marp-cli` | `^4.4.1` (latest, published May 2026; requires Node >=18) | Renders Marp Markdown decks to HTML/PDF/PPTX/PNG | Official Marp CLI, the only actively maintained renderer for the format. It shells out to a real browser via `puppeteer-core` (not a bundled one) for PDF/PPTX/image conversion — matches the project's existing "CLI as devDependency, invoked via npm script" pattern already used for `markdownlint-cli2` and `@mermaid-js/mermaid-cli`. |
+| `deepl-node` | `^1.27.0` (latest, published ~2 months ago; Node 12-24 officially supported) | EN→FR translation of deck Markdown via the DeepL API | Official DeepL Node SDK, actively maintained (44 releases). Ships `tagHandling: 'xml'` with `ignoreTags`/`nonSplittingTags`/`preserveFormatting`, and the new v3 multilingual glossary API — the building blocks needed to protect Marp syntax and proper nouns during translation (see Patterns below). |
+| `basic-ftp` | `^6.0.1` (latest, published May 2026; Node >=10) | FTP/FTPS deploy of rendered decks to the hosting target | Promise-based, ESM-friendly (`import { Client } from 'basic-ftp'`), zero runtime dependencies, supports FTPS-over-TLS. Already present as a `pnpm.overrides` entry in this repo's `package.json` (transitively pulled in already), so promoting it to a direct runtime dependency adds nothing new to the tree. At 25.5M weekly downloads vs `ssh2-sftp-client`'s 1.9M it is by far the dominant Node FTP client — use it unless the deploy target turns out to require SFTP only (see Alternatives). |
+
+### Supporting Libraries
+
+No new supporting libraries are required. Reuse what's already installed:
+
+| Library (already installed) | Purpose in the new pipeline | When to Use |
+| --- | --- | --- |
+| `gray-matter` | Strip/restore Marp YAML front-matter (`marp: true`, `theme:`, `paginate:`) before/after sending deck body to DeepL | Every translation pass — front-matter must never be sent to the translator |
+| `markdown-it` | Tokenize the deck to locate fenced code blocks and HTML-comment directives (`<!-- _class: lead -->`, `<!-- paginate: skip -->`) that must be masked before translation | Building the translation pre/post-processor |
+| `chokidar` | Watch the EN `.md` deck source for changes to trigger translate→render→deploy | Daemon orchestration stage (already the watcher tech) |
+| `node-cron` | Optional scheduled re-render/re-deploy fallback if watcher-driven triggers are debounced/missed | Scheduler wiring, same pattern as existing hourly/daily jobs |
+| `puppeteer` (devDependency, already installed) | Supplies a bundled, pre-downloaded Chromium for `marp-cli`'s `--browser-path` | Resolve via `puppeteer.executablePath()` at render time — see Dev Tools below |
+
+**Do not add** a markdown-AST translation library (see What NOT to Use) — the masking approach only needs regex/tokenizing, which `markdown-it` already provides.
+
+### Development Tools
+
+| Tool | Purpose | Notes |
+| ------ | --------- | ------- |
+| LibreOffice (system install, NOT an npm package) | Required by `marp --pptx --pptx-editable` to convert the pre-rendered PPTX into an editable one | On macOS, default install path is `/Applications/LibreOffice.app/Contents/MacOS/soffice`. marp-cli does not search `PATH` reliably for non-standard installs (confirmed via [marp-cli#631](https://github.com/marp-team/marp-cli/issues/631)) — set `SOFFICE_PATH=/Applications/LibreOffice.app/Contents/MacOS/soffice` in `.env` rather than relying on auto-detection. Confirm the app is actually present (`ls /Applications/LibreOffice.app`) before wiring this in — PROJECT.md notes soffice is "not on PATH" but doesn't confirm the app itself is installed. |
+| A Chromium-flavored browser or Firefox (for `marp-cli` PDF/PPTX/PNG export) | `marp-cli` uses `puppeteer-core`, which does **not** bundle its own Chromium — it needs one already present on the machine, found via `--browser` (`chrome,edge,firefox`, default `auto`) or explicit `--browser-path` | **Reuse, don't reinstall**: `puppeteer@24.40.0` is already a devDependency (transitively pulled in by `@mermaid-js/mermaid-cli`, and `pnpm.onlyBuiltDependencies: ["puppeteer"]` already forces its Chromium download at install). Resolve the path at runtime with `puppeteer.executablePath()` and pass it via `--browser-path` / the `browserPath` key in `marp.config.mjs`. This avoids a second ~200MB Chromium download and avoids depending on a system-level Chrome install — important for Docker portability, since this repo already ships a Dockerfile (v3.2). |
+| `.marprc.yml` or `marp.config.mjs` | Central Marp CLI config: `browser`, `browserPath`, `pptx`, `pptxEditable`, `themeSet`, `allowLocalFiles`, output dirs | Config is loaded via `cosmiconfig` (a direct `marp-cli` dependency) — supports `.marprc` (JSON/YAML), `marp.config.{js,mjs,cjs}`, and a `"marp"` key in `package.json`. **Precedence: CLI flags > Markdown front-matter directives > config file.** Prefer `marp.config.mjs` over `.marprc.yml` if the browser/soffice paths need to be computed dynamically at load time (e.g., calling `puppeteer.executablePath()`), since `.marprc.yml` is static data only. |
 
 ## Installation
 
 ```bash
+# Core — DeepL translation + FTP deploy are runtime dependencies (imported by daemon code)
+pnpm add deepl-node basic-ftp
 
-# New runtime dependencies
+# Dev dependency — Marp CLI is invoked as a shelled-out binary via npm scripts, same pattern
+# as markdownlint-cli2 and @mermaid-js/mermaid-cli (never imported as a library)
+pnpm add -D @marp-team/marp-cli
 
-npm install simple-git dotenv
-
-# New dev dependency
-
-npm install -D @godaddy/terminus
-
+# System prerequisite (NOT npm) — only needed for --pptx-editable, install manually
+brew install --cask libreoffice
 ```
 
----
+No change needed to the `puppeteer` devDependency — it's already present and its bundled Chromium is reusable for Marp's `--browser-path`.
 
 ## Alternatives Considered
 
 | Recommended | Alternative | When to Use Alternative |
+| ------------- | ------------- | ------------------------- |
+| `basic-ftp` | `ssh2-sftp-client` | If the deploy target's hosting only exposes SSH/SFTP (no FTP/FTPS port open) — common for modern managed hosting. Confirm with the hosting provider before creds land in `.env`; if SFTP-only, swap the deploy processor's client — the `dry-run` design pattern (list-then-diff-then-transfer) stays identical either way. |
+| `@marp-team/marp-cli` | `marp-core` + custom Puppeteer script | Only if programmatic control finer than the CLI exposes is needed (e.g., custom per-slide DOM post-processing before PDF capture). Not needed here — the CLI covers HTML/PDF/PPTX/PPTX-editable via flags and the milestone scope is "render, don't customize." |
+| `deepl-node` official SDK + custom masking layer | `deepmark` (community DeepL+Markdown wrapper) | Never for this project — see What NOT to Use. Reconsider only if DeepL ships first-party Markdown `tag_handling` support (tracked at [deepl-node#26](https://github.com/DeepLcom/deepl-node/issues/26), open, no ETA). |
+| DeepL Free tier via `DEEPL_AUTH_KEY` ending `:fx` | DeepL Pro (`api.deepl.com`) | Once deck volume approaches the Free tier's 500,000 chars/month cap, or when EN+FR decks across ProductMarketing exceed that in aggregate. `deepl-node`'s `serverUrl` option lets you override the auto-selected endpoint once a Pro key is provisioned — no code change needed, only the key format changes. |
 
-| ----------- | ----------- | ----------------------- |
+## What NOT to Use
 
-| `node:22-bookworm-slim` | `node:20-bookworm-slim` | If existing CI/CD is pinned to Node 20 and cannot be updated. Node 22 is preferred — it is Active LTS and eliminates some Node-version CVEs. |
+| Avoid | Why | Use Instead |
+| ------- | ----- | -------------- |
+| `deepmark` (npm) | Last published 2022 (abandoned, ~100 downloads/month), pins `better-sqlite3@^7` which directly conflicts with this repo's `better-sqlite3@^12.6.2`, and is an MDX/blog-oriented CLI tool — not designed for embedding in a daemon pipeline or for Marp's HTML-comment directive syntax. | A small custom pre/post-processor (regex + `gray-matter` + `markdown-it`, both already dependencies) that wraps fenced code blocks, HTML-comment directives, and front-matter in placeholder tags, calls `deeplClient.translateText(text, 'en', 'fr', { tagHandling: 'xml', ignoreTags: ['ignore'] })`, then unwraps. |
+| Raw `translateText()` on the full deck body with no masking | DeepL's translation endpoint has **no native Markdown awareness** — it does not understand Marp directives, code fences, or YAML front-matter, and will happily "translate" code identifiers, class names, or directive keywords, corrupting the deck. Confirmed: DeepL offers `tag_handling` only for `html`/`xml`, not markdown, and community workarounds (deepmark, cmark-translate, babeldown) all exist specifically to cover this gap. | Use the masking pattern above: strip front-matter first (`gray-matter`), protect code fences/HTML comments with `ignoreTags`, then translate the remaining prose only. |
+| The deprecated `Translator` class pattern seen in older `deepl-node` blog posts/tutorials | `deepl-node`'s current main class is `DeepLClient`, which supports the v3 multilingual glossary API (`createMultilingualGlossary()`, etc.) alongside the legacy v2 monolingual glossary methods still exposed on the same client. Code written against `new deepl.Translator(authKey)` patterns from older tutorials is stale. | `import * as deepl from 'deepl-node'; const client = new deepl.DeepLClient(authKey)` |
+| `PUPPETEER_EXECUTABLE_PATH` / `CHROME_PATH` env vars as a way to point marp-cli at a browser | marp-cli's README does not document reading these env vars — it only respects `--browser-path` (CLI) / `browserPath` (config file/programmatic config). Setting the env vars alone will silently do nothing for marp-cli's own browser search. | Resolve the path explicitly (e.g. `puppeteer.executablePath()`) and pass it via `--browser-path` or `browserPath` in `marp.config.mjs`. |
+| Treating `--pptx-editable` as a pipeline-guaranteed artifact | marp-cli's own README flags this as EXPERIMENTAL: "lower slide reproducibility... presenter notes are not supported... may throw an error or output the incomplete result" with complex themes. | Generate regular (non-editable, image-baked) `--pptx` for the automated deploy pipeline; treat `--pptx-editable` as a manually-triggered, best-effort convenience output. |
 
-| `simple-git` | `isomorphic-git` | Only if DocuMind needs to run in a browser context (never) or needs git operations without a native git CLI installed. Not applicable in Docker. |
+## Stack Patterns by Variant
 
-| `@godaddy/terminus` | Manual SIGTERM handler | Acceptable if keeping dependencies minimal. Requires ~80 lines of careful manual implementation to match terminus behavior. Not worth the risk for a system with SQLite WAL. |
+**If running the pipeline inside Docker (per the existing v3.2 Dockerfile/docker-compose):**
 
-| `dotenv` | Node `--env-file` flag (native, Node 20.6+) | For config loading in scripts invoked via `node --env-file .env script.mjs`. Cannot be used programmatically from inside `server.mjs` at module load time — dotenv covers both CLI and programmatic use. |
+- Do not install a second full Chrome/Chromium in the image just for marp-cli — reuse `puppeteer`'s already-downloaded Chromium (same `pnpm.onlyBuiltDependencies: ["puppeteer"]` mechanism already forces this at `pnpm install`) and point `--browser-path` at `puppeteer.executablePath()`.
+- Because LibreOffice is a ~600MB system package, do not bake it into the daemon's always-on container image just for an experimental flag. If `--pptx-editable` is genuinely needed in CI/containers, use the official `marpteam/marp-cli` Docker image (which bundles Chrome) as a separate one-shot job, not inside the daemon container.
+- Set `DEEPL_SERVER_URL` explicitly only if testing against a DeepL mock/staging server; otherwise let auto-detection from the key's `:fx` suffix pick Free vs Pro.
 
-| Single `node:22-bookworm-slim` for both stages | Separate `node:22-bookworm` (full) for builder | Full Debian image in builder is not needed. `node:22-bookworm-slim` with `apt-get install python3 make g++` in the builder stage is sufficient and keeps both stages on the same base. |
+**If running on the macOS host via PM2 (the primary/native mode for this repo):**
 
----
+- `SOFFICE_PATH=/Applications/LibreOffice.app/Contents/MacOS/soffice` goes in `.env`.
+- Reuse the same `puppeteer.executablePath()` resolution as Docker for consistency — do not special-case "use system Chrome on macOS," since that adds an untracked variable (which Chrome version is installed) that can silently change PDF rendering output between machines.
+
+**If DeepL Free tier's 500K chars/month is exceeded:**
+
+- Upgrade the API key to Pro (`serverUrl` auto-switches based on key format — no code change), and add a monthly usage check via `deeplClient.getUsage()` (part of the SDK) to the daemon's daily cron so exhaustion is visible before it silently blocks a deploy.
 
 ## Version Compatibility
 
-| Package | Compatible With | Notes |
-
-| ------- | --------------- | ----- |
-
-| `better-sqlite3@^12.6.2` | `node:22-bookworm-slim` | Prebuilt binaries available for Node 22 / N-API 131. No compilation from source needed in builder stage (prebuilt binary downloaded during `npm ci`). |
-
-| `better-sqlite3@^12.6.2` | `node:24-*` | INCOMPATIBLE. N-API 137 binaries missing. Node 24 V8 API changes break compilation from source. Do not use Node 24 until better-sqlite3 publishes Node 24 prebuilts. |
-
-| `simple-git@^3.33.0` | `node@>=20` | No native bindings. Requires git CLI available at runtime. |
-
-| `@godaddy/terminus@^4.12.1` | `express@5.x` | Wraps the `http.Server` instance, not the Express app — compatible with Express 5. |
-
-| `docker/build-push-action@v6` | `docker/setup-buildx-action@v3` | Must use Buildx for multi-platform builds. Both actions required together. |
-
----
+| Package A | Compatible With | Notes |
+| ----------- | ----------------- | ------- |
+| `@marp-team/marp-cli@4.4.1` | Node >=18 (repo requires >=20 — satisfied) | Depends on `puppeteer-core@^24.43.1` — close to but not identical to the repo's existing `puppeteer@24.40.0`; both are within the same major (24.x) Chrome-for-Testing protocol generation, so the shared Chromium binary should be protocol-compatible. Verify with a smoke test (`marp --browser-path <path> test.md -o test.pdf`) after wiring, since minor CDP protocol drift between puppeteer-core minor versions is the most likely failure mode. |
+| `deepl-node@1.27.0` | Node 12/14/16/17/18/20/22/24 officially tested | Fully compatible with repo's Node >=20 requirement. |
+| `basic-ftp@6.0.1` | Node >=10 | No conflicts; ESM import works natively under `"type": "module"` (already set in `package.json`). |
+| `deepl-node` glossary API | v3 (multilingual) vs v2 (monolingual, still supported) | Use v3 (`createMultilingualGlossary()`) for new EN→FR glossary entries (proper nouns, brand terms) — v2 methods remain on the client only for backward compatibility with existing v2 glossaries, not recommended for new integrations. |
 
 ## Sources
 
-- [WiseLibs/better-sqlite3 Discussion #1270](https://github.com/WiseLibs/better-sqlite3/discussions/1270) — Alpine vs Debian: community consensus that Debian slim is correct for better-sqlite3 (MEDIUM confidence)
-
-- [WiseLibs/better-sqlite3 Issue #1384](https://github.com/WiseLibs/better-sqlite3/issues/1384) — Node 24 / N-API 137 prebuilt binaries missing (HIGH confidence — open upstream issue)
-
-- [Docker Hub node:22-bookworm-slim](https://hub.docker.com/layers/library/node/22-bookworm-slim/) — Confirmed Active LTS tag exists (HIGH confidence)
-
-- [MCP Specification 2025-03-26 — Transports](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports) — Streamable HTTP current standard, SSE deprecated (HIGH confidence — official spec)
-
-- [GitHub Publishing Docker Images docs](https://docs.github.com/en/actions/publishing-packages/publishing-docker-images) — GHCR workflow pattern with GITHUB_TOKEN (HIGH confidence — official docs)
-
-- [Node Best Practices — Graceful Shutdown](https://github.com/goldbergyoni/nodebestpractices/blob/master/sections/docker/graceful-shutdown.md) — SIGTERM handling, terminus recommendation (MEDIUM confidence)
-
-- [godaddy/terminus GitHub](https://github.com/godaddy/terminus) — API reference for createTerminus (MEDIUM confidence)
-
-- [simple-git npm](https://www.npmjs.com/package/simple-git) — v3.33.0 confirmed current (MEDIUM confidence — search result, not direct npm page fetch)
-
-- [Express Healthcheck and Graceful Shutdown](https://expressjs.com/en/advanced/healthcheck-graceful-shutdown.html) — Official Express guidance confirming node direct exec over npm for SIGTERM (HIGH confidence — official Express docs)
-
-- [How to Run SQLite in Docker](https://oneuptime.com/blog/post/2026-02-08-how-to-run-sqlite-in-docker-when-and-how/view) — Named volume pattern for SQLite persistence (MEDIUM confidence)
+- npm registry direct (`npm view`) — `@marp-team/marp-cli@4.4.1`, `deepl-node@1.27.0`, `basic-ftp@6.0.1`, engines fields, dependency trees — HIGH confidence, authoritative
+- [marp-cli GitHub README](https://github.com/marp-team/marp-cli/blob/main/README.md) — `--browser`, `--browser-path`, `--browser-protocol`, `--pptx-editable`, config file precedence (cosmiconfig) — HIGH confidence, official docs
+- [marp-cli issue #631](https://github.com/marp-team/marp-cli/issues/631) — `SOFFICE_PATH` env var for non-standard LibreOffice install locations — MEDIUM confidence (community-confirmed workaround, not in main README, but directly from the official repo's issue tracker)
+- [DeepLcom/deepl-node GitHub](https://github.com/DeepLcom/deepl-node) — `DeepLClient` API, `tagHandling`/`ignoreTags`/`preserveFormatting`, `serverUrl` free/pro auto-selection, v2 vs v3 glossary API, Node engine support — HIGH confidence, official SDK repo
+- [DeepLcom/deepl-node issue #26 "Feature Request: Markdown Handling"](https://github.com/DeepLcom/deepl-node/issues/26) — confirms no native markdown `tag_handling` exists as of research date — HIGH confidence, official repo issue tracker
+- npmjs.org download stats API (`api.npmjs.org/downloads/point/last-week`) — `basic-ftp` 25.5M/week vs `ssh2-sftp-client` 1.9M/week — HIGH confidence, authoritative usage data
+- `pnpm-lock.yaml` (this repo) — confirms `puppeteer@24.40.0` already resolved as a build dependency of `@mermaid-js/mermaid-cli@11.12.0` — HIGH confidence, direct repo inspection
+- WebSearch (deepmark package status, general FTP-vs-SFTP framing) — MEDIUM confidence, cross-checked against npm registry directly for the numbers that mattered (version dates, download counts)
 
 ---
-
-### Stack research for: DocuMind v3.2 — Docker + MCP HTTP + git-clone + GHCR
-
-### Researched: 2026-03-23
+*Stack research for: Marp render + DeepL translate + FTP deploy pipeline (DocuMind v3.4 Presentation Pipeline)*
+*Researched: 2026-07-10*

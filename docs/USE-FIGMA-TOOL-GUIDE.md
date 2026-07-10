@@ -10,7 +10,7 @@
 
 `use_figma` is the Figma MCP's general-purpose write tool. It executes JavaScript code via the Figma Plugin API against any Figma Design or FigJam file you have edit access to. It can create, edit, delete, or inspect any object: pages, frames, text, stickies, connectors, components, variants, variables, styles, and auto layout.
 
-It is the only MCP tool that can **modify existing files**. All other write tools (`generate_diagram`, `create_new_file`) are create-only.
+It is the most general-purpose write tool. The `generate_diagram` tool can now also target existing files via `fileKey` (see the **`generate_diagram` with fileKey** section at the end of this guide), but `use_figma` remains the only tool that can modify arbitrary content in any existing file.
 
 ---
 
@@ -401,6 +401,45 @@ On error:
 | Pro (Full/Dev seat) | 10/min, 200/day |
 
 | Starter / View / Collab | 6/month |
+
+---
+
+## `generate_diagram` with fileKey
+
+**As of 2026-05**, `generate_diagram` accepts an optional `fileKey` parameter. When provided, the diagram renders into the specified existing FigJam file rather than creating a new standalone file.
+
+### Tool Parameters
+
+| Parameter      | Type   | Required | Description                                                  |
+| -------------- | ------ | -------- | ------------------------------------------------------------ |
+| `name`         | string | Yes      | Diagram name (use `"{Repo} - {Title}"` convention)           |
+| `mermaidSyntax`| string | Yes      | Full Mermaid diagram syntax                                  |
+| `userIntent`   | string | Yes      | One-sentence description of what the diagram shows           |
+| `fileKey`      | string | No       | Target Figma/FigJam file key. Omit to create a new file.     |
+
+The `fileKey` is the segment between `/board/` and the next `/` in the board URL. See `docs/DIAGRAM-WORKFLOW.md` § Central Board for the DVWDesign central board URL.
+
+### Behavior with fileKey
+
+- Diagram content is rendered into the **default page** of the target file
+- The returned URL points to the existing file, not a new standalone one
+- No orphaned files are created — the diagram lands immediately on the central board
+- Page/section selection within the file is not yet supported — content placement within the correct page still requires manual curation via `/figma-curate`
+
+### When to omit fileKey
+
+- You want a preview in an isolated sandbox file before committing to the board
+- The central board file is inaccessible (permissions issue, file unavailable)
+- You're creating a one-off diagram that does not belong in the central collection
+
+### Complementary use with `use_figma`
+
+After generating a diagram with `fileKey`, you can use `use_figma` (same `fileKey`) to:
+
+- Read the current page structure and locate the newly created diagram nodes
+- Move content into a named section: `findOne(n => n.name === "Architecture")` then `section.appendChild(diagramNode)`
+- Add metadata stickies (source repo, generation date, `.mmd` path)
+- Verify placement before recording the curated URL
 
 ---
 

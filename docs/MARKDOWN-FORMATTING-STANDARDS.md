@@ -26,6 +26,31 @@ This document defines the mandatory markdown formatting rules for all DVWDesign 
 
 Table separator rows **MUST** have one space between the pipe and the dashes on each side.
 
+**Prefer the minimal form** — one hyphen per cell. Markdown is not a design tool: separator width and cell padding have zero effect on rendering, and padded "aligned" tables are pure diff noise.
+
+```text
+
+✅ BEST — minimal separators:
+
+| col1 | col2 | col3 |
+| - | - | - |
+| data | data | data |
+
+✅ ACCEPTED — any dash count, as long as it is spaced:
+
+| col1 | col2 |
+| --- | --- |
+
+❌ NEVER — padding cells or separators to visually align columns.
+
+```
+
+> The former MD060A rule (`force-align-table-columns`) that padded every table
+> to its widest cell was **retired on 2026-07-07**. Do not re-enable it, and do
+> not manually align table columns.
+
+**Wide tables:** if a table needs rows longer than ~80 characters to stay readable, write it as an HTML `<table>` embedded in the markdown instead (HTML table elements are allowed by MD033). Browsers render both identically well.
+
 ```text
 
 ✅ CORRECT — spaces inside each separator cell:
@@ -65,17 +90,11 @@ Alignment colons are allowed and follow the same spacing rule:
 ### Enforcement
 
 | Layer              | Tool                                       | Auto-fixes?          |
-
 | ------------------ | ------------------------------------------ | -------------------- |
-
 | Linter             | markdownlint + DVW001 custom rule          | Yes (`--fix`)        |
-
 | Pre-commit         | lint-staged runs `markdownlint-cli2 --fix` | Yes                  |
-
 | VSCode             | DavidAnson.vscode-markdownlint extension   | Yes (format-on-save) |
-
 | Cron / daemon      | `npm run fix:custom`                       | Yes                  |
-
 | Agent instructions | CLAUDE.md + markdown-fixer agent           | Prevention           |
 
 ### Custom rule file
@@ -107,7 +126,48 @@ Alignment colons are allowed and follow the same spacing rule:
 
 ---
 
-## Rule 2: Fenced Code Block Identifiers
+## Rule 2: No Blank Lines Inside Tables (DVW002)
+
+A blank line inside a GFM table **terminates it** — every row after the blank renders as raw text. Table rows MUST be consecutive lines.
+
+```text
+
+✅ CORRECT — consecutive rows:
+
+| col Name | Col2 Name |
+| - | - |
+| content | content |
+
+❌ WRONG — blank lines between rows (table breaks in every renderer):
+
+| col Name | Col2 Name |
+
+| - | - |
+
+| content | content |
+
+```
+
+### Why DVW002 exists
+
+- A fixer bug (fixed 2026-07-07) injected blank lines between table rows across all repositories, breaking every affected table in preview
+- Renderers (VSCode, GitHub, Storybook docs) all treat the blank line as end-of-table
+
+### DVW002 enforcement
+
+| Layer | Tool | Auto-fixes? |
+| - | - | - |
+| Linter | DVW002 custom rule (`no-blank-lines-in-tables.cjs`) | Yes (`--fix` deletes the blank lines) |
+| Pre-commit | lint-staged runs `markdownlint-cli2 --fix` | Yes |
+| VSCode | DavidAnson.vscode-markdownlint extension | Yes (format-on-save) |
+| Cron / daemon | Nightly lint pass (3 AM) | Yes |
+| Agent instructions | CLAUDE.md + markdown-fixer agent | Prevention |
+
+Guard: two adjacent but **separate** tables (a new header row + separator after the blank) are preserved — only broken continuations are merged.
+
+---
+
+## Rule 3: Fenced Code Block Identifiers
 
 **Every** fenced code block **MUST** have a language identifier. Empty ` ``` ` blocks are forbidden.
 
@@ -122,13 +182,9 @@ When the content language is known, use the specific identifier:
 When no specific language applies, use this priority order:
 
 | Priority | Identifier | Use when |
-
 | --- | --- | --- |
-
 | 1 | `md` | Content is markdown (headings, lists, links, emphasis) |
-
 | 2 | `diagram` | Content is a diagram (Mermaid, FigJam, flowcharts) |
-
 | 3 | `text` | Last resort — plain text, terminal output, non-code content |
 
 ### Examples
@@ -166,16 +222,12 @@ const x = 1;
 
 ```
 
-### Enforcement
+### MD040 enforcement
 
 | Layer              | Tool                                    | Auto-fixes?        |
-
 | ------------------ | --------------------------------------- | ------------------ |
-
 | Linter             | markdownlint MD040                      | No (flags only)    |
-
 | Fix script         | `fix-markdown.mjs` (language detection) | Yes (auto-detects) |
-
 | Agent instructions | CLAUDE.md + markdown-fixer agent        | Prevention         |
 
 ### Language detection
@@ -237,21 +289,13 @@ Single source of truth for markdownlint-cli2. Auto-discovered by:
 Standard markdownlint rules. Key enforced rules:
 
 | Rule | Purpose |
-
 | --- | --- |
-
 | MD001 | Heading levels increment by one |
-
 | MD003 | ATX-style headings (`#` not underline) |
-
 | MD022 | Blank lines around headings |
-
 | MD031 | Blank lines around fenced code blocks |
-
 | MD032 | Blank lines around lists |
-
 | MD040 | Code blocks must have language identifier |
-
 | MD047 | Files end with single newline |
 
 ### .vscode/settings.json
@@ -278,17 +322,11 @@ Standard markdownlint rules. Key enforced rules:
 Available via `Cmd+Shift+P` > `Tasks: Run Task`:
 
 | Task                             | Command                                  | Scope           |
-
 | -------------------------------- | ---------------------------------------- | --------------- |
-
 | Validate Markdown                | `npm run lint`                           | All `.md` files |
-
 | Fix Markdown                     | `npm run lint:fix`                       | All `.md` files |
-
 | Fix Table Separators             | `npm run fix:custom`                     | All `.md` files |
-
 | Fix All Markdown (lint + custom) | `npm run lint:fix && npm run fix:custom` | All `.md` files |
-
 | Fix Current File (lint + custom) | `markdownlint-cli2 --fix '${file}'`      | Open file only  |
 
 ### Optional keyboard shortcut
@@ -308,19 +346,12 @@ Add to your VSCode `keybindings.json` (`Cmd+Shift+P` > `Open Keyboard Shortcuts 
 ## NPM Scripts
 
 | Script | Purpose |
-
 | --- | --- |
-
 | `npm run lint` | Check all markdown (standard + DVW001) |
-
 | `npm run lint:fix` | Auto-fix all markdown (standard + DVW001) |
-
 | `npm run fix` | Legacy fix script (line breaks, code blocks, bold/italic) |
-
 | `npm run fix:custom` | Custom fixes (tables, headings, whitespace, horizontal rules) |
-
 | `npm run fix:custom:all` | Custom fixes across all DVWDesign repositories |
-
 | `npm run fix:custom:dry-run` | Preview custom fixes without writing |
 
 ### Recommended fix sequence

@@ -12,6 +12,24 @@ When you look at a document, you instantly see what it's connected to — what l
 
 ### Validated
 
+- ✓ Dockerfile + docker-compose.yml for single-command startup — v3.2
+
+- ✓ Volume mount mode for local dev repo access — v3.2
+
+- ✓ Git clone/pull mode for remote/CI repo access — v3.2
+
+- ✓ Environment-based configuration (repo paths, mode, cron schedules) — v3.2
+
+- ✓ MCP server dual-mode: stdio local, HTTP containerized — v3.2
+
+- ✓ Health checks + graceful shutdown — v3.2
+
+- ✓ Published image on GHCR — v3.2
+
+- ✓ CI-ready multi-arch build via GitHub Actions — v3.2
+
+- ✓ PM2 launchd autostart + MCP Inspector as persistent service — v3.2
+
 - ✓ Full-text search across 620+ markdown files via FTS5 — existing
 
 - ✓ Markdown linting with standard + custom rules (DVW001 + MD060A) — v3.0
@@ -66,25 +84,29 @@ When you look at a document, you instantly see what it's connected to — what l
 
 - ✓ All phase VERIFICATION.md files complete (Phase 4 backfilled) — v3.1
 
+- ✓ Graph traversal via SQLite recursive CTEs (Kuzu retired per ADR-001) — v3.3
+
+- ✓ Obsolete docs dashboard with archive + delete actions — v3.3
+
 ### Active
 
-<!-- v3.2 scope — Dockerize -->
+<!-- v3.4 scope — Presentation Pipeline -->
 
-- [ ] Dockerfile + docker-compose.yml for single-command startup
+- [ ] Marp toolchain: marp-cli devDependency, .marprc.yml, slides:* npm scripts (HTML/PDF/PPTX incl. --pptx-editable)
 
-- [ ] Volume mount mode for local dev repo access
+- [ ] DeepL translation stage: EN deck → generated .fr.md, Marp directives/code/proper nouns preserved, glossary support
 
-- [ ] Git clone/pull mode for remote/CI repo access
+- [ ] Render stage: EN + FR → HTML/PDF/PPTX via single slides:build
 
-- [ ] Environment-based configuration (repo paths, mode, cron schedules)
+- [ ] FTP deploy stage with dry-run mode (creds pending in .env)
 
-- [ ] MCP server dual-mode: stdio local, HTTP containerized
+- [ ] Figma Slides push runbook via use_figma MCP (blocked on Figma MCP auth)
 
-- [ ] Health checks + graceful shutdown
+- [ ] Orchestration: daemon watcher trigger → translate → render → deploy, with loop protection
 
-- [ ] Published image on GHCR
+- [ ] ProductMarketing content updates flow as dispatches into EN source; AgentHub discovery published on deploy
 
-- [ ] CI-ready: runs as GitHub Action service or on remote Linux server
+- [ ] Rendered outputs gitignored; stale committed binaries removed
 
 ### Future
 
@@ -95,6 +117,10 @@ When you look at a document, you instantly see what it's connected to — what l
 - [ ] SaaS layer (multi-tenant, auth, billing)
 
 ### Out of Scope
+
+- Kuzu graph DB — retired per ADR-001 (2026-07); SQLite recursive CTEs cover graph traversal, Graphify covers visualization
+
+- Figma Buzz integration — RandD study concluded stop (2026-07); removed from all marketing material
 
 - OAuth / multi-tenant auth — revisit if SaaS path chosen
 
@@ -149,49 +175,44 @@ The strategic path forward:
 ## Key Decisions
 
 | Decision                              | Rationale                                                      | Outcome      |
-
 | ------------------------------------- | -------------------------------------------------------------- | ------------ |
-
 | Keep SQLite, no NoSQL                 | Single writer, read-heavy, ~50K doc ceiling, zero config       | ✓ Good       |
-
 | Build MCP alongside REST              | Main value is agents querying DocuMind                         | ✓ Good       |
-
 | Schema + profiles before processors   | Data model must be stable before processors write to it        | ✓ Good       |
-
 | Graph is the priority feature         | Relationship map is the day-one intelligence test              | ✓ Good       |
-
 | Context profiles for portability      | JSON config swaps behavior for code/marketing/ops verticals    | ✓ Good       |
-
 | Fold relink_diagram into curate_diagram | One tool sets URL + propagates + generates snapshot           | ✓ Good       |
-
 | DB as single source for diagrams      | Per-repo DIAGRAM-REGISTRY.md files deprecated                  | ✓ Good       |
-
 | Separate lint_file + fix_file         | Matches CLI pattern, agent decides when to fix                 | ✓ Good       |
+| Retire Kuzu → SQLite CTE (ADR-001)    | Dual-DB complexity not justified; CTEs + Graphify cover needs  | ✓ Good       |
+| EN Marp .md = only hand-edited slide artifact | FR/HTML/PDF/PPTX/hosted copies are generated, never edited | — Pending |
+| Rendered slide exports gitignored     | ~8MB binary churn per edit; pipeline makes regeneration free   | — Pending    |
+| DeepL for FR translation              | Always-French requirement; API-driven, glossary-capable        | — Pending    |
 
 ---
 
-## Current Milestone: v3.2 Dockerize
+## Current Milestone: v3.4 Presentation Pipeline
 
-**Goal:** Containerize DocuMind as a CI-ready, published image that runs anywhere — with both volume-mount and git-clone repo access, and MCP available via stdio or HTTP.
+**Goal:** Automated slides publishing pipeline — EN Marp decks as single source of truth, DeepL French translation, HTML/PDF/PPTX rendering, FTP deploy, and Figma Slides push, orchestrated by the DocuMind daemon with agent-driven content updates.
 
-### Target features:
+### Target features
 
-- Dockerfile + docker-compose.yml — `docker compose up` starts daemon + SQLite + API on :9000
+- Marp toolchain (marp-cli devDep, .marprc.yml, slides:* scripts, editable PPTX via LibreOffice)
 
-- Volume mount mode for local dev (mount repo dirs into container)
+- DeepL translation stage producing generated .fr.md decks (directives/code/proper nouns preserved)
 
-- Git clone/pull mode for remote/CI (container fetches repos itself)
+- Single slides:build rendering EN + FR to HTML/PDF/PPTX
 
-- Environment-based config (repo paths, mode, cron schedules)
+- FTP deploy with dry-run mode until credentials land in .env
 
-- MCP server dual-mode: stdio for local Claude Code, HTTP for containerized/remote consumers
+- Figma Slides push runbook via use_figma MCP (final presentation document)
 
-- Health checks + graceful shutdown
+- Daemon watcher orchestration: EN deck change → translate → render → deploy, loop-protected
 
-- Published image on GHCR (GitHub Container Registry)
+- ProductMarketing updates arrive as RootDispatcher dispatches; AgentHub discovery on deploy
 
-- CI integration: runs as GitHub Action service or on remote Linux server
+**Known prereq gaps:** DEEPL_API_KEY missing, FTP creds missing, Figma MCP unauthorized, soffice not on PATH.
 
 ---
 
-### Last updated: 2026-03-23 after v3.2 milestone started
+### Last updated: 2026-07-10 after v3.4 milestone started

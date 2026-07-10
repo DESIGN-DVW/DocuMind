@@ -2,7 +2,7 @@
 
 name: figma-diagram
 description: "Create a FigJam diagram following the triple output rule (.mmd + .png + FigJam + registry)"
-allowed-tools: [Bash, Read, Write, Edit, Glob, Grep, mcp__claude_ai_Figma__generate_diagram, mcp__documind__register_diagram]
+allowed-tools: [Bash, Read, Write, Edit, Glob, Grep, mcp__claude_ai_Figma__generate_diagram, mcp__documind__register_diagram, mcp__documind__get_diagrams]
 
 ---
 
@@ -18,6 +18,26 @@ Create a diagram following the ecosystem triple output standard. Every diagram p
 
 Read the full standard:
 `/Users/Shared/htdocs/github/DVWDesign/RootDispatcher/memory/global-rules.md` (section: Diagrams & Visualization)
+
+---
+
+## Step 0 — Pre-flight registry check
+
+Before writing any file, call `get_diagrams({ repo: "{CurrentRepoName}" })` to read the current diagram state for this repo.
+
+| Registry state                                    | Agent action                                  |
+
+| ------------------------------------------------- | --------------------------------------------- |
+
+| Diagram exists, `stale: 0`, `curated_url` present | Skip — diagram is current. Report its status. |
+
+| Diagram exists, `stale: 1`                        | Proceed — source changed, regeneration needed |
+
+| Diagram exists, `curated_url` null                | Remind user to curate — do not regenerate     |
+
+| No entry found                                    | Proceed — first generation                    |
+
+Also confirm the repo's `nodeId` destination is known before proceeding to Step 3.
 
 ---
 
@@ -37,35 +57,7 @@ The user provides ONE of:
 
 Write the `.mmd` file to `docs/diagrams/{name}.mmd` in the current repo.
 
-**Choose the right Mermaid syntax for the content.** The registry supports 7 types — auto-detected from syntax:
-
-| Content                                   | Mermaid Syntax                               | Detected As          |
-
-| ----------------------------------------- | -------------------------------------------- | -------------------- |
-
-| Process flow, pipeline, decision logic    | `flowchart TD` / `flowchart LR`              | `flowchart`          |
-
-| Repo structure, file/folder hierarchy     | `graph TD` with folder/directory node labels | `folder_tree`        |
-
-| Entity relationships, module dependencies | `classDiagram`                               | `relationship_graph` |
-
-| Decision tree, troubleshooting, routing   | `flowchart TD` with diamond decision nodes   | `decision_tree`      |
-
-| Interactions over time between systems    | `sequenceDiagram`                            | `sequence`           |
-
-| Lifecycle stages, status transitions      | `stateDiagram-v2`                            | `state`              |
-
-| Timelines, schedules, phased work         | `gantt`                                      | `gantt`              |
-
-Do NOT default to `flowchart` for everything. Match the syntax to the content:
-
-- Showing how systems talk to each other over time? Use `sequenceDiagram`.
-
-- Showing document/diagram lifecycle stages? Use `stateDiagram-v2`.
-
-- Showing repo folder structure? Use `graph TD` with folder keywords.
-
-- Showing milestone phases on a timeline? Use `gantt`.
+Supported diagram types: `flowchart`, `sequenceDiagram`, `stateDiagram-v2`, `gantt`, `classDiagram`, `erDiagram`.
 
 Use clear, descriptive node labels. Keep diagrams readable — max ~30 nodes per diagram.
 
@@ -73,19 +65,38 @@ Use clear, descriptive node labels. Keep diagrams readable — max ~30 nodes per
 
 ```bash
 
-npx -y -p puppeteer -p @mermaid-js/mermaid-cli mmdc -i docs/diagrams/{name}.mmd -o docs/diagrams/{name}.png
+npx -y -p puppeteer -p @mermaid-js/mermaid-cli mmdc \
+  -i docs/diagrams/{name}.mmd \
+  -o docs/diagrams/{name}.png \
+  --puppeteerConfig '{"defaultViewport":{"width":3072,"height":2048,"deviceScaleFactor":2}}'
 
 ```
 
-Verify the PNG was created and is non-empty.
+Verify the PNG was created and is non-empty. This is a placeholder at 2× retina resolution — it will be replaced with a higher-quality Figma export when the diagram is curated via `/figma-curate`.
 
 ## Step 3 — Generate FigJam
 
-Use `generate_diagram` MCP tool with the Mermaid source content.
+Use `generate_diagram` MCP tool. The diagram lands on the `nodeId` provided by the user or the repo's agent profile — not the board's default page.
+
+Read the repo's allowed page IDs from `docs/DIAGRAM-WORKFLOW.md § Central Board` or from the user. Then call:
+
+```text
+
+generate_diagram({
+  name: "{RepoName} - {Diagram Title}",
+  mermaidSyntax: "{contents of .mmd file}",
+  userIntent: "{brief description of what this diagram shows}",
+  fileKey: "{central-board-file-key}",
+  nodeId:  "{repo-section-node-id}"    // from repo's allowed page IDs — required
+})
+
+```
 
 **Naming convention:** Prefix with repo name: `"{RepoName} - {Diagram Title}"`
 
-The tool creates a standalone FigJam file and returns a URL.
+The diagram renders into the repo's designated section on the central board. No post-generation move is needed — the landing destination is the final location.
+
+If no `nodeId` is configured for this repo yet, omit it and flag to the user that a destination section needs to be created before the next diagram.
 
 ## Step 4 — Register Diagram
 
@@ -154,6 +165,6 @@ Do NOT commit automatically — let the user review first.
 
 - If `generate_diagram` fails, still produce `.mmd` + `.png` and note FigJam as pending
 
-- If PNG generation fails (puppeteer issue), try: `npx -y -p puppeteer -p @mermaid-js/mermaid-cli mmdc -i {input} -o {output} --puppeteerConfig '{"args":["--no-sandbox"]}'`
+- If PNG generation fails (puppeteer issue), try: `npx -y -p puppeteer -p @mermaid-js/mermaid-cli mmdc -i {input} -o {output} --puppeteerConfig '{"args":["--no-sandbox"],"defaultViewport":{"width":3072,"height":2048,"deviceScaleFactor":2}}'`
 
-- The FigJam URL is a standalone file — the user will later curate it into the central board and use `/figma-curate` to relink
+- The FigJam URL points to the repo's designated section on the central board — use `/figma-curate` to record the node-level URL in the registry. If `nodeId` was used at generation time, the diagram is already in the correct location; curation is registry-only (no board move needed)

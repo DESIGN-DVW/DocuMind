@@ -1,0 +1,15 @@
+# graphify — exclude transient and irrelevant folders
+node_modules/
+.git/
+dist/
+build/
+data/
+graphify-out/
+index/
+context/
+.planning/phases/
+markdown.bbprojectd/
+markdown.code-workspace
+package-lock.json
+pnpm-lock.yaml
+*.log

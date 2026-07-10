@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <meta charset="utf-8">
+    <title>config/env.mjs - Documentation</title>
+    
+    
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+    <script src="scripts/nav.js" defer></script>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav >
+    
+    
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-backfill-classifications.html">backfill-classifications</a><ul class='methods'><li data-type='method'><a href="module-backfill-classifications.html#.backfillClassifications">backfillClassifications</a></li><li data-type='method'><a href="module-backfill-classifications.html#~classifyPath">classifyPath</a></li></ul></li><li><a href="module-backfill-summaries.html">backfill-summaries</a><ul class='methods'><li data-type='method'><a href="module-backfill-summaries.html#.backfillSummaries">backfillSummaries</a></li><li data-type='method'><a href="module-backfill-summaries.html#~extractSummary">extractSummary</a></li></ul></li><li><a href="module-config_constants.html">config/constants</a><ul class='methods'><li data-type='method'><a href="module-config_constants.html#.getAllRepositoryNames">getAllRepositoryNames</a></li><li data-type='method'><a href="module-config_constants.html#.getGitHubUrl">getGitHubUrl</a></li><li data-type='method'><a href="module-config_constants.html#.getLocalPath">getLocalPath</a></li><li data-type='method'><a href="module-config_constants.html#.isActiveRepository">isActiveRepository</a></li><li data-type='method'><a href="module-config_constants.html#.isLocalOnly">isLocalOnly</a></li></ul></li><li><a href="module-config_env.html">config/env</a></li><li><a href="module-scripts_fix-github-org-references.html">scripts/fix-github-org-references</a></li><li><a href="module-scripts_propagate-org-fixes.html">scripts/propagate-org-fixes</a></li><li><a href="module-scripts_validate-custom-errors.html">scripts/validate-custom-errors</a><ul class='methods'><li data-type='method'><a href="module-scripts_validate-custom-errors.html#~runValidation">runValidation</a></li><li data-type='method'><a href="module-scripts_validate-custom-errors.html#~validateFile">validateFile</a></li><li data-type='method'><a href="module-scripts_validate-custom-errors.html#~validateMixedListTypes">validateMixedListTypes</a></li><li data-type='method'><a href="module-scripts_validate-custom-errors.html#~validateMultipleH1">validateMultipleH1</a></li><li data-type='method'><a href="module-scripts_validate-custom-errors.html#~validateReferenceLinks">validateReferenceLinks</a></li><li data-type='method'><a href="module-scripts_validate-custom-errors.html#~validateTableConsistency">validateTableConsistency</a></li></ul></li></ul><h3>Global</h3><ul><li><a href="global.html#ALL_TARGET_REPOS">ALL_TARGET_REPOS</a></li><li><a href="global.html#MARKDOWNLINT_CONFIG">MARKDOWNLINT_CONFIG</a></li><li><a href="global.html#OBSOLETE_RULE_FILES">OBSOLETE_RULE_FILES</a></li><li><a href="global.html#analyzeDirectory">analyzeDirectory</a></li><li><a href="global.html#backupDatabase">backupDatabase</a></li><li><a href="global.html#blockType">blockType</a></li><li><a href="global.html#calculateMaxDepth">calculateMaxDepth</a></li><li><a href="global.html#copyIfExists">copyIfExists</a></li><li><a href="global.html#countFiles">countFiles</a></li><li><a href="global.html#detectPackageManager">detectPackageManager</a></li><li><a href="global.html#detectTechnologies">detectTechnologies</a></li><li><a href="global.html#findDuplicates">findDuplicates</a></li><li><a href="global.html#findMarkdownFiles">findMarkdownFiles</a></li><li><a href="global.html#findSimilarDocuments">findSimilarDocuments</a></li><li><a href="global.html#fixExcessiveHorizontalRules">fixExcessiveHorizontalRules</a></li><li><a href="global.html#fixFile">fixFile</a></li><li><a href="global.html#fixListIndentation">fixListIndentation</a></li><li><a href="global.html#fixNestedCodeBlocks">fixNestedCodeBlocks</a></li><li><a href="global.html#fixSkippedHeadingLevels">fixSkippedHeadingLevels</a></li><li><a href="global.html#fixTableSeparatorSpacing">fixTableSeparatorSpacing</a></li><li><a href="global.html#fixTableSeparators">fixTableSeparators</a></li><li><a href="global.html#fixTrailingSpaces">fixTrailingSpaces</a></li><li><a href="global.html#formatBytes">formatBytes</a></li><li><a href="global.html#generateSchema">generateSchema</a></li><li><a href="global.html#getCanonicalDocument">getCanonicalDocument</a></li><li><a href="global.html#getCategoryStats">getCategoryStats</a></li><li><a href="global.html#getDeviationStats">getDeviationStats</a></li><li><a href="global.html#getDirectorySize">getDirectorySize</a></li><li><a href="global.html#getGlobalStats">getGlobalStats</a></li><li><a href="global.html#getLearningPatterns">getLearningPatterns</a></li><li><a href="global.html#getLineNumber">getLineNumber</a></li><li><a href="global.html#getLintingIssues">getLintingIssues</a></li><li><a href="global.html#getLintingStats">getLintingStats</a></li><li><a href="global.html#getRecentlyModified">getRecentlyModified</a></li><li><a href="global.html#getRepoName">getRepoName</a></li><li><a href="global.html#getRepoType">getRepoType</a></li><li><a href="global.html#getRepositoryStats">getRepositoryStats</a></li><li><a href="global.html#getScanHistory">getScanHistory</a></li><li><a href="global.html#getUnresolvedDeviations">getUnresolvedDeviations</a></li><li><a href="global.html#hasDevDep">hasDevDep</a></li><li><a href="global.html#listCanonicalDocuments">listCanonicalDocuments</a></li><li><a href="global.html#main">main</a></li><li><a href="global.html#mergeCustomRules">mergeCustomRules</a></li><li><a href="global.html#processRepository">processRepository</a></li><li><a href="global.html#propagateToRepo">propagateToRepo</a></li><li><a href="global.html#results">results</a></li><li><a href="global.html#safeTimestamp">safeTimestamp</a></li><li><a href="global.html#searchByFilename">searchByFilename</a></li><li><a href="global.html#searchDocuments">searchDocuments</a></li><li><a href="global.html#validateInternalLinks">validateInternalLinks</a></li></ul>
+    
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">config/env.mjs</h1>
+    
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * Centralized environment configuration for DocuMind
+ *
+ * This is the single source of truth for all runtime configuration.
+ * It loads .env via Node 22's built-in process.loadEnvFile() and
+ * exports all config as named constants with sensible defaults.
+ *
+ * IMPORTANT: This module must NOT import from config/constants.mjs
+ * to avoid circular dependencies.
+ *
+ * @module config/env
+ */
+
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// ============================================================================
+// PROJECT ROOT
+// ============================================================================
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+/**
+ * Absolute path to the DocuMind project root
+ * @constant {string}
+ */
+export const ROOT = path.resolve(__dirname, '..');
+
+// ============================================================================
+// LOAD .ENV FILE
+// ============================================================================
+
+// Load .env if it exists. Silent skip if missing — Docker passes vars directly.
+try {
+  process.loadEnvFile(path.join(ROOT, '.env'));
+} catch {
+  // .env not present — this is fine in Docker and CI environments
+}
+
+// ============================================================================
+// SERVER
+// ============================================================================
+
+/**
+ * HTTP server port
+ * @constant {number}
+ */
+export const PORT = Number(process.env.PORT ?? 9000);
+
+// ============================================================================
+// DATABASE
+// ============================================================================
+
+/**
+ * Absolute path to the SQLite database file
+ * @constant {string}
+ */
+export const DB_PATH = path.resolve(ROOT, process.env.DOCUMIND_DB ?? 'data/documind.db');
+
+// ============================================================================
+// PROFILE
+// ============================================================================
+
+/**
+ * Absolute path to the active repository profile JSON
+ * @constant {string}
+ */
+export const PROFILE_PATH = path.resolve(
+  ROOT,
+  process.env.DOCUMIND_PROFILE ?? 'config/profiles/dvwdesign.json'
+);
+
+// ============================================================================
+// REPOSITORY DISCOVERY
+// ============================================================================
+
+/**
+ * Base directory containing all repositories to scan.
+ * When set, DocuMind discovers repos by walking this directory.
+ * When null, the profile/registry defines which repos to scan.
+ * @constant {string|null}
+ */
+export const REPOS_DIR = process.env.DOCUMIND_REPOS_DIR
+  ? path.resolve(process.env.DOCUMIND_REPOS_DIR)
+  : null;
+
+/**
+ * Explicit list of repository names to scan (comma-separated in env).
+ * When set, only these repos are scanned regardless of REPOS_DIR.
+ * When null, all repos discovered via REPOS_DIR or profile are used.
+ * @constant {string[]|null}
+ */
+export const REPOS_LIST = process.env.DOCUMIND_REPOS
+  ? process.env.DOCUMIND_REPOS.split(',')
+      .map(s => s.trim())
+      .filter(Boolean)
+  : null;
+
+/**
+ * Repository ingestion mode.
+ * 'mount' — repos are provided via host bind mount (default, macOS dev).
+ * 'clone' — repos are cloned from GitHub on startup (Docker production).
+ * @constant {string}
+ */
+export const REPO_MODE = process.env.REPO_MODE ?? 'mount';
+
+// ============================================================================
+// CRON SCHEDULES
+// ============================================================================
+
+/**
+ * Cron expression for file watcher heartbeat check (default: every 15 min)
+ * @constant {string}
+ */
+export const CRON_HEARTBEAT = process.env.DOCUMIND_CRON_HEARTBEAT ?? '*/15 * * * *';
+
+/**
+ * Cron expression for incremental scan (default: every hour)
+ * @constant {string}
+ */
+export const CRON_HOURLY = process.env.DOCUMIND_CRON_HOURLY ?? '0 * * * *';
+
+/**
+ * Cron expression for full scan + analysis (default: daily at 2 AM)
+ * @constant {string}
+ */
+export const CRON_DAILY = process.env.DOCUMIND_CRON_DAILY ?? '0 2 * * *';
+
+/**
+ * Cron expression for PDF re-index + keyword refresh (default: weekly Sunday 3 AM)
+ * @constant {string}
+ */
+export const CRON_WEEKLY = process.env.DOCUMIND_CRON_WEEKLY ?? '0 3 * * 0';
+
+/**
+ * Cron expression for relink processor check (default: every 6 hours)
+ * @constant {string}
+ */
+export const CRON_RELINK = process.env.DOCUMIND_CRON_RELINK ?? '0 */6 * * *';
+
+/**
+ * Cron expression for markdown lint + auto-fix pass (default: daily at 3 AM)
+ * Runs after the daily full scan (2 AM). Skipped if DOCUMIND_CRON_LINT=false.
+ * @constant {string}
+ */
+export const CRON_LINT = process.env.DOCUMIND_CRON_LINT ?? '0 3 * * *';
+
+// ============================================================================
+// MCP TRANSPORT
+// ============================================================================
+
+/**
+ * MCP transport mode.
+ * 'stdio' — JSON-RPC over stdin/stdout for local Claude Code (default).
+ * 'http'  — Streamable HTTP on Express /mcp route for remote consumers.
+ * @constant {string}
+ */
+export const MCP_MODE = process.env.DOCUMIND_MCP_MODE ?? 'stdio';
+
+/**
+ * Bearer token(s) for MCP HTTP auth (comma-separated for multiple consumers).
+ * Required when MCP_MODE is 'http'. Null when unset.
+ * @constant {string|null}
+ */
+export const MCP_TOKEN = process.env.DOCUMIND_MCP_TOKEN ?? null;
+
+/**
+ * Allowed CORS origins for MCP HTTP endpoint (comma-separated).
+ * Empty string disables CORS headers. Use '*' to allow all origins.
+ * @constant {string}
+ */
+export const MCP_CORS_ORIGINS = process.env.DOCUMIND_MCP_CORS_ORIGINS ?? '';
+
+// ============================================================================
+// PRESENTATION PIPELINE
+// ============================================================================
+
+/**
+ * DeepL API key for EN -> FR slide translation.
+ * Null means the translate stage is unavailable.
+ * @constant {string|null}
+ */
+export const DEEPL_API_KEY = process.env.DEEPL_API_KEY ?? null;
+
+/**
+ * FTP host for slide deploy. Null when unset.
+ * @constant {string|null}
+ */
+export const FTP_HOST = process.env.FTP_HOST ?? null;
+
+/**
+ * FTP username for slide deploy. Null when unset.
+ * @constant {string|null}
+ */
+export const FTP_USER = process.env.FTP_USER ?? null;
+
+/**
+ * FTP password for slide deploy. Null when unset.
+ * Null FTP credentials (host/user/password) mean deploy stays in dry-run mode (DPLY-02).
+ * @constant {string|null}
+ */
+export const FTP_PASSWORD = process.env.FTP_PASSWORD ?? null;
+
+/**
+ * Remote path on the web host where rendered slides are published.
+ * @constant {string}
+ */
+export const FTP_REMOTE_PATH = process.env.FTP_REMOTE_PATH ?? '/public_html/slides';
+
+/**
+ * Absolute path to the LibreOffice soffice binary (needed for editable PPTX export).
+ * Consumers (Phase 24) must check the path resolves before use and warn if not.
+ * @constant {string}
+ */
+export const SOFFICE_PATH =
+  process.env.SOFFICE_PATH ?? '/Applications/LibreOffice.app/Contents/MacOS/soffice';
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+    
+    
+</div>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Sat Jul 11 2026 01:34:36 GMT+0200 (Central European Summer Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/polyfill.js"></script>
+<script src="scripts/linenumber.js"></script>
+
+
+
+</body>
+</html>

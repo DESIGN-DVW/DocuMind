@@ -138,6 +138,13 @@ export const CRON_WEEKLY = process.env.DOCUMIND_CRON_WEEKLY ?? '0 3 * * 0';
  */
 export const CRON_RELINK = process.env.DOCUMIND_CRON_RELINK ?? '0 */6 * * *';
 
+/**
+ * Cron expression for markdown lint + auto-fix pass (default: daily at 3 AM)
+ * Runs after the daily full scan (2 AM). Skipped if DOCUMIND_CRON_LINT=false.
+ * @constant {string}
+ */
+export const CRON_LINT = process.env.DOCUMIND_CRON_LINT ?? '0 3 * * *';
+
 // ============================================================================
 // MCP TRANSPORT
 // ============================================================================
@@ -163,3 +170,47 @@ export const MCP_TOKEN = process.env.DOCUMIND_MCP_TOKEN ?? null;
  * @constant {string}
  */
 export const MCP_CORS_ORIGINS = process.env.DOCUMIND_MCP_CORS_ORIGINS ?? '';
+
+// ============================================================================
+// PRESENTATION PIPELINE
+// ============================================================================
+
+/**
+ * DeepL API key for EN -> FR slide translation.
+ * Null means the translate stage is unavailable.
+ * @constant {string|null}
+ */
+export const DEEPL_API_KEY = process.env.DEEPL_API_KEY ?? null;
+
+/**
+ * FTP host for slide deploy. Null when unset.
+ * @constant {string|null}
+ */
+export const FTP_HOST = process.env.FTP_HOST ?? null;
+
+/**
+ * FTP username for slide deploy. Null when unset.
+ * @constant {string|null}
+ */
+export const FTP_USER = process.env.FTP_USER ?? null;
+
+/**
+ * FTP password for slide deploy. Null when unset.
+ * Null FTP credentials (host/user/password) mean deploy stays in dry-run mode (DPLY-02).
+ * @constant {string|null}
+ */
+export const FTP_PASSWORD = process.env.FTP_PASSWORD ?? null;
+
+/**
+ * Remote path on the web host where rendered slides are published.
+ * @constant {string}
+ */
+export const FTP_REMOTE_PATH = process.env.FTP_REMOTE_PATH ?? '/public_html/slides';
+
+/**
+ * Absolute path to the LibreOffice soffice binary (needed for editable PPTX export).
+ * Consumers (Phase 24) must check the path resolves before use and warn if not.
+ * @constant {string}
+ */
+export const SOFFICE_PATH =
+  process.env.SOFFICE_PATH ?? '/Applications/LibreOffice.app/Contents/MacOS/soffice';
