@@ -56,9 +56,7 @@
     }
   },
   "plugins": [
-    "plugins/markdown",
-    "node_modules/better-docs/typescript",
-    "node_modules/better-docs/component"
+    "plugins/markdown"
   ],
   "markdown": {
     "parser": "gfm",

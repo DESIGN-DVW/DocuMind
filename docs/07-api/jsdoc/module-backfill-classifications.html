@@ -3,7 +3,7 @@
 <head>
     
     <meta charset="utf-8">
-    <title>scripts/fix-github-org-references - Documentation</title>
+    <title>backfill-classifications - Documentation</title>
     
     
     <script src="scripts/prettify/prettify.js"></script>
@@ -35,7 +35,7 @@
 
 <div id="main">
     
-    <h1 class="page-title">scripts/fix-github-org-references</h1>
+    <h1 class="page-title">backfill-classifications</h1>
     
 
     
@@ -58,14 +58,11 @@
         <div class="container-overview">
         
             
-                <div class="description usertext"><p>Fix GitHub Organization References</p>
-<p>This script fixes all incorrect GitHub organization references across all repositories.
-It replaces:</p>
-<ul>
-<li>github.com/DVWDesign → github.com/DESIGN-DVW</li>
-<li>github.com/FigmaAPI/* → github.com/DESIGN-DVW/*</li>
-<li>&quot;DVWDesign organization&quot; → &quot;DESIGN-DVW organization&quot;</li>
-</ul></div>
+                <div class="description usertext"><p>Backfill classifications for all documents that have a NULL classification.</p>
+<p>Classification uses ordered path-matching rules. First match wins.
+Documents not matching any rule are classified as 'uncategorized'.</p>
+<p>Designed to be idempotent — only processes rows WHERE classification IS NULL.
+Accepts an open better-sqlite3 db instance (does NOT open or close the DB).</p></div>
             
 
             
@@ -77,20 +74,17 @@ It replaces:</p>
 <dl class="details">
     
     <dt class="tag-description">Description:</dt>
-    <dd class="tag-description"><ul class="dummy"><li><p>Fix GitHub Organization References</p>
-<p>This script fixes all incorrect GitHub organization references across all repositories.
-It replaces:</p>
-<ul>
-<li>github.com/DVWDesign → github.com/DESIGN-DVW</li>
-<li>github.com/FigmaAPI/* → github.com/DESIGN-DVW/*</li>
-<li>&quot;DVWDesign organization&quot; → &quot;DESIGN-DVW organization&quot;</li>
-</ul></li></ul></dd>
+    <dd class="tag-description"><ul class="dummy"><li><p>Backfill classifications for all documents that have a NULL classification.</p>
+<p>Classification uses ordered path-matching rules. First match wins.
+Documents not matching any rule are classified as 'uncategorized'.</p>
+<p>Designed to be idempotent — only processes rows WHERE classification IS NULL.
+Accepts an open better-sqlite3 db instance (does NOT open or close the DB).</p></li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="scripts_fix-github-org-references.mjs.html">scripts/fix-github-org-references.mjs</a>, <a href="scripts_fix-github-org-references.mjs.html#line3">line 3</a>
+        <a href="scripts_db_backfill_backfill-classifications.mjs.html">scripts/db/backfill/backfill-classifications.mjs</a>, <a href="scripts_db_backfill_backfill-classifications.mjs.html#line3">line 3</a>
     </li></ul></dd>
     
 
@@ -173,6 +167,369 @@ It replaces:</p>
 
     
 
+    
+        <h3 class="subsection-title">Methods</h3>
+
+        
+            
+
+    
+
+    <h4 class="name" id=".backfillClassifications"><span class="type-signature type-signature-static">(static) </span>backfillClassifications<span class="signature">(db, ctx)</span><span class="type-signature"> &rarr; {number}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>Backfill classifications for all documents where classification IS NULL.</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="scripts_db_backfill_backfill-classifications.mjs.html">scripts/db/backfill/backfill-classifications.mjs</a>, <a href="scripts_db_backfill_backfill-classifications.mjs.html#line44">line 44</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>db</code></td>
+            
+
+            <td class="type">
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>ctx</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">object</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>Context profile object (ctx.classificationRules used for path matching)</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5 class="h5-returns">Returns:</h5>
+
+        
+<div class="param-desc">
+    <p>Number of documents updated</p>
+</div>
+
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">number</span>
+
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
+            
+
+    
+
+    <h4 class="name" id="~classifyPath"><span class="type-signature type-signature-inner">(inner) </span>classifyPath<span class="signature">(docPath, rules)</span><span class="type-signature"> &rarr; {string}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>Determine the classification for a document path using ctx.classificationRules.
+Rules are already compiled RegExp objects (done once in loader.mjs).</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="scripts_db_backfill_backfill-classifications.mjs.html">scripts/db/backfill/backfill-classifications.mjs</a>, <a href="scripts_db_backfill_backfill-classifications.mjs.html#line28">line 28</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>docPath</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>The document path</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>rules</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Array.&lt;{pattern: RegExp, classification: string}></span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>Compiled classification rules</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5 class="h5-returns">Returns:</h5>
+
+        
+<div class="param-desc">
+    <p>Classification string (materialized path or 'uncategorized')</p>
+</div>
+
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">string</span>
+
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
     
 
     

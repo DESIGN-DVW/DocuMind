@@ -5,7 +5,7 @@
 After the pnpm→npm migration, `npm audit` reported 10 moderates. Fixed: `markdown-it` DoS (GHSA-6v5v-wf23-fmfq) via markdownlint-cli2 0.22→0.23 bump (custom DVW001/DVW002 rules verified working). Deferred as not exploitable in this codebase:
 
 - **uuid via node-cron (2)** — advisory requires calling `uuid.v3/v5/v6` with a `buf` argument; node-cron only calls `uuid.v4()` with no args. Real fix is node-cron 3→4 (breaking, runtime dep of daemon/scheduler.mjs) — do as a deliberate upgrade with daemon testing, not via `npm audit fix --force`.
-- **pug/pug-code-gen/vue-template-compiler/vue-docgen-api/better-docs (5)** — dev-only JSDoc theme chain, runs only against our own code comments; `vue-template-compiler` has NO fixed version (EOL Vue 2 tooling) and DocuMind has no `.vue` files so it never executes. Real fix is replacing the `better-docs` jsdoc template (e.g. with already-installed `docdash`).
+- ~~pug/pug-code-gen/vue-template-compiler/vue-docgen-api/better-docs (5)~~ **RESOLVED 2026-07-11**: `better-docs` removed entirely — the template was already `docdash`; better-docs only supplied two unused plugins (typescript, component — repo has no TS sources or components). JSDoc regenerated successfully without them (output refreshed, picked up previously undocumented modules). Audit now reports only the 2 deferred node-cron/uuid moderates.
 
 Items discovered during plan execution that are out of scope for the current task (pre-existing, unrelated to the task's file changes) per the executor's scope-boundary rule. Not auto-fixed; logged here for future triage.
 

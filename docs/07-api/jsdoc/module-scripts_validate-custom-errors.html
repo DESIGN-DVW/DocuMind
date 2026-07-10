@@ -3,7 +3,7 @@
 <head>
     
     <meta charset="utf-8">
-    <title>scripts/fix-github-org-references - Documentation</title>
+    <title>scripts/validate-custom-errors - Documentation</title>
     
     
     <script src="scripts/prettify/prettify.js"></script>
@@ -35,7 +35,7 @@
 
 <div id="main">
     
-    <h1 class="page-title">scripts/fix-github-org-references</h1>
+    <h1 class="page-title">scripts/validate-custom-errors</h1>
     
 
     
@@ -58,14 +58,9 @@
         <div class="container-overview">
         
             
-                <div class="description usertext"><p>Fix GitHub Organization References</p>
-<p>This script fixes all incorrect GitHub organization references across all repositories.
-It replaces:</p>
-<ul>
-<li>github.com/DVWDesign → github.com/DESIGN-DVW</li>
-<li>github.com/FigmaAPI/* → github.com/DESIGN-DVW/*</li>
-<li>&quot;DVWDesign organization&quot; → &quot;DESIGN-DVW organization&quot;</li>
-</ul></div>
+                <div class="description usertext"><p>Custom Markdown Error Validator</p>
+<p>Detects advanced markdown errors beyond standard linter capabilities.
+Uses pattern matching, context analysis, and file system validation.</p></div>
             
 
             
@@ -77,23 +72,21 @@ It replaces:</p>
 <dl class="details">
     
     <dt class="tag-description">Description:</dt>
-    <dd class="tag-description"><ul class="dummy"><li><p>Fix GitHub Organization References</p>
-<p>This script fixes all incorrect GitHub organization references across all repositories.
-It replaces:</p>
-<ul>
-<li>github.com/DVWDesign → github.com/DESIGN-DVW</li>
-<li>github.com/FigmaAPI/* → github.com/DESIGN-DVW/*</li>
-<li>&quot;DVWDesign organization&quot; → &quot;DESIGN-DVW organization&quot;</li>
-</ul></li></ul></dd>
+    <dd class="tag-description"><ul class="dummy"><li><p>Custom Markdown Error Validator</p>
+<p>Detects advanced markdown errors beyond standard linter capabilities.
+Uses pattern matching, context analysis, and file system validation.</p></li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="scripts_fix-github-org-references.mjs.html">scripts/fix-github-org-references.mjs</a>, <a href="scripts_fix-github-org-references.mjs.html#line3">line 3</a>
+        <a href="scripts_validate-custom-errors.mjs.html">scripts/validate-custom-errors.mjs</a>, <a href="scripts_validate-custom-errors.mjs.html#line3">line 3</a>
     </li></ul></dd>
     
 
+    
+    <dt class="tag-version">Version:</dt>
+    <dd class="tag-version"><ul class="dummy"><li>1.0.0</li></ul></dd>
     
 
     
@@ -173,6 +166,617 @@ It replaces:</p>
 
     
 
+    
+        <h3 class="subsection-title">Methods</h3>
+
+        
+            
+
+    
+
+    <h4 class="name" id="~runValidation"><span class="type-signature type-signature-inner">(inner) </span>runValidation<span class="signature">()</span><span class="type-signature"></span></h4>
+
+    
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>Run special validation logic based on validation type</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="scripts_validate-custom-errors.mjs.html">scripts/validate-custom-errors.mjs</a>, <a href="scripts_validate-custom-errors.mjs.html#line129">line 129</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+            
+
+    
+
+    <h4 class="name" id="~validateFile"><span class="type-signature type-signature-inner">(inner) </span>validateFile<span class="signature">(filePath, options)</span><span class="type-signature"> &rarr; {Array}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>Validate a single markdown file</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="scripts_validate-custom-errors.mjs.html">scripts/validate-custom-errors.mjs</a>, <a href="scripts_validate-custom-errors.mjs.html#line70">line 70</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>filePath</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>Path to markdown file</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>options</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>Validation options</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5 class="h5-returns">Returns:</h5>
+
+        
+<div class="param-desc">
+    <p>Array of validation errors</p>
+</div>
+
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Array</span>
+
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
+            
+
+    
+
+    <h4 class="name" id="~validateMixedListTypes"><span class="type-signature type-signature-inner">(inner) </span>validateMixedListTypes<span class="signature">()</span><span class="type-signature"></span></h4>
+
+    
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>Validate mixed list types (numbered + bulleted)</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="scripts_validate-custom-errors.mjs.html">scripts/validate-custom-errors.mjs</a>, <a href="scripts_validate-custom-errors.mjs.html#line168">line 168</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+            
+
+    
+
+    <h4 class="name" id="~validateMultipleH1"><span class="type-signature type-signature-inner">(inner) </span>validateMultipleH1<span class="signature">()</span><span class="type-signature"></span></h4>
+
+    
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>Validate multiple H1 headings</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="scripts_validate-custom-errors.mjs.html">scripts/validate-custom-errors.mjs</a>, <a href="scripts_validate-custom-errors.mjs.html#line311">line 311</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+            
+
+    
+
+    <h4 class="name" id="~validateReferenceLinks"><span class="type-signature type-signature-inner">(inner) </span>validateReferenceLinks<span class="signature">()</span><span class="type-signature"></span></h4>
+
+    
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>Validate reference-style links have definitions</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="scripts_validate-custom-errors.mjs.html">scripts/validate-custom-errors.mjs</a>, <a href="scripts_validate-custom-errors.mjs.html#line264">line 264</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+            
+
+    
+
+    <h4 class="name" id="~validateTableConsistency"><span class="type-signature type-signature-inner">(inner) </span>validateTableConsistency<span class="signature">()</span><span class="type-signature"></span></h4>
+
+    
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>Validate table column consistency</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="scripts_validate-custom-errors.mjs.html">scripts/validate-custom-errors.mjs</a>, <a href="scripts_validate-custom-errors.mjs.html#line215">line 215</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
     
 
     

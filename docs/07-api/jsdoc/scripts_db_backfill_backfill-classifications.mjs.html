@@ -3,7 +3,7 @@
 <head>
     
     <meta charset="utf-8">
-    <title>scripts/fix-github-org-references - Documentation</title>
+    <title>scripts/db/backfill/backfill-classifications.mjs - Documentation</title>
     
     
     <script src="scripts/prettify/prettify.js"></script>
@@ -35,152 +35,117 @@
 
 <div id="main">
     
-    <h1 class="page-title">scripts/fix-github-org-references</h1>
+    <h1 class="page-title">scripts/db/backfill/backfill-classifications.mjs</h1>
     
 
     
 
 
 
-
-<section>
-
-<header>
     
-        
-            
-        
-    
-</header>
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>#!/usr/bin/env node
 
-<article>
-    
-        <div class="container-overview">
-        
-            
-                <div class="description usertext"><p>Fix GitHub Organization References</p>
-<p>This script fixes all incorrect GitHub organization references across all repositories.
-It replaces:</p>
-<ul>
-<li>github.com/DVWDesign → github.com/DESIGN-DVW</li>
-<li>github.com/FigmaAPI/* → github.com/DESIGN-DVW/*</li>
-<li>&quot;DVWDesign organization&quot; → &quot;DESIGN-DVW organization&quot;</li>
-</ul></div>
-            
+/**
+ * Backfill classifications for all documents that have a NULL classification.
+ *
+ * Classification uses ordered path-matching rules. First match wins.
+ * Documents not matching any rule are classified as 'uncategorized'.
+ *
+ * Designed to be idempotent — only processes rows WHERE classification IS NULL.
+ * Accepts an open better-sqlite3 db instance (does NOT open or close the DB).
+ *
+ * @module backfill-classifications
+ */
 
-            
-                
+import chalk from 'chalk';
 
+const BATCH_SIZE = 500;
+const DEFAULT_CLASSIFICATION = 'uncategorized';
 
+/**
+ * Determine the classification for a document path using ctx.classificationRules.
+ * Rules are already compiled RegExp objects (done once in loader.mjs).
+ *
+ * @param {string} docPath - The document path
+ * @param {Array&lt;{pattern: RegExp, classification: string}>} rules - Compiled classification rules
+ * @returns {string} Classification string (materialized path or 'uncategorized')
+ */
+function classifyPath(docPath, rules) {
+  for (const rule of rules) {
+    if (rule.pattern.test(docPath)) {
+      return rule.classification;
+    }
+  }
+  return DEFAULT_CLASSIFICATION;
+}
 
+/**
+ * Backfill classifications for all documents where classification IS NULL.
+ *
+ * @param {import('better-sqlite3').Database} db - Open better-sqlite3 database instance
+ * @param {object} ctx - Context profile object (ctx.classificationRules used for path matching)
+ * @returns {number} Number of documents updated
+ */
+export function backfillClassifications(db, ctx) {
+  const rows = db.prepare('SELECT id, path FROM documents WHERE classification IS NULL').all();
 
-<dl class="details">
-    
-    <dt class="tag-description">Description:</dt>
-    <dd class="tag-description"><ul class="dummy"><li><p>Fix GitHub Organization References</p>
-<p>This script fixes all incorrect GitHub organization references across all repositories.
-It replaces:</p>
-<ul>
-<li>github.com/DVWDesign → github.com/DESIGN-DVW</li>
-<li>github.com/FigmaAPI/* → github.com/DESIGN-DVW/*</li>
-<li>&quot;DVWDesign organization&quot; → &quot;DESIGN-DVW organization&quot;</li>
-</ul></li></ul></dd>
-    
+  const total = rows.length;
 
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="scripts_fix-github-org-references.mjs.html">scripts/fix-github-org-references.mjs</a>, <a href="scripts_fix-github-org-references.mjs.html#line3">line 3</a>
-    </li></ul></dd>
-    
+  if (total === 0) {
+    console.log(chalk.gray('  backfill-classifications: no NULL classifications found — skipping'));
+    return 0;
+  }
 
-    
+  console.log(chalk.blue(`  Backfilling classifications for ${total} documents...`));
 
-    
+  const update = db.prepare('UPDATE documents SET classification = ? WHERE id = ?');
 
-    
+  const batchUpdate = db.transaction(batch => {
+    for (const doc of batch) {
+      const classification = classifyPath(doc.path, ctx.classificationRules);
+      update.run(classification, doc.id);
+    }
+  });
 
-    
+  let processed = 0;
 
-    
+  for (let i = 0; i &lt; rows.length; i += BATCH_SIZE) {
+    const batch = rows.slice(i, i + BATCH_SIZE);
+    batchUpdate(batch);
+    processed += batch.length;
 
-    
+    const pct = Math.round((processed / total) * 100);
+    process.stdout.write(
+      chalk.gray(`\r  Backfilling classifications: ${processed}/${total} (${pct}%)...`)
+    );
+  }
 
-    
+  // Clear progress line
+  process.stdout.write('\n');
+  console.log(chalk.green(`  Classifications backfilled: ${processed} documents updated`));
 
-    
+  // Print classification distribution (top 10)
+  const dist = db
+    .prepare(
+      'SELECT classification, COUNT(*) as cnt FROM documents GROUP BY classification ORDER BY cnt DESC LIMIT 10'
+    )
+    .all();
 
-    
+  console.log(chalk.blue('\n  Classification distribution (top 10):'));
+  for (const row of dist) {
+    const bar = '█'.repeat(Math.min(Math.ceil(row.cnt / 100), 30));
+    console.log(
+      chalk.gray(`    ${row.classification.padEnd(36)} ${String(row.cnt).padStart(5)}  ${bar}`)
+    );
+  }
 
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            
-        
-        </div>
-    
-
-    
-
-    
-
-    
-    
-    
-
-     
-
-    
-
-    
-
-    
-
-    
-
-    
-</article>
-
-</section>
+  return processed;
+}
+</code></pre>
+        </article>
+    </section>
 
 
 

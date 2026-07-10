@@ -3,7 +3,7 @@
 <head>
     
     <meta charset="utf-8">
-    <title>scripts/fix-github-org-references.mjs - Documentation</title>
+    <title>scripts/propagate-org-fixes.mjs - Documentation</title>
     
     
     <script src="scripts/prettify/prettify.js"></script>
@@ -35,7 +35,7 @@
 
 <div id="main">
     
-    <h1 class="page-title">scripts/fix-github-org-references.mjs</h1>
+    <h1 class="page-title">scripts/propagate-org-fixes.mjs</h1>
     
 
     
@@ -48,20 +48,16 @@
             <pre class="prettyprint source linenums"><code>#!/usr/bin/env node
 
 /**
- * Fix GitHub Organization References
+ * Propagate Organization Fixes to All Repositories
  *
- * This script fixes all incorrect GitHub organization references across all repositories.
- * It replaces:
- * - github.com/DVWDesign → github.com/DESIGN-DVW
- * - github.com/FigmaAPI/* → github.com/DESIGN-DVW/*
- * - "DVWDesign organization" → "DESIGN-DVW organization"
+ * This script copies the central configuration and documentation
+ * to all active repositories in the DVWDesign workspace.
  *
- * @module scripts/fix-github-org-references
+ * @module scripts/propagate-org-fixes
  */
 
-import { readFileSync, writeFileSync } from 'fs';
-import { resolve, join } from 'path';
-import { globSync } from 'glob';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { join } from 'path';
 import chalk from 'chalk';
 import { LOCAL_BASE_PATH } from '../config/constants.mjs';
 
@@ -71,234 +67,247 @@ import { LOCAL_BASE_PATH } from '../config/constants.mjs';
 
 const BASE_PATH = LOCAL_BASE_PATH;
 
-const REPOSITORIES = [
-  'DocuMind',
+const SOURCE_REPO = 'DocuMind';
+
+const TARGET_REPOS = [
   'RootDispatcher',
   'Figma-Plug-ins',
   'LibraryAssetManager',
   'Aprimo',
   'CampaignManager',
   'GlossiaApp',
-  'FigmaAPI/@figma-core',
-  'FigmaAPI/@figma-docs',
-  'FigmaAPI/FigmailAPP',
   'FigmaAPI/FigmaDSController',
+  'FigmaAPI/FigmailAPP',
 ];
 
-const FILE_PATTERNS = ['**/*.md', '**/*.json', '**/*.mjs', '**/*.js'];
-
-const IGNORE_PATTERNS = [
-  '**/node_modules/**',
-  '**/.git/**',
-  '**/dist/**',
-  '**/build/**',
-  '**/coverage/**',
-  '**/.next/**',
-  '**/index/**',
-  '**/.backups/**',
+const FILES_TO_COPY = [
+  {
+    source: 'config/constants.mjs',
+    target: 'config/constants.mjs',
+    description: 'Central configuration file',
+  },
+  {
+    source: 'scripts/fix-github-org-references.mjs',
+    target: 'scripts/fix-github-org-references.mjs',
+    description: 'GitHub org reference fix script',
+  },
+  {
+    source: 'docs/GITHUB-ORGANIZATION-AUDIT-REPORT.md',
+    target: 'docs/GITHUB-ORGANIZATION-AUDIT-REPORT.md',
+    description: 'Organization audit report',
+  },
+  {
+    source: 'docs/GLOSSIAAPP-MIGRATION-GUIDE.md',
+    target: 'docs/GLOSSIAAPP-MIGRATION-GUIDE.md',
+    description: 'GlossiaApp migration guide',
+  },
+  {
+    source: 'docs/USER-INVITATION-GUIDE.md',
+    target: 'docs/USER-INVITATION-GUIDE.md',
+    description: 'User invitation guide',
+  },
+  {
+    source: 'docs/ORGANIZATION-NAMING-FIX-SUMMARY.md',
+    target: 'docs/ORGANIZATION-NAMING-FIX-SUMMARY.md',
+    description: 'Complete fix summary',
+  },
 ];
 
 // ============================================================================
-// REPLACEMENT RULES
+// HELPER FUNCTIONS
 // ============================================================================
 
-const REPLACEMENTS = [
-  // Fix incorrect GitHub organization URLs
-  {
-    pattern: /github\.com\/DVWDesign\//g,
-    replacement: 'github.com/DESIGN-DVW/',
-    description: 'Fix DVWDesign → DESIGN-DVW in URLs',
-  },
+function ensureDirectoryExists(filePath) {
+  const dir = filePath.substring(0, filePath.lastIndexOf('/'));
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
+}
 
-  // Fix FigmaAPI references (FigmaAPI doesn't exist on GitHub)
-  {
-    pattern: /github\.com\/DESIGN-DVW\/FigmaAPI\/FigmailAPP/g,
-    replacement: 'github.com/DESIGN-DVW/FigmailAPP',
-    description: 'Fix FigmaAPI/FigmailAPP → FigmailAPP',
-  },
-  {
-    pattern: /github\.com\/DESIGN-DVW\/FigmaAPI\/FigmaDSController/g,
-    replacement: 'github.com/DESIGN-DVW/FigmaDSController',
-    description: 'Fix FigmaAPI/FigmaDSController → FigmaDSController',
-  },
-  {
-    pattern: /github\.com\/DESIGN-DVW\/FigmaAPI\/@figma-core/g,
-    replacement: 'github.com/DESIGN-DVW/@figma-core',
-    description: 'Fix FigmaAPI/@figma-core → @figma-core',
-  },
-  {
-    pattern: /github\.com\/DESIGN-DVW\/FigmaAPI\/@figma-docs/g,
-    replacement: 'github.com/DESIGN-DVW/@figma-docs',
-    description: 'Fix FigmaAPI/@figma-docs → @figma-docs',
-  },
-  {
-    pattern: /github\.com\/DESIGN-DVW\/FigmaAPI\/Figma-DAM/g,
-    replacement: 'github.com/DESIGN-DVW/Figma-DAM',
-    description: 'Fix FigmaAPI/Figma-DAM → Figma-DAM',
-  },
-  {
-    pattern: /github\.com\/DESIGN-DVW\/FigmaAPI\/Figma-Plug-ins/g,
-    replacement: 'github.com/DESIGN-DVW/Figma-Plug-ins',
-    description: 'Fix FigmaAPI/Figma-Plug-ins → Figma-Plug-ins',
-  },
-  {
-    pattern: /github\.com\/DESIGN-DVW\/FigmaAPI\/FigmaRestAPI/g,
-    replacement: 'github.com/DESIGN-DVW/FigmaRestAPI',
-    description: 'Fix FigmaAPI/FigmaRestAPI → FigmaRestAPI',
-  },
+function copyFile(sourcePath, targetPath, description) {
+  try {
+    ensureDirectoryExists(targetPath);
+    copyFileSync(sourcePath, targetPath);
+    return { success: true, description };
+  } catch (error) {
+    return { success: false, description, error: error.message };
+  }
+}
 
-  // Fix text references to organization name
-  {
-    pattern: /DVWDesign [Oo]rganization/g,
-    replacement: 'DESIGN-DVW organization',
-    description: 'Fix "DVWDesign organization" → "DESIGN-DVW organization"',
-  },
-  {
-    pattern: /for DVWDesign/g,
-    replacement: 'for DESIGN-DVW',
-    description: 'Fix "for DVWDesign" → "for DESIGN-DVW"',
-  },
-  {
-    pattern: /of DVWDesign/g,
-    replacement: 'of DESIGN-DVW',
-    description: 'Fix "of DVWDesign" → "of DESIGN-DVW"',
-  },
-  {
-    pattern: /@DVWDesign/g,
-    replacement: '@DESIGN-DVW',
-    description: 'Fix @DVWDesign → @DESIGN-DVW (in links)',
-  },
+function updatePackageJson(repoPath, repoName) {
+  const packagePath = join(repoPath, 'package.json');
 
-  // Fix generic FigmaAPI references (when not a local path)
-  {
-    pattern: /github\.com\/DESIGN-DVW\/FigmaAPI/g,
-    replacement: 'github.com/DESIGN-DVW',
-    description: 'Remove orphaned FigmaAPI references',
-  },
-];
+  if (!existsSync(packagePath)) {
+    return { success: false, reason: 'No package.json found' };
+  }
 
-// Special case: Don't replace these patterns
-const EXCEPTIONS = [
-  // Keep local file paths as-is
-  /\/Users\/Shared\/htdocs\/github\/DVWDesign\//,
-  // Keep package scope in package.json name field (handled separately)
-  /"name": "@dvwdesign\//,
-  // Keep BBEdit project references
-  /\.bbproject/,
-];
+  try {
+    const content = readFileSync(packagePath, 'utf8');
+    const pkg = JSON.parse(content);
+
+    let modified = false;
+
+    // Update name if it uses @dvwdesign
+    if (pkg.name &amp;&amp; pkg.name.startsWith('@dvwdesign/')) {
+      pkg.name = pkg.name.replace('@dvwdesign/', '@design-dvw/');
+      modified = true;
+    }
+
+    // Update description if it mentions DVWDesign
+    if (pkg.description &amp;&amp; pkg.description.includes('DVWDesign')) {
+      pkg.description = pkg.description.replace(/DVWDesign/g, 'DESIGN-DVW');
+      modified = true;
+    }
+
+    // Update author if it says DVWDesign
+    if (pkg.author === 'DVWDesign') {
+      pkg.author = 'DESIGN-DVW';
+      modified = true;
+    }
+
+    // Add repository info if missing
+    if (!pkg.repository) {
+      pkg.repository = {
+        type: 'git',
+        url: `https://github.com/DESIGN-DVW/${repoName}.git`,
+      };
+      modified = true;
+    }
+
+    // Add homepage if missing
+    if (!pkg.homepage) {
+      pkg.homepage = `https://github.com/DESIGN-DVW/${repoName}`;
+      modified = true;
+    }
+
+    // Add bugs if missing
+    if (!pkg.bugs) {
+      pkg.bugs = {
+        url: `https://github.com/DESIGN-DVW/${repoName}/issues`,
+      };
+      modified = true;
+    }
+
+    if (modified) {
+      writeFileSync(packagePath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
+      return { success: true, modified: true };
+    }
+
+    return { success: true, modified: false };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
 
 // ============================================================================
 // MAIN FUNCTION
 // ============================================================================
 
-async function fixGitHubOrgReferences() {
-  console.log(chalk.bold.cyan('\n🔧 Fixing GitHub Organization References\n'));
+async function propagateOrgFixes() {
+  console.log(chalk.bold.cyan('\n🚀 Propagating Organization Fixes\n'));
+
+  const sourcePath = join(BASE_PATH, SOURCE_REPO);
 
   const stats = {
-    totalFiles: 0,
-    modifiedFiles: 0,
-    totalReplacements: 0,
-    byType: {},
+    totalRepos: TARGET_REPOS.length,
+    successfulRepos: 0,
+    failedRepos: 0,
+    filesCopied: 0,
+    filesFailed: 0,
+    packagesUpdated: 0,
   };
 
   const dryRun = process.argv.includes('--dry-run');
-  const verbose = process.argv.includes('--verbose');
 
   if (dryRun) {
     console.log(chalk.yellow('📋 DRY RUN MODE - No files will be modified\n'));
   }
 
   // Process each repository
-  for (const repo of REPOSITORIES) {
+  for (const repo of TARGET_REPOS) {
     const repoPath = join(BASE_PATH, repo);
+    const repoName = repo.split('/').pop(); // Get last part for nested repos
+
     console.log(chalk.bold(`\n📂 Processing: ${repo}`));
 
-    // Find all files matching patterns
-    const files = globSync(FILE_PATTERNS, {
-      cwd: repoPath,
-      ignore: IGNORE_PATTERNS,
-      absolute: true,
-      nodir: true,
-    });
+    if (!existsSync(repoPath)) {
+      console.log(chalk.yellow(`   ⚠️  Repository not found, skipping`));
+      stats.failedRepos++;
+      continue;
+    }
 
-    console.log(chalk.gray(`   Found ${files.length} files to check`));
+    let repoSuccess = true;
 
-    // Process each file
-    for (const file of files) {
-      try {
-        let content = readFileSync(file, 'utf8');
-        const originalContent = content;
-        let fileModified = false;
-        let replacementCount = 0;
+    // Copy files
+    for (const file of FILES_TO_COPY) {
+      const source = join(sourcePath, file.source);
+      const target = join(repoPath, file.target);
 
-        // Check if file should be skipped (based on exceptions)
-        const shouldSkip = EXCEPTIONS.some(pattern => pattern.test(content));
-        if (shouldSkip &amp;&amp; content === originalContent) {
-          // Only skip if it's entirely exception-based content
-          continue;
-        }
-
-        // Apply each replacement rule
-        for (const rule of REPLACEMENTS) {
-          const before = content;
-          content = content.replace(rule.pattern, rule.replacement);
-
-          if (content !== before) {
-            fileModified = true;
-            const count = (before.match(rule.pattern) || []).length;
-            replacementCount += count;
-
-            if (!stats.byType[rule.description]) {
-              stats.byType[rule.description] = 0;
-            }
-            stats.byType[rule.description] += count;
-
-            if (verbose) {
-              console.log(chalk.green(`   ✓ ${rule.description}: ${count} replacement(s)`));
-            }
-          }
-        }
-
-        // Write file if modified
-        if (fileModified &amp;&amp; content !== originalContent) {
-          stats.modifiedFiles++;
-          stats.totalReplacements += replacementCount;
-
-          const relativePath = file.replace(BASE_PATH + '/', '');
-          console.log(
-            chalk.green(`   ✓ Modified: ${relativePath} (${replacementCount} replacements)`)
-          );
-
-          if (!dryRun) {
-            writeFileSync(file, content, 'utf8');
-          }
-        }
-
-        stats.totalFiles++;
-      } catch (error) {
-        console.log(chalk.red(`   ✗ Error processing ${file}: ${error.message}`));
+      if (!existsSync(source)) {
+        console.log(chalk.yellow(`   ⚠️  Source file not found: ${file.source}`));
+        continue;
       }
+
+      if (!dryRun) {
+        const result = copyFile(source, target, file.description);
+        if (result.success) {
+          console.log(chalk.green(`   ✓ Copied: ${file.description}`));
+          stats.filesCopied++;
+        } else {
+          console.log(chalk.red(`   ✗ Failed: ${file.description} - ${result.error}`));
+          stats.filesFailed++;
+          repoSuccess = false;
+        }
+      } else {
+        console.log(chalk.gray(`   Would copy: ${file.description}`));
+      }
+    }
+
+    // Update package.json
+    if (!dryRun) {
+      const pkgResult = updatePackageJson(repoPath, repoName);
+      if (pkgResult.success) {
+        if (pkgResult.modified) {
+          console.log(chalk.green(`   ✓ Updated: package.json`));
+          stats.packagesUpdated++;
+        } else {
+          console.log(chalk.gray(`   → No changes needed: package.json`));
+        }
+      } else if (pkgResult.reason) {
+        console.log(chalk.gray(`   → ${pkgResult.reason}`));
+      } else {
+        console.log(chalk.red(`   ✗ Failed to update package.json: ${pkgResult.error}`));
+        repoSuccess = false;
+      }
+    } else {
+      console.log(chalk.gray(`   Would update: package.json`));
+    }
+
+    if (repoSuccess) {
+      stats.successfulRepos++;
+    } else {
+      stats.failedRepos++;
     }
   }
 
   // Print summary
   console.log(chalk.bold.cyan('\n📊 Summary\n'));
-  console.log(`Total files scanned: ${stats.totalFiles}`);
-  console.log(`Files modified: ${chalk.green(stats.modifiedFiles)}`);
-  console.log(`Total replacements: ${chalk.green(stats.totalReplacements)}`);
-
-  if (Object.keys(stats.byType).length > 0) {
-    console.log(chalk.bold('\n📋 Replacements by type:\n'));
-    for (const [type, count] of Object.entries(stats.byType)) {
-      console.log(`   ${chalk.green(count.toString().padStart(3))} × ${type}`);
-    }
-  }
+  console.log(`Total repositories: ${stats.totalRepos}`);
+  console.log(`Successful: ${chalk.green(stats.successfulRepos)}`);
+  console.log(
+    `Failed: ${stats.failedRepos > 0 ? chalk.red(stats.failedRepos) : stats.failedRepos}`
+  );
+  console.log(`Files copied: ${chalk.green(stats.filesCopied)}`);
+  console.log(
+    `Files failed: ${stats.filesFailed > 0 ? chalk.red(stats.filesFailed) : stats.filesFailed}`
+  );
+  console.log(`Packages updated: ${chalk.green(stats.packagesUpdated)}`);
 
   if (dryRun) {
     console.log(chalk.yellow('\n⚠️  This was a DRY RUN - no files were actually modified'));
     console.log(chalk.yellow('   Run without --dry-run to apply changes\n'));
   } else {
-    console.log(chalk.bold.green('\n✅ All references updated successfully!\n'));
+    console.log(chalk.bold.green('\n✅ Propagation complete!\n'));
   }
 }
 
@@ -306,7 +315,7 @@ async function fixGitHubOrgReferences() {
 // RUN
 // ============================================================================
 
-fixGitHubOrgReferences().catch(error => {
+propagateOrgFixes().catch(error => {
   console.error(chalk.red('\n❌ Error:'), error.message);
   process.exit(1);
 });

@@ -3,7 +3,7 @@
 <head>
     
     <meta charset="utf-8">
-    <title>scripts/fix-github-org-references - Documentation</title>
+    <title>backfill-summaries - Documentation</title>
     
     
     <script src="scripts/prettify/prettify.js"></script>
@@ -35,7 +35,7 @@
 
 <div id="main">
     
-    <h1 class="page-title">scripts/fix-github-org-references</h1>
+    <h1 class="page-title">backfill-summaries</h1>
     
 
     
@@ -58,14 +58,15 @@
         <div class="container-overview">
         
             
-                <div class="description usertext"><p>Fix GitHub Organization References</p>
-<p>This script fixes all incorrect GitHub organization references across all repositories.
-It replaces:</p>
-<ul>
-<li>github.com/DVWDesign → github.com/DESIGN-DVW</li>
-<li>github.com/FigmaAPI/* → github.com/DESIGN-DVW/*</li>
-<li>&quot;DVWDesign organization&quot; → &quot;DESIGN-DVW organization&quot;</li>
-</ul></div>
+                <div class="description usertext"><p>Backfill summaries for all documents that have a NULL summary.</p>
+<p>Extraction hierarchy (user-locked decision):</p>
+<ol>
+<li>frontmatter.description field (if present and &gt; 20 chars)</li>
+<li>First non-heading, non-table, non-fence paragraph (if &gt; 30 chars)</li>
+<li>Filename fallback from path</li>
+</ol>
+<p>Designed to be idempotent — only processes rows WHERE summary IS NULL.
+Accepts an open better-sqlite3 db instance (does NOT open or close the DB).</p></div>
             
 
             
@@ -77,20 +78,21 @@ It replaces:</p>
 <dl class="details">
     
     <dt class="tag-description">Description:</dt>
-    <dd class="tag-description"><ul class="dummy"><li><p>Fix GitHub Organization References</p>
-<p>This script fixes all incorrect GitHub organization references across all repositories.
-It replaces:</p>
-<ul>
-<li>github.com/DVWDesign → github.com/DESIGN-DVW</li>
-<li>github.com/FigmaAPI/* → github.com/DESIGN-DVW/*</li>
-<li>&quot;DVWDesign organization&quot; → &quot;DESIGN-DVW organization&quot;</li>
-</ul></li></ul></dd>
+    <dd class="tag-description"><ul class="dummy"><li><p>Backfill summaries for all documents that have a NULL summary.</p>
+<p>Extraction hierarchy (user-locked decision):</p>
+<ol>
+<li>frontmatter.description field (if present and &gt; 20 chars)</li>
+<li>First non-heading, non-table, non-fence paragraph (if &gt; 30 chars)</li>
+<li>Filename fallback from path</li>
+</ol>
+<p>Designed to be idempotent — only processes rows WHERE summary IS NULL.
+Accepts an open better-sqlite3 db instance (does NOT open or close the DB).</p></li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="scripts_fix-github-org-references.mjs.html">scripts/fix-github-org-references.mjs</a>, <a href="scripts_fix-github-org-references.mjs.html#line3">line 3</a>
+        <a href="scripts_db_backfill_backfill-summaries.mjs.html">scripts/db/backfill/backfill-summaries.mjs</a>, <a href="scripts_db_backfill_backfill-summaries.mjs.html#line3">line 3</a>
     </li></ul></dd>
     
 
@@ -173,6 +175,448 @@ It replaces:</p>
 
     
 
+    
+        <h3 class="subsection-title">Methods</h3>
+
+        
+            
+
+    
+
+    <h4 class="name" id=".backfillSummaries"><span class="type-signature type-signature-static">(static) </span>backfillSummaries<span class="signature">(db)</span><span class="type-signature"> &rarr; {number}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>Backfill summaries for all documents where summary IS NULL.</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="scripts_db_backfill_backfill-summaries.mjs.html">scripts/db/backfill/backfill-summaries.mjs</a>, <a href="scripts_db_backfill_backfill-summaries.mjs.html#line78">line 78</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>db</code></td>
+            
+
+            <td class="type">
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5 class="h5-returns">Returns:</h5>
+
+        
+<div class="param-desc">
+    <p>Number of documents updated</p>
+</div>
+
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">number</span>
+
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
+            
+
+    
+
+    <h4 class="name" id="~extractSummary"><span class="type-signature type-signature-inner">(inner) </span>extractSummary<span class="signature">(doc)</span><span class="type-signature"> &rarr; {string}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>Extract a summary string from a document's frontmatter and content.</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="scripts_db_backfill_backfill-summaries.mjs.html">scripts/db/backfill/backfill-summaries.mjs</a>, <a href="scripts_db_backfill_backfill-summaries.mjs.html#line34">line 34</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>doc</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">object</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>Row from the documents table</p>
+                <h6>Properties</h6>
+                
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>id</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">number</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>Document ID</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>path</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>Document path</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>frontmatter</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+|
+
+<span class="param-type">null</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>JSON-serialized frontmatter (may be null)</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>content</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+|
+
+<span class="param-type">null</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>Full document content (may be null)</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+            </td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5 class="h5-returns">Returns:</h5>
+
+        
+<div class="param-desc">
+    <p>Extracted summary (never empty)</p>
+</div>
+
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">string</span>
+
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
     
 
     
