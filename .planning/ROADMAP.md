@@ -367,7 +367,15 @@ Plans:
 
 4. `.dockerignore` excludes `.env`; building the image and inspecting its layers confirms no secret values are baked in
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+
+- [ ] 23-01-PLAN.md — Git hygiene: untrack 6 rendered slide exports (`git rm --cached`) + path-scoped gitignore rules for `docs/slides/**/*.{html,pdf,pptx}`
+
+- [ ] 23-02-PLAN.md — Env scaffolding: `.env.example` PRESENTATION PIPELINE section, `config/env.mjs` exports for all 6 vars, CLAUDE.md env table + Docker secret-baking verification
+
+- [ ] 23-03-PLAN.md — Ledger: migration 009 (`slide_pipeline_runs` table + indexes + `latest_slide_runs` view) applied via `npm run db:migrate`
 
 ### Phase 24: Render Stage
 
