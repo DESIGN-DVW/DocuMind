@@ -256,17 +256,11 @@ All in `logs/` (gitignored):
 ## 📚 Documentation
 
 | Document                                                             | Purpose                   |
-
 | -------------------------------------------------------------------- | ------------------------- |
-
 | [README.md](README.md)                                               | Main documentation        |
-
 | [CLAUDE.md](CLAUDE.md)                                               | Comprehensive usage guide |
-
 | [docs/QUICK-START.md](docs/QUICK-START.md)                           | 5-minute setup guide      |
-
 | [docs/CRON-SETUP.md](docs/CRON-SETUP.md)                             | Cron automation guide     |
-
 | [.claude/agents/markdown-fixer.md](.claude/agents/markdown-fixer.md) | Agent documentation       |
 
 ## 🎓 Next Steps
@@ -399,7 +393,7 @@ npm run lint:fix
 
 The DVWDesign Markdown Management System is now fully operational!
 
-### What you have:
+### What you have
 
 - ✅ Cross-repository markdown scanning
 
@@ -417,7 +411,7 @@ The DVWDesign Markdown Management System is now fully operational!
 
 - ✅ Claude Code agent integration
 
-### What's next:
+### What's next
 
 1. Run `npm run cron:setup` to enable automation
 

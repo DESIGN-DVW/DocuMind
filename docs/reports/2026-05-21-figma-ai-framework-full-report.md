@@ -94,15 +94,10 @@ Plugins run inside Figma's sandboxed environment and complement the MCP server.
 Node.js automation scripts that bridge the gap between repos:
 
 | Script                     | Purpose                                                   |
-
 | -------------------------- | --------------------------------------------------------- |
-
 | `export-figma-png.mjs`     | Export FigJam node as high-quality PNG via Figma REST API |
-
 | `sync-markdown-config.mjs` | Deploy markdownlint config to all 14+ repos               |
-
 | `scan-all-repos.mjs`       | Full-text scan of 620+ markdown files                     |
-
 | `fix-markdown.mjs`         | Auto-fix markdown lint violations                         |
 
 ### Layer 4 — MCP Server (Figma MCP)
@@ -111,23 +106,14 @@ The Model Context Protocol server is the primary integration layer for AI-assist
 design workflows. Claude Code agents call MCP tools directly — no browser required.
 
 | Tool                 | Direction       | Purpose                                         |
-
 | -------------------- | --------------- | ----------------------------------------------- |
-
 | `generate_diagram`   | Code → Canvas   | Create FigJam diagram from Mermaid syntax       |
-
 | `get_design_context` | Canvas → Code   | Read component structure, variants, properties  |
-
 | `get_figjam`         | Canvas → Code   | Read FigJam node content (shapes, text, layout) |
-
 | `get_screenshot`     | Canvas → Code   | Capture rendered PNG of any frame               |
-
 | `get_variable_defs`  | Canvas → Code   | Read design tokens / variables                  |
-
 | `curate_diagram`     | Code → Registry | Record curated URL, propagate to all repos      |
-
 | `register_diagram`   | Code → Registry | Register new diagram in DocuMind database       |
-
 | `get_diagrams`       | Registry → Code | Query diagram registry (pre-flight check)       |
 
 ### Layer 5 — Skills & Commands
@@ -135,17 +121,11 @@ design workflows. Claude Code agents call MCP tools directly — no browser requ
 Slash commands that orchestrate the full workflow for common tasks:
 
 | Command                  | What it does                                            |
-
 | ------------------------ | ------------------------------------------------------- |
-
 | `/figma-diagram`         | 6-step: Mermaid → PNG → FigJam → Registry → Link insert |
-
 | `/figma-curate`          | Record curated URL → export Figma PNG → propagate refs  |
-
 | `/figma-use`             | Prerequisites before calling `use_figma`                |
-
 | `/figma-generate-design` | Translate app layout into Figma design                  |
-
 | `/figma-code-connect`    | Map Figma components to codebase components             |
 
 ### Figma Agent (May 2026 — Additive Layer)
@@ -181,15 +161,10 @@ free (no AI credit consumption). Collab and Dev seats can use it in drafts only.
 Every diagram in the ecosystem produces four artifacts:
 
 | Artifact | Format | Location | Purpose |
-
 | --- | --- | --- | --- |
-
 | Mermaid source | `.mmd` | `docs/diagrams/` in each repo | Version-controlled source of truth |
-
 | PNG preview | `.png` | `docs/diagrams/` in each repo | GitHub, PRs, inline docs |
-
 | FigJam view | Board node URL | Central FigJam board | Collaboration, presentation |
-
 | Registry entry | SQLite row | DocuMind `diagrams` table | Tracking, staleness, URL management |
 
 ### The Diagram Registry
@@ -213,23 +188,14 @@ get_diagrams({ repo }) → check state → generate if needed → register → c
 > **Owner:** ProductMarketing `[STUB — enrich with business framing by 2026-05-22]`
 
 | Problem                     | Before                                                    | After                                                                 |
-
 | --------------------------- | --------------------------------------------------------- | --------------------------------------------------------------------- |
-
 | Diagram drift               | Stale `.mmd` files, broken FigJam links, outdated PNGs    | Registry + SHA-256 staleness detection + auto-relink                  |
-
 | Design-code gap             | Manual handoff, screenshots in Notion, no version control | MCP bridges canvas ↔ code; `get_design_context` is the handoff        |
-
 | Scattered documentation     | 14 repos, no search, no relationships                     | DocuMind FTS5 + graph traversal across 620+ files                     |
-
 | Low-quality PNG previews    | 22kb mmdc output — barely legible at full-page width      | 185kb Figma REST export at scale=2 — 8× quality improvement           |
-
 | Manual board organization   | Diagrams land on default page, manual move required       | Pre-configured `nodeId` destinations — diagrams land in right section |
-
 | Redundant generation        | No visibility into what already exists                    | Pre-flight `get_diagrams` check before every generation               |
-
 | Cross-repo link maintenance | Grep and replace across 14 repos manually                 | `curate_diagram` rewrites all references automatically                |
-
 | Design system inconsistency | Manual component audits, naming drifts                    | Figma Agent bulk-updates component descriptions and naming            |
 
 ---
@@ -379,55 +345,36 @@ Quantified improvements observed in production use.
 ### Diagram Quality
 
 | Metric | Before | After | Delta |
-
 | --- | --- | --- | --- |
-
 | PNG file size | ~22kb (mmdc) | ~185kb (Figma REST scale=2) | **8× improvement** |
-
 | PNG resolution | Default viewport | 3072×2048 @ 2× deviceScaleFactor | Retina quality |
-
 | Board placement | Default page (manual move) | Pre-configured `nodeId` section | **0 manual moves** |
-
 | Duplicate diagrams | No visibility | Pre-flight registry check | **Eliminated** |
 
 ### Documentation
 
 | Metric | Value |
-
 | --- | --- |
-
 | Files indexed | 620+ markdown files across 14+ repos |
-
 | Search latency | < 100ms full-text search |
-
 | Cross-repo URL propagation | 14 repos updated per `curate_diagram` call |
-
 | Staleness detection | SHA-256 hash comparison, automatic |
 
 ### Ecosystem Scale
 
 | Metric | Value |
-
 | --- | --- |
-
 | Repositories managed | 14+ |
-
 | Diagrams registered | 16+ (growing) |
-
 | Curated diagrams (stable URLs) | 4 fully curated, 12 in progress |
-
 | Dispatches coordinated | 66+ cross-repo dispatches |
 
 ### Figma Buzz (existing RandD analysis)
 
 | Metric | Value |
-
 | --- | --- |
-
 | ROI (3 years) | 311% |
-
 | Cost savings vs build-in-house | $316K–$480K |
-
 | Asset generation speed | 100s of assets in minutes |
 
 ---
@@ -512,19 +459,12 @@ Content:
 ### Internal Costs (DVW Running the Framework)
 
 | Item | Unit Cost | Cadence | Notes |
-
 | --- | --- | --- | --- |
-
 | Figma Professional seat | $15–25/month | Monthly per seat | Required for Figma Agent beta |
-
 | Anthropic Claude API | Usage-based | Monthly | Volume discounts available |
-
 | DocuMind server | Infrastructure | Monthly | Self-hosted — compute + storage only |
-
 | Figma MCP server | Free | — | Open source, Anthropic-maintained |
-
 | Export-figma-png script | Free | — | Internal script, no license cost |
-
 | Training material dev | Internal time | Quarterly | One-time build + quarterly refresh |
 
 ### Client-Facing Rates (DVW as Vendor)
@@ -532,37 +472,23 @@ Content:
 All prices are indicative. RandD agent to validate against 7-layer pricing model.
 
 | Package | What's Included | Indicative Price |
-
 | --- | --- | --- |
-
 | **Framework Setup** | Tool config, MCP setup, CLAUDE.md, repo onboarding | €2,500–5,000 one-time |
-
 | **Coaching Session** | 2h hands-on with team, live problem-solving | €800–1,200 per session |
-
 | **Training T1** | Awareness webinar (up to 20 participants) | Free / included in Setup |
-
 | **Training T2 — User** | 1-day workshop, up to 5 participants | €3,500–5,000 per day |
-
 | **Training T3 — Admin** | 2-day deep-dive, up to 3 participants | €6,000–9,000 total |
-
 | **Material License** | Slides + playbook + recordings (annual) | €1,500/year |
-
 | **Maintenance Retainer** | Monthly framework updates + monitoring | €500–1,500/month |
-
 | **UX Review** | 2-day workflow audit (user/team needs assessment) | €3,000–5,000 |
 
 ### Suggested Packages
 
 | Starter | Standard | Premium |
-
 | --- | --- | --- |
-
 | Framework Setup | Setup + T2 Training | Setup + T2 + T3 + Retainer |
-
 | T1 Awareness webinar | Material License (1yr) | Full Material License |
-
 | 1 Coaching session | 3 Coaching sessions | Unlimited Coaching (6 months) |
-
 | €3,500–6,000 | €9,000–14,000 | €18,000–28,000 |
 
 ---
@@ -576,17 +502,11 @@ All prices are indicative. RandD agent to validate against 7-layer pricing model
 Areas to assess per team:
 
 | Area | Questions |
-
 | --- | --- |
-
 | Design handoff | How does a finished Figma design become a coded component today? |
-
 | Diagram maintenance | Who updates `.mmd` files when architecture changes? |
-
 | Doc search | Do team members use DocuMind search, or still grep manually? |
-
 | Training gap | Which T-tier does each team member currently need? |
-
 | Friction inventory | What do people still do manually that should be automated? |
 
 ### Known Friction Points (Pre-Assessment)
@@ -610,31 +530,20 @@ Areas to assess per team:
 ### Now (May 2026)
 
 | Item | Status |
-
 | --- | --- |
-
 | FigJam section `nodeId` per repo | Blocked — user must create board sections |
-
 | DISPATCH-065 rollout | Pending — all repos applying new destination workflow |
-
 | DISPATCH-064 Group B curation | Pending — 9 old redirect URLs need new node URLs |
-
 | DISPATCH-066 (this presentation) | In progress |
-
 | AgentHub API key fix | Blocked — needs settings check |
 
 ### Next (Q3 2026)
 
 | Item | Effort | Value |
-
 | --- | --- | --- |
-
 | Figma Slides generation via `use_figma` MCP | Medium | High — live presentation quality |
-
 | In-place FigJam node editing | Waiting on Figma API | High — eliminates regenerate-swap workflow |
-
 | Figma Agent programmatic API | Waiting on Figma | Very high — closes the CLI↔canvas loop |
-
 | Training program v1 launch | Medium | High — enables scale |
 
 ### Later (H2 2026)
@@ -650,25 +559,14 @@ Areas to assess per team:
 ## Appendix — Glossary for Neophytes
 
 | Term | Plain English |
-
 | --- | --- |
-
 | MCP Server | A translator between our AI agent (Claude) and design tools (Figma). Like a phone interpreter. |
-
 | FigJam | Figma's whiteboard tool. Where diagrams and architecture maps live. |
-
 | Mermaid / `.mmd` | A text file that describes a diagram (like writing a recipe instead of drawing a cake). The computer draws the diagram from the text. |
-
 | Registry | A central list that tracks every diagram: where it lives, whether it's up to date, and what URL to use. |
-
 | Curation | The act of placing a diagram in the right spot on the board and recording its permanent URL. After curation, all links point to the right place automatically. |
-
 | CRON | A scheduler. "CRON at 9am" means "run this agent automatically at 9am every day." |
-
 | Dispatch | A message sent from one repo to another with specific instructions. Like a memo between departments. |
-
 | Staleness | A diagram is "stale" when the source text has changed but the visual hasn't been updated yet. |
-
 | Figma Agent | A new AI assistant built directly into Figma (not our agent — Figma's own). It can make bulk changes to designs on the canvas. |
-
 | Design Token | A design decision stored as a variable (e.g., "primary color = #0066FF"). Changes to the token propagate everywhere the token is used. |

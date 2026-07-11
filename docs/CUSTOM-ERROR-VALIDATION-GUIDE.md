@@ -18,7 +18,7 @@ The custom error validation system extends standard markdown linting with patter
 
 - Complex regex patterns
 
-### What Makes It Different:
+### What Makes It Different
 
 Standard linters like markdownlint focus on single-line rules. This system handles:
 
@@ -106,11 +106,8 @@ Files with broken links: 1
 ### Validation
 
 | Command | Description | Output |
-
 | --- | --- | --- |
-
 | `npm run validate:custom` | Validate current repository | Console report |
-
 | `npm run validate:custom:all` | Validate all repositories | Cross-repo report |
 
 #### Validation Flags:
@@ -126,13 +123,9 @@ node scripts/validate-custom-errors.mjs --severity=error
 ### Fixing
 
 | Command | Description | Action |
-
 | --- | --- | --- |
-
 | `npm run fix:custom:dry-run` | Preview fixes without changing files | Read-only |
-
 | `npm run fix:custom` | Apply fixes to current repository | Modifies files |
-
 | `npm run fix:custom:all` | Apply fixes to all repositories | Modifies all repos |
 
 #### Fix Flags:

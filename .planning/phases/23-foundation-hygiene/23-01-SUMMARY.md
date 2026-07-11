@@ -77,6 +77,7 @@ completed: 2026-07-10
 ### Auto-fixed Issues
 
 **1. [Rule 3 - Blocking] Branch base changed from literal `master` to the current branch's tip commit**
+
 - **Found during:** Pre-task branch setup (before Task 1)
 - **Issue:** Plan's branching note said to cut a fresh branch from `master`, but `master` (commit `b866bc3`, "docs(phase-16): complete phase execution") does not contain `docs/slides/` at all — that directory and its 6 target files were added later, on unmerged work. Branching from `master` would make the plan's own Task 1 unexecutable.
 - **Fix:** Created the new branch `feat/2026-07-10-v3.4-foundation-hygiene` from the tip of `fix/2026-07-07-table-lint-rules` (commit `2ed9f60`) instead, which has all target files and full phase 17-23 history.
@@ -85,6 +86,7 @@ completed: 2026-07-10
 - **Committed in:** N/A (pre-commit setup)
 
 **2. [Rule 3 - Blocking] Used an isolated `git worktree` instead of switching branches in the shared working directory**
+
 - **Found during:** Pre-task branch setup (before Task 1)
 - **Issue:** `git checkout -b feat/2026-07-10-v3.4-foundation-hygiene master` failed mid-operation because sibling executor agents were concurrently modifying/committing files (plans 23-02, 23-03) in the same shared working directory at that moment. An earlier defensive `git stash push -u` (to protect an unrelated large uncommitted WIP diff on `fix/2026-07-07-table-lint-rules` before any branch switch) was left in place rather than popped, to avoid further disrupting concurrent agents; it remains as `stash@{0}` on that branch for manual review.
 - **Fix:** Used `git worktree add <isolated-path> -b feat/2026-07-10-v3.4-foundation-hygiene <tip-commit>` to create a fully separate checkout, leaving the shared main working directory and its concurrent activity completely untouched. All Plan 23-01 file edits and commits happened only in that isolated worktree.

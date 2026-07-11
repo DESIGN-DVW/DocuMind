@@ -25,11 +25,8 @@ Produce a full report and two-track presentation deck showcasing DVWDesign's Fig
 framework. The deliverables serve two audiences simultaneously:
 
 | Track        | Audience                      | Framing                                          |
-
 | ------------ | ----------------------------- | ------------------------------------------------ |
-
 | A — Internal | DVW team, partners            | Strategy, capability inventory, adoption roadmap |
-
 | B — External | Clients, prospects, investors | Value proposition, ROI, pricing, training offer  |
 
 Both tracks are derived from the same full report — Track B is a curated subset.
@@ -41,19 +38,12 @@ Both tracks are derived from the same full report — Track B is a curated subse
 Before building anything new, the following R&D exists:
 
 | Asset                            | Location                                                             | Relevant Section                            |
-
 | -------------------------------- | -------------------------------------------------------------------- | ------------------------------------------- |
-
 | Figma Buzz integration proposal  | `RandD/docs/proposals/figma-buzz/FIGMA-BUZZ-INTEGRATION-PROPOSAL.md` | Platform analysis, capabilities             |
-
 | Figma Buzz executive summary     | `RandD/docs/proposals/figma-buzz/EXECUTIVE-SUMMARY-FIGMA-BUZZ-CM.md` | ROI: 311% over 3 years, $316K–$480K savings |
-
 | Pricing & invoicing strategy     | `RandD/docs/proposals/pricing/PRICING-INVOICING-STRATEGY.md`         | 7-layer pricing model                       |
-
 | Diagram workflow documentation   | `DocuMind/docs/DIAGRAM-WORKFLOW.md`                                  | Triple output rule, curation, registry      |
-
 | FigJam article (LinkedIn + blog) | `DocuMind/docs/articles/2026-05-18-figjam-diagram-curation.md`       | PNG export, curation workflow               |
-
 | Agent architecture proposal      | `RootDispatcher/docs/AGENT-ARCHITECTURE-PROPOSAL.md`                 | Multi-agent coordination                    |
 
 ---
@@ -101,13 +91,9 @@ Targeted dispatch to each repo with their specific chapter ownership and slide c
 Three recurring agent sessions configured via CronCreate:
 
 | Session                | Schedule       | Duration | Output                        |
-
 | ---------------------- | -------------- | -------- | ----------------------------- |
-
 | Daily standup          | Weekdays 09:00 | 15 min   | Progress report + blockers    |
-
 | Evening decision log   | Weekdays 18:00 | 10 min   | Decisions made, next actions  |
-
 | Weekly strategy review | Mondays 08:30  | 30 min   | Priorities, scope adjustments |
 
 ---
@@ -115,27 +101,16 @@ Three recurring agent sessions configured via CronCreate:
 ## Chapter → Team Mapping
 
 | Chapter                              | Owner Repo        | Supporting        |
-
 | ------------------------------------ | ----------------- | ----------------- |
-
 | 1. Executive Overview                | ProductMarketing  | DocuMind          |
-
 | 2. What We Built (framework layers)  | DocuMind          | RootDispatcher    |
-
 | 3. What It Solves                    | ProductMarketing  | FigmaDSController |
-
 | 4. What It Enhances                  | FigmaDSController | Figma-Plug-ins    |
-
 | 5. R&D Study (Figma Agent + MCP)     | RandD             | DocuMind          |
-
 | 6. R&D Gains (metrics, time savings) | RandD             | DocuMind          |
-
 | 7. Training Program Design           | ProductMarketing  | RandD             |
-
 | 8. Pricing Model (internal + client) | RandD             | ProductMarketing  |
-
 | 9. UX Review (user/team needs)       | FigmaDSController | FigmailAPP        |
-
 | 10. Roadmap                          | RootDispatcher    | All               |
 
 ---
@@ -165,19 +140,12 @@ Key tools per layer: `generate_diagram`, `get_design_context`, `export-figma-png
 ### Chapter 3 — What It Solves
 
 | Problem | Before | After |
-
 | --- | --- | --- |
-
 | Diagram drift | Stale `.mmd`, broken FigJam links | Registry + staleness detection + auto-relink |
-
 | Design-code gap | Manual handoff, no version control | MCP bridges canvas ↔ code |
-
 | Scattered docs across 14 repos | No single source of truth | DocuMind FTS5 + graph |
-
 | Low-quality PNG previews | 22kb mmdc output | 185kb Figma REST export at scale=2 |
-
 | Manual board organization | Diagrams on default page | Pre-configured `nodeId` destinations |
-
 | Redundant diagram generation | No registry | Pre-flight `get_diagrams` check |
 
 ### Chapter 4 — What It Enhances
@@ -223,13 +191,9 @@ Quantified where possible. Draw from RandD existing analysis:
 Three tiers (at scale):
 
 | Tier | Target | Format | Duration | Outcome |
-
 | --- | --- | --- | --- | --- |
-
 | T1 — Awareness | All stakeholders | 30-min webinar + slide deck | 1 session | Understand what exists |
-
 | T2 — User | Designers, PMs | Hands-on workshop + playbook | 1 day | Can use the framework |
-
 | T3 — Admin | Devs, agents | Deep-dive + CLAUDE.md | 2 days | Can extend the framework |
 
 Delivery: live sessions, recorded playback, Figma Slides walkthrough, PDF workbook.
@@ -242,17 +206,11 @@ Two views:
 #### Internal Costs (DVWDesign)
 
 | Item | Cost | Cadence |
-
 | --- | --- | --- |
-
 | Figma Professional seat | $15–25/seat/month | Monthly |
-
 | Anthropic Claude API | Variable (usage-based) | Monthly |
-
 | DocuMind hosting (self-hosted) | Infrastructure cost | Monthly |
-
 | Figma MCP server | Free (open source) | — |
-
 | Training material development | Dev time (internal) | One-time + quarterly |
 
 #### Client-Facing Rates (DVW as vendor)
@@ -260,21 +218,13 @@ Two views:
 Draw from `PRICING-INVOICING-STRATEGY.md` 7-layer model. Proposed packages:
 
 | Package | Scope | Price (indicative) |
-
 | --- | --- | --- |
-
 | Framework Setup | Tool config, MCP setup, CLAUDE.md | €2,500–5,000 one-time |
-
 | Coaching (per session) | 2h hands-on with team | €800–1,200/session |
-
 | Training Program (T2) | 1-day workshop, 5 attendees | €3,500–5,000/day |
-
 | Training Program (T3) | 2-day deep-dive | €6,000–9,000 |
-
 | Training Material License | Slides + playbook + recordings | €1,500/year |
-
 | Maintenance Retainer | Monthly framework updates | €500–1,500/month |
-
 | UX Review | 2-day audit (user/team needs) | €3,000–5,000 |
 
 ##### All prices indicative — finalize with RandD pricing model
@@ -357,17 +307,11 @@ presentation quality. Figma Slides exports PDF natively.
 ## Timeline (This Week)
 
 | Day   | Date               | Milestone                                                           |
-
 | ----- | ------------------ | ------------------------------------------------------------------- |
-
 | Day 1 | 2026-05-21 (today) | Pre-plan approved; report skeleton + dispatch sent; CRON configured |
-
 | Day 2 | 2026-05-22         | Full report first draft; slide outlines per team confirmed          |
-
 | Day 3 | 2026-05-23         | Internal deck complete; external deck v1; pricing validated         |
-
 | Day 4 | 2026-05-24         | External deck polished; Figma Slides attempt; exports generated     |
-
 | Day 5 | 2026-05-25         | Final review; all artifacts indexed in DocuMind; presentation ready |
 
 ---
@@ -375,17 +319,11 @@ presentation quality. Figma Slides exports PDF natively.
 ## Blockers & Dependencies
 
 | Blocker                                | Unblocked by                                                    |
-
 | -------------------------------------- | --------------------------------------------------------------- |
-
 | AgentHub API key invalid               | Check key in `~/.claude/settings.json` or RootDispatcher config |
-
 | DesignCreation repo not cloned locally | Clone or delegate to remote agent                               |
-
 | NodeId per repo still missing          | User creates FigJam sections + fills `repository-registry.json` |
-
 | Final pricing figures                  | RandD agent validates against 7-layer model                     |
-
 | Figma Slides MCP availability          | Check `use_figma` tool schema before Day 4                      |
 
 ---

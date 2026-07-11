@@ -97,5 +97,5 @@ None — no external service configuration required.
 - Phase 18-02 (REST /graph endpoint) and Phase 19 (text-to-Cypher) can proceed in parallel
 
 ---
-*Phase: 18-query-layer*
-*Completed: 2026-04-13*
+_Phase: 18-query-layer_
+_Completed: 2026-04-13_

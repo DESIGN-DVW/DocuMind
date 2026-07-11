@@ -25,10 +25,11 @@ Cypher MERGE statement handles upserts, and the data source is the already-popul
 Extend `/health` to query Kuzu edge count.
 
 <phase_requirements>
+
 ## Phase Requirements
 
 | ID | Description | Research Support |
-|----|-------------|-----------------|
+| ---- | ------------- | ----------------- |
 | SYNC-01 | After each relationship rebuild, doc_relationships sync automatically from SQLite to Kuzu | Wire `syncToKuzu(db, kuzuDb)` call into `runDeepScan` in orchestrator after `buildRelationships` completes |
 | SYNC-02 | Operator can trigger full Kuzu graph rebuild via `npm run graph:rebuild` | New `scripts/rebuild-kuzu-graph.mjs` standalone script; add `graph:rebuild` to package.json scripts |
 | SYNC-03 | `/health` endpoint reports Kuzu edge count and sync status vs SQLite | Query both `SELECT COUNT(*) FROM doc_relationships` (SQLite) and `MATCH ()-[r]->() RETURN COUNT(r)` (Kuzu); diff determines in-sync vs drift detected |
@@ -39,20 +40,20 @@ Extend `/health` to query Kuzu edge count.
 ### Core
 
 | Library | Version | Purpose | Why Standard |
-|---------|---------|---------|--------------|
+| --------- | --------- | --------- | -------------- |
 | kuzu | 0.11.3 | Graph write target — Cypher MERGE for upsert | Already installed; confirmed ESM default import |
 | better-sqlite3 | ^12.6.2 | Source read — SELECT from doc_relationships | Already used throughout; synchronous reads fine here |
 
 ### Supporting
 
 | Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
+| --------- | --------- | --------- | ------------- |
 | (none new) | — | No new dependencies required | All functionality uses kuzu + better-sqlite3 already present |
 
 ### Alternatives Considered
 
 | Instead of | Could Use | Tradeoff |
-|------------|-----------|----------|
+| ------------ | ----------- | ---------- |
 | Kuzu MERGE upsert | DELETE all + CREATE fresh | MERGE is safer (preserves future manual edges); full drop+create used only in `graph:rebuild` |
 | Passing kuzuDb through runScan options | Importing kuzuDb directly in orchestrator | Parameter passing is cleaner (testable, no circular import risk) — orchestrator should not import from server.mjs |
 
@@ -383,7 +384,7 @@ async function insertEdge(conn, edge) {
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
-|---------|-------------|-------------|-----|
+| --------- | ------------- | ------------- | ----- |
 | Node upsert | Custom SELECT+INSERT/UPDATE logic | Kuzu Cypher MERGE | MERGE is the Kuzu standard for conditional create; single statement |
 | Edge deduplication | Track inserted edge IDs | Drop-and-recreate pattern (delete edges, re-insert from SQLite) | SQLite is the source of truth; re-sync is idempotent by design |
 | Batch write transactions | Custom batching/chunking logic | One Connection per sync call, serial awaits | Kuzu embedded: no network overhead; serial awaits are fast enough for ~10K edges |
@@ -435,6 +436,7 @@ Alternatively: expose `POST /graph/rebuild` as a daemon endpoint that delegates 
 `rebuildKuzuGraph(db, kuzuDb)` — this ensures only one Database instance is ever open.
 
 **Recommendation:** Phase 17 should implement BOTH:
+
 1. `npm run graph:rebuild` (standalone, daemon must be stopped)
 2. `POST /graph/rebuild` endpoint (daemon-internal, safer)
 
@@ -536,7 +538,7 @@ try {
 ## State of the Art
 
 | Old Approach | Current Approach | When Changed | Impact |
-|--------------|------------------|--------------|--------|
+| -------------- | ------------------ | -------------- | -------- |
 | Kuzu empty (Phase 16) | Kuzu mirrors SQLite relationships (Phase 17) | This phase | Graph queries become possible |
 | `/health` kuzu: status+path only | `/health` kuzu: status+path+edge_count+sync_status | This phase | Operators can verify sync parity |
 | `initScheduler(db, ROOT, ctx)` | `initScheduler(db, ROOT, ctx, kuzuDb)` | This phase | Weekly deep scan triggers Kuzu sync |

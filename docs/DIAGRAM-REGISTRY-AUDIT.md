@@ -25,47 +25,30 @@
 ## Inventory: All .mmd Files on Disk
 
 | Repository          | File                                                 | Registered | Has PNG      | Has FigJam | Has Curated URL |
-
 | ------------------- | ---------------------------------------------------- | ---------- | ------------ | ---------- | --------------- |
-
 | DocuMind            | `docs/diagrams/documind-workflow.mmd`                | NO         | Yes (67 KB)  | --         | --              |
-
 | RootDispatcher      | `docs/diagrams/dispatch-005-workflow.mmd`            | Yes        | Yes (56 KB)  | Yes        | Yes             |
-
 | RootDispatcher      | `docs/diagrams/shared-packages-repo-structure.mmd`   | Yes        | Yes (85 KB)  | Yes        | Yes             |
-
 | RootDispatcher      | `docs/diagrams/agent-organization-base.mmd`          | Yes        | Yes (149 KB) | Yes        | Yes             |
-
 | RootDispatcher      | `docs/diagrams/repo-specific-agents-inheritance.mmd` | Yes        | Yes (73 KB)  | Yes        | Yes             |
-
 | any2figma           | `docs/diagrams/architecture-data-flow.mmd`           | Yes        | Yes (16 KB)  | Yes        | No              |
-
 | any2figma           | `docs/diagrams/ast-schema.mmd`                       | Yes        | Yes (50 KB)  | Yes        | No              |
-
 | any2figma           | `docs/diagrams/pipeline-6-pass.mmd`                  | Yes        | Yes (89 KB)  | Yes        | No              |
-
 | any2figma           | `docs/diagrams/html-parser-flow.mmd`                 | Yes        | Yes (52 KB)  | Yes        | No              |
-
 | any2figma           | `docs/diagrams/emitter-outputs.mmd`                  | Yes        | Yes (28 KB)  | Yes        | No              |
-
 | LibraryAssetManager | `docs/diagrams/image-analyzer-pipeline.mmd`          | Yes        | Yes (74 KB)  | Yes        | No              |
 
 ## Orphaned PNG Files (No .mmd Source)
 
 | Repository | File                                               | Size   | Notes                                          |
-
 | ---------- | -------------------------------------------------- | ------ | ---------------------------------------------- |
-
 | GlossiaApp | `docs/02-architecture/diagrams/GlossiaAppFlow.png` | 192 KB | No `.mmd` source exists; not in diagrams table |
 
 ## Repositories with No Diagrams
 
 | Repository      | .mmd Files | .png Files       | Notes                        |
-
 | --------------- | ---------- | ---------------- | ---------------------------- |
-
 | CampaignManager | 0          | 0                | No diagrams directory        |
-
 | GlossiaApp      | 0          | 1 (orphaned PNG) | Has PNG but no `.mmd` source |
 
 ---
@@ -79,7 +62,7 @@
 
 **Root cause:** The file was likely created manually or by an earlier process before the diagram registry was implemented. The mermaid processor's `generateDiagram()` function handles registration, but this file was never passed through it.
 
-#### Recommended action:
+#### Recommended action
 
 ```sql
 
@@ -133,7 +116,7 @@ The `better-sqlite3` native module was compiled against a newer Node.js version 
 
 **Impact:** The daemon cannot start, scans cannot run, and diagram registration via the mermaid processor is blocked.
 
-### Recommended action:
+### Recommended action
 
 ```bash
 
@@ -149,15 +132,9 @@ This will recompile the native module for the current Node v22.14.0. No other de
 ## Action Priority
 
 | Priority | Action | Effort |
-
 | --- | --- | --- |
-
 | 1 (blocking) | Run `npm rebuild better-sqlite3` to fix Node version mismatch | 1 min |
-
 | 2 (high) | Register `documind-workflow.mmd` in diagrams table | 2 min |
-
 | 3 (medium) | Curate any2figma + LibraryAssetManager FigJam URLs | 10 min |
-
 | 4 (low) | Create `.mmd` source for GlossiaApp `GlossiaAppFlow.png` | 15 min |
-
 | 5 (low) | Evaluate CampaignManager diagram needs | 5 min |

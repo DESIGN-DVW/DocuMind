@@ -119,7 +119,7 @@ npm run scan:report       # Scan + generate report
 
 ```
 
-#### Outputs:
+#### Outputs
 
 - `index/all-markdown-files.json` - Complete scan data
 
@@ -133,7 +133,7 @@ npm run index             # Create organized index
 
 ```
 
-#### Outputs:
+#### Outputs
 
 - `index/organized-index.md` - Categorized file list
 
@@ -149,11 +149,11 @@ npm run validate          # Check timestamps/versions
 
 ```
 
-#### Outputs:
+#### Outputs
 
 - `index/validation-report.md` - Validation issues
 
-#### Checks:
+#### Checks
 
 - Missing "Last Updated" timestamps
 
@@ -173,7 +173,7 @@ npm run fix               # Fix specific directory
 
 ```
 
-#### Auto-Fixes:
+#### Auto-Fixes
 
 - Line breaks around headings, lists, code blocks
 
@@ -189,7 +189,7 @@ npm run watch             # Watch for changes (Ctrl+C to stop)
 
 ```
 
-#### Features:
+#### Features
 
 - Watches all DVWDesign repositories
 
@@ -207,7 +207,7 @@ npm run cron:stop         # Remove cron jobs
 
 ```
 
-#### Scheduled Jobs:
+#### Scheduled Jobs
 
 - **Scan:** Every hour at :00 (`npm run scan:report`)
 
@@ -275,17 +275,11 @@ npm run lint
 All outputs are in `index/` (gitignored):
 
 | File                      | Description                                     |
-
 | ------------------------- | ----------------------------------------------- |
-
 | `all-markdown-files.json` | Complete scan data with metadata                |
-
 | `scan-report.md`          | Repository breakdown, largest files, statistics |
-
 | `organized-index.md`      | Categorized file list with links                |
-
 | `categories.json`         | JSON categories for programmatic access         |
-
 | `validation-report.md`    | Missing timestamps/versions report              |
 
 ## 🤖 Claude Code Integration
