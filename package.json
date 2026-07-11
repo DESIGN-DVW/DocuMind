@@ -94,7 +94,7 @@
     "express": "^5.2.1",
     "fast-glob": "^3.3.2",
     "fast-levenshtein": "^3.0.0",
-    "glob": "^11.0.0",
+    "glob": "^13.0.0",
     "gray-matter": "^4.0.3",
     "helmet": "^8.1.0",
     "ignore": "^5.3.0",
