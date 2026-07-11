@@ -64,7 +64,8 @@
     "graphify": "graphify .",
     "graphify:update": "graphify . --update",
     "graphify:deep": "graphify . --mode deep",
-    "graphify:query": "graphify query"
+    "graphify:query": "graphify query",
+    "slides:build": "node scripts/publish-slides.mjs --render-only"
   },
   "lint-staged": {
     "!(.planning|.claude)/**/*.md": [
