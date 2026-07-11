@@ -28,7 +28,7 @@ This guide provides exact steps to:
 
 ### Current State Verification
 
-#### GlossiaApp:
+#### GlossiaApp
 
 - Current URL: `https://github.com/DVW-Design/GlossiaApp`
 
@@ -143,13 +143,13 @@ git branch
 
    ```
 
-4. **Confirm Transfer:**
+1. **Confirm Transfer:**
 
    - Type: `DVW-Design/GlossiaApp`
 
    - Click "I understand, transfer this repository"
 
-5. **Wait for Completion:**
+2. **Wait for Completion:**
 
    - GitHub will process the transfer
 
@@ -157,7 +157,7 @@ git branch
 
    - You'll be redirected to the new URL
 
-### Expected Result:
+### Expected Result
 
 - Old URL: `https://github.com/DVW-Design/GlossiaApp` → Redirects automatically
 
@@ -629,23 +629,14 @@ Questions? Check docs/GLOSSIAAPP-MIGRATION-GUIDE.md
 ## Timeline
 
 | Task | Duration | When |
-
 | ------ | ---------- | ------ |
-
 | **Commit local changes** | 5 min | Now |
-
 | **Create backup** | 2 min | Before transfer |
-
 | **Transfer on GitHub** | 5 min | When ready |
-
 | **Update local remote** | 3 min | After transfer |
-
 | **Verify migration** | 5 min | After update |
-
 | **Invite guillaume** | 5 min | After migration |
-
 | **Grant repo access** | 5-10 min | After acceptance |
-
 | **Total** | **~30-35 min active work** | Single session |
 
 (User acceptance of invitation happens asynchronously)

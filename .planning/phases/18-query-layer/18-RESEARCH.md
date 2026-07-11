@@ -25,10 +25,11 @@ via a new HTTP sub-call to the daemon (HTTP bridge pattern — avoids dual Datab
 passing `kuzuDb` through the MCP init path.
 
 <phase_requirements>
+
 ## Phase Requirements
 
 | ID | Description | Research Support |
-|----|-------------|-----------------|
+| ---- | ------------- | ----------------- |
 | QUERY-01 | `GET /graph` supports `direction=forward\|reverse\|both` parameter (Kuzu backend) | Kuzu Cypher arrow syntax: `->` forward, `<-` reverse, `-` both; `docId` param triggers per-node traversal; existing SQLite path removed |
 | QUERY-02 | `get_related` MCP tool uses Kuzu Cypher traversal (same response contract, reverse traversal enabled) | `graph/kuzu-queries.mjs` exports `kuzuFindRelated`; response shape matches current `findRelated` output: `{ doc_id, hops, total, related: [{doc_id, relationship_type, weight, depth, path, repository, filename, category}] }` |
 </phase_requirements>
@@ -38,7 +39,7 @@ passing `kuzuDb` through the MCP init path.
 ### Core
 
 | Library | Version | Purpose | Why Standard |
-|---------|---------|---------|--------------|
+| --------- | --------- | --------- | -------------- |
 | kuzu | ^0.11.3 | Graph database — Cypher queries | Already installed, schema frozen, kuzuDb singleton in server.mjs |
 | better-sqlite3 | existing | SQLite — documents lookup for node metadata | Stays as-is; no FTS replacement |
 | express | existing | REST endpoint host | No change |
@@ -71,6 +72,7 @@ daemon/
 filtering needed — the database does it.
 
 **Forward (outgoing from docId):**
+
 ```cypher
 MATCH (src:Document {id: $id})-[r]->(tgt:Document)
 RETURN tgt.id AS doc_id, label(r) AS relationship_type, tgt.path, tgt.repository,
@@ -78,6 +80,7 @@ RETURN tgt.id AS doc_id, label(r) AS relationship_type, tgt.path, tgt.repository
 ```
 
 **Reverse (incoming to docId — documents that point TO this doc):**
+
 ```cypher
 MATCH (src:Document)-[r]->(tgt:Document {id: $id})
 RETURN src.id AS doc_id, label(r) AS relationship_type, src.path, src.repository,
@@ -85,6 +88,7 @@ RETURN src.id AS doc_id, label(r) AS relationship_type, src.path, src.repository
 ```
 
 **Both (undirected — union of forward and reverse):**
+
 ```cypher
 MATCH (src:Document {id: $id})-[r]-(tgt:Document)
 RETURN tgt.id AS doc_id, label(r) AS relationship_type, tgt.path, tgt.repository,
@@ -92,6 +96,7 @@ RETURN tgt.id AS doc_id, label(r) AS relationship_type, tgt.path, tgt.repository
 ```
 
 Note: The pipe `|` operator for multiple relationship types works when listing edge tables:
+
 ```cypher
 MATCH (a:Document)-[r:imports|related_to|parent_of]->(b:Document)
 ```
@@ -200,7 +205,7 @@ Use UNION (not UNION ALL) to deduplicate when a node is both source and target.
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
-|---------|-------------|-------------|-----|
+| --------- | ------------- | ------------- | ----- |
 | Directional traversal filtering | Application-side edge direction filter | Kuzu Cypher `->` / `<-` / `-` arrow syntax | Database handles it; no JS needed |
 | Multi-hop traversal | Recursive JS loop | Kuzu `*1..N` variable-length path | Database optimizes recursion |
 | Result deduplication | Manual Set-based dedup in JS | Kuzu `UNION` (not `UNION ALL`) | Dedup at query level |
@@ -466,12 +471,13 @@ server.registerTool(
 ## State of the Art
 
 | Old Approach | Current Approach | When Changed | Impact |
-|--------------|------------------|--------------|--------|
+| -------------- | ------------------ | -------------- | -------- |
 | SQLite recursive CTE in findRelated | Kuzu `*1..N` Cypher variable-length path | Phase 18 | Native graph engine; reverse traversal now possible |
 | `/graph` SQLite-only, no direction param | `/graph?docId=&direction=` with Kuzu backend | Phase 18 | New capability: reverse + both modes |
 | `get_related` forward-only | `get_related` with `direction` param | Phase 18 | Reverse traversal for "who references this doc?" |
 
 **Deprecated/outdated after Phase 18:**
+
 - `findRelated` from `graph/relations.mjs` for query purposes — file stays but the function is no
   longer called by MCP or REST. It can be removed in a future cleanup phase; don't remove now.
 
@@ -527,6 +533,7 @@ server.registerTool(
 ## Metadata
 
 **Confidence breakdown:**
+
 - Standard stack: HIGH — all libraries already present; no new deps
 - Architecture: HIGH — file locations and module boundaries confirmed from source code
 - Kuzu Cypher direction syntax: HIGH — confirmed from official docs fetch

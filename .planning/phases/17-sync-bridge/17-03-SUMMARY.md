@@ -100,5 +100,5 @@ None — no external service configuration required. Operators run `npm run grap
 
 ---
 
-*Phase: 17-sync-bridge*
-*Completed: 2026-04-12*
+_Phase: 17-sync-bridge_
+_Completed: 2026-04-12_

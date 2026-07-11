@@ -30,7 +30,7 @@ These errors require understanding parent-child relationships and document struc
 
 **Problem:** Numbered lists interrupted by content break continuation
 
-##### Detection Pattern:
+##### Detection Pattern
 
 ```regex
 
@@ -38,7 +38,7 @@ These errors require understanding parent-child relationships and document struc
 
 ```
 
-##### Example (WRONG):
+##### Example (WRONG)
 
 ```markdown
 
@@ -52,7 +52,7 @@ Some explanatory text here
 
 ```
 
-##### Example (CORRECT):
+##### Example (CORRECT)
 
 ```markdown
 
@@ -78,7 +78,7 @@ Some explanatory text here
 
 **Fix Strategy:** AI-assisted (context required)
 
-##### Grep Command:
+##### Grep Command
 
 ```bash
 
@@ -92,7 +92,7 @@ grep -Pzo '^\d+\.\s+[^\n]+\n\n(?!^\d+\.\s+)[^\n]+\n\n^\d+\.\s+' file.md
 
 **Problem:** Switching between numbered and bulleted lists without proper nesting
 
-##### Detection Pattern:
+##### Detection Pattern
 
 ```regex
 
@@ -102,7 +102,7 @@ grep -Pzo '^\d+\.\s+[^\n]+\n\n(?!^\d+\.\s+)[^\n]+\n\n^\d+\.\s+' file.md
 
 Where first and second markers don't match type
 
-##### Example (WRONG):
+##### Example (WRONG)
 
 ```markdown
 
@@ -114,7 +114,7 @@ Where first and second markers don't match type
 
 ```
 
-##### Example (CORRECT):
+##### Example (CORRECT)
 
 ```markdown
 
@@ -138,7 +138,7 @@ OR
 
 **Fix Strategy:** Automated or AI-assisted
 
-##### Grep Command:
+##### Grep Command
 
 ```bash
 
@@ -154,7 +154,7 @@ These require understanding document structure and semantic hierarchy.
 
 **Problem:** Jumping from H2 to H4 (skipping H3)
 
-##### Detection Pattern:
+##### Detection Pattern
 
 ```regex
 
@@ -162,7 +162,7 @@ These require understanding document structure and semantic hierarchy.
 
 ```
 
-##### Example (WRONG):
+##### Example (WRONG)
 
 ```markdown
 
@@ -172,7 +172,7 @@ These require understanding document structure and semantic hierarchy.
 
 ```
 
-#### Example (CORRECT):
+#### Example (CORRECT)
 
 ```markdown
 
@@ -186,7 +186,7 @@ These require understanding document structure and semantic hierarchy.
 
 **Fix Strategy:** Automated
 
-##### Grep Command:
+##### Grep Command
 
 ```bash
 
@@ -198,7 +198,7 @@ grep -Pzo '##\s+[^\n]+(\n\n|$)####\s+' file.md
 
 **Problem:** More than one top-level heading
 
-##### Detection Pattern:
+##### Detection Pattern
 
 ```regex
 
@@ -206,7 +206,7 @@ grep -Pzo '##\s+[^\n]+(\n\n|$)####\s+' file.md
 
 ```
 
-##### Example (WRONG):
+##### Example (WRONG)
 
 ```markdown
 
@@ -218,7 +218,7 @@ Content here
 
 ```
 
-##### Example (CORRECT):
+##### Example (CORRECT)
 
 ```markdown
 
@@ -232,7 +232,7 @@ Content here
 
 **Fix Strategy:** AI-assisted (semantic decision)
 
-### Grep Command:
+### Grep Command
 
 ```bash
 
@@ -246,7 +246,7 @@ grep -n '^#\s\+' file.md | wc -l  # Count > 1 means multiple H1s
 
 **Problem:** Code blocks inside code blocks (common in documentation)
 
-##### Detection Pattern:
+##### Detection Pattern
 
 ```regex
 
@@ -254,7 +254,7 @@ grep -n '^#\s\+' file.md | wc -l  # Count > 1 means multiple H1s
 
 ```
 
-##### Example (WRONG):
+##### Example (WRONG)
 
 ```markdown
 
@@ -267,7 +267,7 @@ console.log("test");
 
 ```
 
-##### Example (CORRECT):
+##### Example (CORRECT)
 
 ```markdown
 
@@ -283,7 +283,7 @@ console.log("test");
 
 **Fix Strategy:** Automated
 
-##### Grep Command:
+##### Grep Command
 
 ```bash
 
@@ -295,7 +295,7 @@ grep -Pzo '```[a-z]*\n(.*\n)*?```[a-z]*\n(.*\n)*?```' file.md
 
 **Problem:** AI often forgets language specifier
 
-##### Detection Pattern:
+##### Detection Pattern
 
 ```regex
 
@@ -303,7 +303,7 @@ grep -Pzo '```[a-z]*\n(.*\n)*?```[a-z]*\n(.*\n)*?```' file.md
 
 ```
 
-##### Example (WRONG):
+##### Example (WRONG)
 
 ```markdown
 
@@ -313,7 +313,7 @@ console.log("test");
 
 ```
 
-##### Example (CORRECT):
+##### Example (CORRECT)
 
 ```markdown
 
@@ -325,7 +325,7 @@ console.log("test");
 
 **Fix Strategy:** Automated (already in fix-markdown.mjs)
 
-##### Grep Command:
+##### Grep Command
 
 ```bash
 
@@ -339,7 +339,7 @@ grep -n '^```$' file.md
 
 **Problem:** Using [text][ref] without defining [ref]: url
 
-##### Detection Pattern:
+##### Detection Pattern
 
 ```regex
 
@@ -347,7 +347,7 @@ grep -n '^```$' file.md
 
 ```
 
-##### Example (WRONG):
+##### Example (WRONG)
 
 ```markdown
 
@@ -357,7 +357,7 @@ Check the [documentation][docs] for details.
 
 ```
 
-##### Example (CORRECT):
+##### Example (CORRECT)
 
 ```markdown
 
@@ -369,7 +369,7 @@ Check the [documentation][docs] for details.
 
 **Fix Strategy:** AI-assisted (need to find/create URL)
 
-##### Grep Command:
+##### Grep Command
 
 ```bash
 
@@ -383,7 +383,7 @@ comm -23 refs.txt defs.txt  # Show undefined refs
 
 **Problem:** Links to files/headings that don't exist
 
-##### Detection Pattern:
+##### Detection Pattern
 
 ```regex
 
@@ -393,7 +393,7 @@ comm -23 refs.txt defs.txt  # Show undefined refs
 
 Then validate file existence
 
-##### Example (WRONG):
+##### Example (WRONG)
 
 ```markdown
 
@@ -405,7 +405,7 @@ See [setup guide](docs/setup.md) for details.
 
 **Fix Strategy:** Automated with file system check
 
-## Bash Pipeline:
+## Bash Pipeline
 
 ```bash
 
@@ -423,7 +423,7 @@ done
 
 **Problem:** Different number of columns in table rows
 
-#### Detection Pattern:
+#### Detection Pattern
 
 ```regex
 
@@ -433,7 +433,7 @@ done
 
 Count pipes per line
 
-#### Example (WRONG):
+#### Example (WRONG)
 
 ```markdown
 
@@ -445,7 +445,7 @@ Count pipes per line
 
 ```
 
-#### Example (CORRECT):
+#### Example (CORRECT)
 
 ```markdown
 
@@ -459,7 +459,7 @@ Count pipes per line
 
 **Fix Strategy:** Automated
 
-#### Awk Command:
+#### Awk Command
 
 ```bash
 
@@ -471,7 +471,7 @@ awk -F'|' '/^\|/ {print NF, $0}' file.md | awk '{if(NF!=prev && NR>1) print "Lin
 
 **Problem:** Missing |---|---| separator line
 
-##### Detection Pattern:
+##### Detection Pattern
 
 ```regex
 
@@ -479,7 +479,7 @@ awk -F'|' '/^\|/ {print NF, $0}' file.md | awk '{if(NF!=prev && NR>1) print "Lin
 
 ```
 
-##### Example (WRONG):
+##### Example (WRONG)
 
 ```markdown
 
@@ -489,7 +489,7 @@ awk -F'|' '/^\|/ {print NF, $0}' file.md | awk '{if(NF!=prev && NR>1) print "Lin
 
 ```
 
-##### Example (CORRECT):
+##### Example (CORRECT)
 
 ```markdown
 
@@ -503,7 +503,7 @@ awk -F'|' '/^\|/ {print NF, $0}' file.md | awk '{if(NF!=prev && NR>1) print "Lin
 
 **Fix Strategy:** Automated
 
-##### Grep Command:
+##### Grep Command
 
 ```bash
 
@@ -517,7 +517,7 @@ grep -Pzo '\|.+\|\n\|(?![-:\s]+\|).+\|' file.md
 
 **Problem:** Mixed 2-space and 4-space indentation in nested lists
 
-##### Detection Pattern:
+##### Detection Pattern
 
 ```regex
 
@@ -527,7 +527,7 @@ grep -Pzo '\|.+\|\n\|(?![-:\s]+\|).+\|' file.md
 
 Check for consistency
 
-##### Example (WRONG):
+##### Example (WRONG)
 
 ```markdown
 
@@ -539,7 +539,7 @@ Check for consistency
 
 ```
 
-##### Example (CORRECT):
+##### Example (CORRECT)
 
 ```markdown
 
@@ -553,7 +553,7 @@ Check for consistency
 
 **Fix Strategy:** Automated
 
-##### Sed Command:
+##### Sed Command
 
 ```bash
 
@@ -567,7 +567,7 @@ sed -E 's/^    ([-*+])/  \1/g' file.md
 
 **Problem:** Spaces at end of lines (breaks some parsers)
 
-### Detection Pattern:
+### Detection Pattern
 
 ```regex
 
@@ -575,7 +575,7 @@ sed -E 's/^    ([-*+])/  \1/g' file.md
 
 ```
 
-### Example (WRONG):
+### Example (WRONG)
 
 ```markdown
 
@@ -583,7 +583,7 @@ This line has trailing spaces
 
 ```
 
-### Example (CORRECT):
+### Example (CORRECT)
 
 ```markdown
 
@@ -593,7 +593,7 @@ This line has no trailing spaces
 
 **Fix Strategy:** Automated
 
-### Sed Command:
+### Sed Command
 
 ```bash
 
@@ -607,7 +607,7 @@ sed 's/\s\+$//' file.md
 
 **Problem:** Invalid YAML syntax in frontmatter
 
-##### Detection Pattern:
+##### Detection Pattern
 
 ```regex
 
@@ -617,7 +617,7 @@ sed 's/\s\+$//' file.md
 
 Then validate YAML
 
-##### Example (WRONG):
+##### Example (WRONG)
 
 ```markdown
 
@@ -626,7 +626,7 @@ date 2025-11-13  # ERROR: Missing colon
 
 ```
 
-##### Example (CORRECT):
+##### Example (CORRECT)
 
 ```markdown
 
@@ -637,7 +637,7 @@ date: 2025-11-13
 
 **Fix Strategy:** AI-assisted (YAML parsing required)
 
-##### Validation:
+##### Validation
 
 ```bash
 
@@ -651,7 +651,7 @@ sed -n '/^---$/,/^---$/p' file.md | yq eval - 2>&1 | grep -i error
 
 **Problem:** Documents missing standard metadata fields
 
-### Detection Pattern:
+### Detection Pattern
 
 ```regex
 
@@ -659,7 +659,7 @@ sed -n '/^---$/,/^---$/p' file.md | yq eval - 2>&1 | grep -i error
 
 ```
 
-### Example (WRONG):
+### Example (WRONG)
 
 ```markdown
 
@@ -669,7 +669,7 @@ title: My Document
 
 ```
 
-### Example (CORRECT):
+### Example (CORRECT)
 
 ```markdown
 
@@ -682,7 +682,7 @@ author: DESIGN-DVW
 
 **Fix Strategy:** Automated (add defaults) or AI-assisted
 
-## Grep Command:
+## Grep Command
 
 ```bash
 
@@ -698,7 +698,7 @@ grep -L 'version:' $(find . -name "*.md")
 
 **Problem:** AI using **bold** for everything
 
-#### Detection Pattern:
+#### Detection Pattern
 
 ```regex
 
@@ -708,7 +708,7 @@ grep -L 'version:' $(find . -name "*.md")
 
 At line start (likely should be heading)
 
-#### Example (WRONG):
+#### Example (WRONG)
 
 ```markdown
 
@@ -717,7 +717,7 @@ At line start (likely should be heading)
 
 ```
 
-#### Example (CORRECT):
+#### Example (CORRECT)
 
 ```markdown
 
@@ -733,7 +733,7 @@ Here are the benefits...
 
 **Fix Strategy:** AI-assisted (semantic decision)
 
-#### Grep Command:
+#### Grep Command
 
 ```bash
 
@@ -745,7 +745,7 @@ grep -n '^\*\*[A-Z]' file.md
 
 **Problem:** AI adding --- after every section
 
-##### Detection Pattern:
+##### Detection Pattern
 
 ```regex
 
@@ -755,7 +755,7 @@ grep -n '^\*\*[A-Z]' file.md
 
 Or count per document > threshold
 
-##### Example (WRONG):
+##### Example (WRONG)
 
 ```markdown
 
@@ -771,7 +771,7 @@ Content
 
 ```
 
-### Example (CORRECT):
+### Example (CORRECT)
 
 ```markdown
 
@@ -789,7 +789,7 @@ Content
 
 **Fix Strategy:** Automated
 
-### Sed Command:
+### Sed Command
 
 ```bash
 
@@ -802,35 +802,20 @@ sed '/^---$/N;/^---\n$/d' file.md
 ## Detection Strategy Matrix
 
 | Error Type | Detection Method | Fix Method | Priority |
-
 | ----------- | ------------------ | ------------ | ---------- |
-
 | **Context Numbering** | Regex + parsing | AI-assisted | High |
-
 | **Heading Hierarchy** | Regex | Automated | High |
-
 | **Code Block Nesting** | State machine | Automated | High |
-
 | **Missing Language** | Regex | Automated | High |
-
 | **Undefined References** | Grep + comm | AI-assisted | Medium |
-
 | **Broken Links** | Grep + file check | Automated | High |
-
 | **Table Alignment** | Awk column count | Automated | Medium |
-
 | **Missing Separator** | Regex | Automated | Medium |
-
 | **Indentation** | Regex | Automated | Low |
-
 | **Trailing Spaces** | Regex | Automated | Low |
-
 | **YAML Frontmatter** | YAML parser | AI-assisted | Medium |
-
 | **Missing Metadata** | Grep | Automated | Medium |
-
 | **Over-Formatting** | Regex + context | AI-assisted | Low |
-
 | **Excessive Rules** | Count threshold | Automated | Low |
 
 ## Command-Line Tool Combinations

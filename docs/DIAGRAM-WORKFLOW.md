@@ -19,15 +19,10 @@ Without the registry, diagrams drift: someone updates a `.mmd` file but forgets 
 Every diagram in the ecosystem produces three artifacts plus a registry entry:
 
 | Artifact       | Format            | Location                        | Purpose                                       |
-
 | -------------- | ----------------- | ------------------------------- | --------------------------------------------- |
-
 | Mermaid source | `.mmd`            | `docs/diagrams/` in each repo   | Version-controlled source of truth            |
-
 | PNG preview    | `.png`            | `docs/diagrams/` in each repo   | Inline previews in GitHub, PRs, docs          |
-
 | FigJam view    | FigJam file/board | Figma (see Central Board below) | Interactive collaboration and presentation    |
-
 | Registry entry | SQLite row        | DocuMind `diagrams` table       | Tracking, staleness detection, URL management |
 
 If any one of the three file artifacts is missing, the diagram is incomplete. The registry tracks which pieces exist and flags gaps.
@@ -75,21 +70,13 @@ The `.mmd` source file has been modified since the FigJam view was last generate
 The registry supports seven diagram types. Choose the type that best fits the content — this helps with filtering, dashboard display, and ensures agents pick the right Mermaid syntax.
 
 | Type                 | Mermaid Syntax                             | When to Use                                            | Example Use Cases                                                          |
-
 | -------------------- | ------------------------------------------ | ------------------------------------------------------ | -------------------------------------------------------------------------- |
-
 | `flowchart`          | `flowchart TD` / `flowchart LR`            | Process flows, data pipelines, decision logic          | Scan pipeline, API request handling, build process                         |
-
 | `folder_tree`        | `graph TD` with directory/folder nodes     | Repository structure, file organization                | Repo structure, config hierarchy, monorepo layout                          |
-
 | `relationship_graph` | `classDiagram`                             | Entity relationships, module dependencies, inheritance | Document relationships, agent inheritance, package dependencies            |
-
 | `decision_tree`      | `flowchart TD` with diamond decision nodes | Decision logic, troubleshooting guides, routing        | Error handling flow, permission checks, dispatch routing                   |
-
 | `sequence`           | `sequenceDiagram`                          | Interactions over time between actors/systems          | API call chains, MCP tool flows, webhook handshakes                        |
-
 | `state`              | `stateDiagram-v2`                          | Lifecycle stages, status transitions                   | Document lifecycle, diagram lifecycle (generated/curated/stale), PR states |
-
 | `gantt`              | `gantt`                                    | Timelines, schedules, phased work                      | Milestone phases, release schedule, migration plan                         |
 
 ### Type auto-detection
@@ -380,19 +367,12 @@ When curating a new diagram, place it in the correct repo Page and an appropriat
 Quick reference for locating diagram artifacts:
 
 | What | Where |
-
 | --- | --- |
-
 | Mermaid source (`.mmd`) | `docs/diagrams/` in each repository |
-
 | PNG preview (`.png`) | `docs/diagrams/` in each repository — initially mmdc 2× retina; replaced by Figma export on curation |
-
 | Registry database | DocuMind SQLite at `data/documind.db`, table `diagrams` |
-
 | Registry snapshot | `docs/diagrams/DIAGRAM-REGISTRY.md` in each repo (auto-generated, do not edit) |
-
 | Central FigJam board | `https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/` |
-
 | Web dashboard | `http://localhost:9000` -- Diagrams tab |
 
 ---
@@ -422,13 +402,9 @@ curl http://localhost:9000/diagrams?stale=true
 ### MCP Tools
 
 | Tool               | Purpose                                                     |
-
 | ------------------ | ----------------------------------------------------------- |
-
 | `get_diagrams`     | Query the registry (optional filters: `repo`, `stale_only`) |
-
 | `register_diagram` | Register or update a diagram entry                          |
-
 | `curate_diagram`   | Set curated URL and propagate across all repos              |
 
 ### Response Shape

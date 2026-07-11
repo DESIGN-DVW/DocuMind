@@ -109,5 +109,5 @@ None - no external service configuration required.
 
 ---
 
-*Phase: 22-obsolete-docs-dashboard*
-*Completed: 2026-04-20*
+_Phase: 22-obsolete-docs-dashboard_
+_Completed: 2026-04-20_

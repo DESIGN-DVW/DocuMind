@@ -21,11 +21,8 @@
 ### Current Situation
 
 | Organization   | Has Access? | Repositories                                     |
-
 | -------------- | ----------- | ------------------------------------------------ |
-
 | **DVW-Design** | ✅ YES       | GlossiaApp only                                  |
-
 | **DESIGN-DVW** | ❌ NO        | All other repos (Figma-Plug-ins, DocuMind, etc.) |
 
 ### The Problem
@@ -109,7 +106,7 @@ Grant repository access:
 
 5. Click "Add <guillaume@aigenconsulting.com> to this repository"
 
-##### Repeat for each repository they need access to.
+##### Repeat for each repository they need access to
 
 ### Method 2: GitHub CLI (Fastest for Multiple Repos)
 
@@ -183,7 +180,7 @@ gh api \
 
 ```
 
-## Permission levels:
+## Permission levels
 
 - `pull` = Read access
 
@@ -294,35 +291,24 @@ If you plan to invite multiple users with similar permissions:
 ### For External Consultants (like <guillaume@aigenconsulting.com>)
 
 | Repository        | Recommended Permission       | Reason                                       |
-
 | ----------------- | ---------------------------- | -------------------------------------------- |
-
 | Figma-Plug-ins    | **Read**                     | Can view BUSINESS-ANALYSIS.md and other docs |
-
 | DocuMind          | **Read**                     | Can view documentation                       |
-
 | FigmailAPP        | **Write** (if working on it) | Can contribute code                          |
-
 | FigmaDSController | **Write** (if working on it) | Can contribute code                          |
-
 | All Others        | **Read** or None             | Access based on need                         |
 
 ### For Full-Time Team Members
 
 | Repository       | Recommended Permission | Reason                         |
-
 | ---------------- | ---------------------- | ------------------------------ |
-
 | All Repositories | **Write**              | Can contribute to all projects |
-
 | Critical Repos   | **Maintain**           | Can manage issues and PRs      |
 
 ### For Organization Admins
 
 | Repository       | Recommended Permission | Reason       |
-
 | ---------------- | ---------------------- | ------------ |
-
 | All Repositories | **Admin**              | Full control |
 
 ## Verification
@@ -389,7 +375,7 @@ Or visit in browser:
 
 ### Issue: Invitation Not Received
 
-#### Solutions:
+#### Solutions
 
 1. Check spam/junk folder
 
@@ -409,7 +395,7 @@ Or visit in browser:
 
 **Cause:** Repository is private and user doesn't have access
 
-#### Solution:
+#### Solution
 
 1. Verify user accepted organization invitation
 
@@ -510,7 +496,7 @@ Once GlossiaApp is migrated from DVW-Design to DESIGN-DVW:
 
 **Time Required:** 5 minutes to invite, 2 minutes for them to accept
 
-### Next Steps:
+### Next Steps
 
 1. Use Method 1 (web interface) to invite
 

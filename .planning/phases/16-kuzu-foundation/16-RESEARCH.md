@@ -7,10 +7,11 @@
 ---
 
 <phase_requirements>
+
 ## Phase Requirements
 
 | ID | Description | Research Support |
-|----|-------------|-----------------|
+| ---- | ------------- | ----------------- |
 | GRAPH-01 | Kuzu DB initializes with document relationship schema on daemon startup | Schema DDL defined below; server.mjs integration pattern confirmed |
 | GRAPH-02 | Kuzu database path is configurable via `DOCUMIND_KUZU_DIR` env var | env.mjs pattern established; new export follows existing DB_PATH pattern |
 | GRAPH-03 | Docker image builds successfully with Kuzu native addon (Debian bookworm base) | Dockerfile already uses `node:22-bookworm-slim`; Kuzu prebuilts are glibc-compatible; builder stage already has python3/make/g++ |
@@ -33,7 +34,7 @@ The milestone research established that Kuzu `0.11.3` is the pinned version (pro
 ### Core
 
 | Library | Version | Purpose | Why Standard |
-|---------|---------|---------|--------------|
+| --------- | --------- | --------- | -------------- |
 | `kuzu` | `0.11.3` (exact pin) | Embedded property graph DB with Cypher query language | Only embedded graph DB with a first-class Node.js N-API binary; ships prebuilt binaries for Node 20/22 on glibc Linux; no server process required; runs in-process alongside SQLite |
 
 ### Supporting
@@ -43,7 +44,7 @@ No additional libraries needed for Phase 16. LangChain packages (`@langchain/cor
 ### Alternatives Considered
 
 | Instead of | Could Use | Tradeoff |
-|------------|-----------|----------|
+| ------------ | ----------- | ---------- |
 | `kuzu@0.11.3` | `kuzu@latest` | `latest` would track the archived upstream or an unverified fork; exact pin is required |
 | `kuzu@0.11.3` | LadybugDB / Bighorn forks | Neither has a published npm package as of April 2026 |
 
@@ -227,7 +228,7 @@ export const KUZU_DIR = path.resolve(ROOT, process.env.DOCUMIND_KUZU_DIR ?? 'dat
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
-|---------|-------------|-------------|-----|
+| --------- | ------------- | ------------- | ----- |
 | Kuzu schema idempotency | Manual "if table exists" checks via query | `CREATE NODE TABLE IF NOT EXISTS` / `CREATE REL TABLE IF NOT EXISTS` | Kuzu supports these DDL guards natively in 0.11.3 |
 | Kuzu database directory creation | `fs.mkdirSync(KUZU_DIR)` before open | Pass the path to `new kuzu.Database(path)` — Kuzu creates the directory | Kuzu creates its own directory structure on first open |
 
@@ -282,7 +283,7 @@ const kuzu = require('kuzu');
 From direct inspection of `graph/relations.mjs` and `scripts/db/schema.sql`:
 
 | SQLite `relationship_type` value | Kuzu Edge Table Name | Properties |
-|----------------------------------|----------------------|-----------|
+| ---------------------------------- | ---------------------- | ----------- |
 | `imports` | `imports` | `weight DOUBLE, link_text STRING` |
 | `dispatched_to` | `dispatched_to` | `target_repo STRING` |
 | `supersedes` | `supersedes` | `confidence DOUBLE` |
@@ -335,7 +336,7 @@ app.get('/health', async (_req, res) => {
 ## State of the Art
 
 | Old Approach | Current Approach | When Changed | Impact |
-|--------------|------------------|--------------|--------|
+| -------------- | ------------------ | -------------- | -------- |
 | All graph queries via SQLite recursive CTEs | Kuzu typed edge tables + Cypher (Phase 17+) | v3.3 | Phase 16 only initializes; CTE queries remain active until Phase 17 sync |
 | Single database (`documind.db`) | Dual-DB: SQLite (FTS5 + metadata) + Kuzu (graph) | v3.3 | Two `data/` subdirectories; named Docker volume already covers both |
 
@@ -371,7 +372,7 @@ app.get('/health', async (_req, res) => {
 **Manual verification gates for Phase 16:**
 
 | Requirement | Verification Command | Expected Result |
-|-------------|---------------------|-----------------|
+| ------------- | --------------------- | ----------------- |
 | ESM import works (GRAPH-03 precursor) | `node scripts/kuzu-smoke-test.mjs` | Exits 0, prints "Kuzu smoke test PASSED" |
 | Docker build with Kuzu (GRAPH-03) | `docker build -t documind-test .` | Exits 0, no "building from source" messages for kuzu |
 | Docker Kuzu open/close (GRAPH-03) | `docker run --rm documind-test node scripts/kuzu-smoke-test.mjs` | Exits 0 |

@@ -9,7 +9,7 @@
 ## Phase Requirements
 
 | ID | Description | Research Support |
-|----|-------------|-----------------|
+| ---- | ------------- | ----------------- |
 | OBS-01 | `obsolescence_signals` table stores per-document heuristic scores (age, inbound links, keyword match, similarity), updated by daily cron pass | Schema design section; migration pattern from existing schema.sql |
 | OBS-02 | `/dashboard/obsolete.html` renders a sortable, filterable table of flagged documents with confidence score, flag label, age, repo, and path | Plain-HTML dashboard pattern documented from diagrams.html |
 | OBS-03 | Batch-select checkboxes + "Archive Selected" / "Dismiss" action buttons; dismiss suppresses a row for 30 days (no destructive action without confirmation) | UI pattern + suppression expiry field in OBS-01 table |
@@ -36,7 +36,7 @@ The detection pass runs inside the existing `CRON_DAILY` block (or as its own su
 ### Core
 
 | Library | Version | Purpose | Why Standard |
-|---------|---------|---------|--------------|
+| --------- | --------- | --------- | -------------- |
 | better-sqlite3 | existing | `obsolescence_signals` DDL + upsert + dismiss queries | Already the project DB layer; all sync operations stay sync |
 | kuzu | 0.11.3 | Inbound-link count query per document | Already initialized as `kuzuDb` in server.mjs; flows as param |
 | node-cron | existing | Schedule daily detection pass | Already manages all cron jobs in scheduler.mjs |
@@ -45,7 +45,7 @@ The detection pass runs inside the existing `CRON_DAILY` block (or as its own su
 ### Supporting
 
 | Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
+| --------- | --------- | --------- | ------------- |
 | content_similarities table | existing SQLite | Redundancy signal (similarity_score ≥ 0.7) | Already populated by Phase 3 deep scan; JOIN on doc1_id/doc2_id |
 | documents table | existing SQLite | Age signal (modified_at), keyword signal (path + title via LIKE) | Core document store |
 | statistics table | existing SQLite | Optional: store last detection run timestamp | If scheduler wants to log detection run metadata |
@@ -53,7 +53,7 @@ The detection pass runs inside the existing `CRON_DAILY` block (or as its own su
 ### Alternatives Considered
 
 | Instead of | Could Use | Tradeoff |
-|------------|-----------|----------|
+| ------------ | ----------- | ---------- |
 | Inline detection in daily cron | Separate `detectObsolescence(db, kuzuDb)` module | Separate module is testable in isolation and keeps scheduler.mjs clean — use the module |
 | Full-table recalculation on every run | Hash-based incremental update | Full recalculation is simpler and correct for daily frequency; ~620 docs processes fast in SQLite |
 | Kuzu for ALL signals | Kuzu only for inbound-link count | SQLite is source of truth for age/keywords/similarity; Kuzu is graph-only per project architecture |
@@ -344,7 +344,7 @@ function scoreDocument(doc, inboundCount, maxSimilarity) {
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
-|---------|-------------|-------------|-----|
+| --------- | ------------- | ------------- | ----- |
 | Inbound-link count per document | Custom SQLite join | Kuzu reverse traversal `MATCH (src)-[r]->(tgt {id: $id}) RETURN count(r)` | Kuzu is the graph source of truth; SQLite `doc_relationships` may have stale data |
 | Similarity score per document | Re-run similarity analysis | JOIN `content_similarities` on doc1_id/doc2_id, take MAX(similarity_score) | Already computed by Phase 3 deep scan; no recomputation needed |
 | Client-side sort | Custom sort algorithm | `Array.prototype.sort()` on `allRows` by column | Native JS sort is sufficient; data set is small (hundreds of rows) |
@@ -503,12 +503,13 @@ function sortBy(key) {
 ## State of the Art
 
 | Old Approach | Current Approach | When Changed | Impact |
-|--------------|------------------|--------------|--------|
+| -------------- | ------------------ | -------------- | -------- |
 | SQLite doc_relationships for graph queries | Kuzu for inbound-link count | Phase 17/18 | Inbound count uses Kuzu reverse traversal, not SQLite JOIN |
 | No staleness surface in UI | `statistics.stale_documents` in /stats JSON | Phase 3 | `stale_documents` count exists but has no drill-down — Phase 22 provides the drill-down |
 | Similarity data unreachable via UI | content_similarities JOIN in detection pass | Phase 3 (schema) | Table exists with scored pairs; Phase 22 is first consumer for UI surface |
 
 **Deprecated/outdated:**
+
 - Do NOT use `similarities` as the table name — the actual table is `content_similarities` (confirmed from schema.sql line 63). Requirements say "similarities table" informally but the real name differs.
 
 ---

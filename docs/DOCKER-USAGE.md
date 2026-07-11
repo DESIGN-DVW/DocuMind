@@ -95,17 +95,11 @@ Expected response:
 Once running, DocuMind automatically:
 
 | Schedule        | What happens                                  |
-
 | --------------- | --------------------------------------------- |
-
 | On startup      | Initializes the database and runs a full scan |
-
 | Every 15 min    | Checks the file watcher is alive              |
-
 | Every hour      | Incremental scan (only changed files)         |
-
 | Daily at 2 AM   | Full scan + similarity detection              |
-
 | Weekly (Sunday) | PDF re-index + keyword refresh                |
 
 All data (the SQLite database, logs) is stored in a Docker volume (`documind_data`) that persists across container restarts.
@@ -167,27 +161,16 @@ curl http://localhost:9000/tree/DocuMind
 ### Full endpoint list
 
 | Endpoint      | Method | Description                 |
-
 | ------------- | ------ | --------------------------- |
-
 | `/health`     | GET    | Health check + version      |
-
 | `/stats`      | GET    | Dashboard statistics        |
-
 | `/search?q=`  | GET    | Full-text search            |
-
 | `/graph`      | GET    | Document relationship graph |
-
 | `/tree/:repo` | GET    | Folder hierarchy            |
-
 | `/keywords`   | GET    | Keyword cloud data          |
-
 | `/diagrams`   | GET    | Diagram registry            |
-
 | `/scan`       | POST   | Trigger scan                |
-
 | `/index`      | POST   | Reindex documents           |
-
 | `/convert`    | POST   | Convert file (DOCX/RTF/PDF) |
 
 ---
@@ -266,7 +249,7 @@ DOCUMIND_REPOS_DIR=/app/repos
 
 Two changes are needed:
 
-#### a) Comment out the bind mount, uncomment the clone volume:
+#### a) Comment out the bind mount, uncomment the clone volume
 
 ```yaml
 
@@ -280,7 +263,7 @@ volumes:
 
 ```
 
-#### b) Uncomment the clone-mode environment variables:
+#### b) Uncomment the clone-mode environment variables
 
 ```yaml
 
@@ -292,7 +275,7 @@ environment:
 
 ```
 
-#### c) Uncomment the `documind_repos` volume at the bottom:
+#### c) Uncomment the `documind_repos` volume at the bottom
 
 ```yaml
 

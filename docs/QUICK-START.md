@@ -48,7 +48,7 @@ This will:
 
 - Create `index/scan-report.md`
 
-#### Expected output:
+#### Expected output
 
 ```text
 
@@ -74,7 +74,7 @@ This will:
 
 - Create `index/categories.json`
 
-#### Expected output:
+#### Expected output
 
 ```text
 
@@ -100,7 +100,7 @@ This will:
 
 - Generate `index/validation-report.md`
 
-#### Expected output:
+#### Expected output
 
 ```text
 
@@ -257,7 +257,7 @@ npm run scan:report && npm run index
 
 ### Cron jobs not running
 
-#### Solution:
+#### Solution
 
 ```bash
 
@@ -277,7 +277,7 @@ tail -f logs/cron-*.log
 
 ## Scripts failing
 
-### Solution:
+### Solution
 
 ```bash
 
@@ -307,27 +307,16 @@ npm install
 ## Quick Reference
 
 | Task | Command |
-
 | ------ | --------- |
-
 | Scan repositories | `npm run scan:report` |
-
 | Create index | `npm run index` |
-
 | Validate timestamps | `npm run validate` |
-
 | Check linting | `npm run lint` |
-
 | Fix linting | `npm run lint:fix` |
-
 | Watch for changes | `npm run watch` |
-
 | Install cron | `npm run cron:setup` |
-
 | Stop cron | `npm run cron:stop` |
-
 | List cron jobs | `npm run cron:list` |
-
 | View logs | `tail -f logs/cron-*.log` |
 
 **Version:** 1.0.0
