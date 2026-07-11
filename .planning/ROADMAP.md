@@ -392,7 +392,7 @@ Plans:
 
 4. The marp-cli multi-format invocation pattern (one config-driven call vs. three per-format calls) is resolved via a short spike and the chosen pattern is documented before Phase 25 begins
 
-**Plans**: TBD
+**Plans**: 24-01 (render capability — marp-cli install, `renderDeck()`, CLI wrapper), 24-02 (verify RNDR-03 under PM2) — 2 plans, 2 waves
 
 **Research flag**: MEDIUM confidence on whether `.marprc.yml`'s per-format config produces multiple outputs from one invocation, or whether marp-cli requires one call per format — spike required (see research/SUMMARY.md).
 
