@@ -96,7 +96,7 @@ Full requirements record: `.planning/milestones/v3.3-REQUIREMENTS.md`
 
 - [x] **Phase 23: Foundation & Hygiene** — Ledger migration, env var scaffolding, gitignore/dockerignore hygiene for the pipeline (completed 2026-07-10)
 
-- [ ] **Phase 24: Render Stage** — EN deck → HTML/PDF/PPTX via marp-cli, proven under the PM2 daemon environment
+- [x] **Phase 24: Render Stage** — EN deck → HTML/PDF/PPTX via marp-cli, proven under the PM2 daemon environment (completed 2026-07-27)
 
 - [ ] **Phase 25: Translation Stage** — EN → FR via DeepL with placeholder-protected Marp syntax/tables and a lint gate
 
@@ -518,7 +518,7 @@ Plans:
 | 21. Visualization Dashboard                  | v3.3      | N/A             | Cancelled   | -          |
 | 22. Obsolete Docs Dashboard                  | v3.3      | 3/3             | Complete    | 2026-04-20 |
 | 23. Foundation & Hygiene                     | v3.4      | 3/3             | Complete    | 2026-07-10 |
-| 24. Render Stage                             | v3.4      | 1/2             | In Progress | -          |
+| 24. Render Stage                             | v3.4      | 2/2             | Complete    | 2026-07-27 |
 | 25. Translation Stage                        | v3.4      | 0/TBD           | Not started | -          |
 | 26. Ledger Wiring                            | v3.4      | 0/TBD           | Not started | -          |
 | 27. Watcher Integration & Loop Protection    | v3.4      | 0/TBD           | Not started | -          |

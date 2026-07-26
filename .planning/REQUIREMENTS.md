@@ -17,7 +17,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 - [x] **RNDR-01**: User can render any EN deck to HTML, PDF, and PPTX with a single `npm run slides:build`
 - [x] **RNDR-02**: Editable PPTX is produced via `--pptx-editable` when soffice is resolvable (SOFFICE_PATH); when not, the build warns explicitly — never a silent image-based fallback
-- [ ] **RNDR-03**: Renders succeed under the PM2 daemon environment (browser + soffice resolution verified daemon-side, not just interactive shell)
+- [x] **RNDR-03**: Renders succeed under the PM2 daemon environment (browser + soffice resolution verified daemon-side, not just interactive shell)
 
 ### Translation
 
@@ -86,7 +86,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FOUND-03 | Phase 23 | Complete |
 | RNDR-01 | Phase 24 | Complete |
 | RNDR-02 | Phase 24 | Complete |
-| RNDR-03 | Phase 24 | Pending |
+| RNDR-03 | Phase 24 | Complete |
 | TRNS-01 | Phase 25 | Pending |
 | TRNS-02 | Phase 25 | Pending |
 | TRNS-03 | Phase 25 | Pending |

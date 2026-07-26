@@ -5,12 +5,12 @@ milestone_name: Presentation Pipeline
 current_phase: 24
 current_plan: "02"
 status: in_progress
-last_updated: "2026-07-11"
+last_updated: "2026-07-27"
 progress:
   total_phases: 7
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 5
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Session State
@@ -25,12 +25,14 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 ## Current Position
 
 **Milestone:** v3.4 Presentation Pipeline
-**Phase:** 24 - Render Stage — IN PROGRESS (Plan 01 of 2 complete); Phase 23 - Foundation & Hygiene COMPLETE (verified 2026-07-10, human-approved 2026-07-11)
-**Plan:** 24-01 complete (renderDeck() processor + slides:build CLI); 24-02 Task 1 of 2 complete — Task 2 is a blocking `checkpoint:human-verify` awaiting confirmation
-**Status:** Plan 24-02 Task 1 complete (PM2 daemon-side render verification evidence captured, exit 0, RNDR-03 proven); PAUSED at Task 2 checkpoint pending human approval — plan not yet marked complete
-**Last activity:** 2026-07-11 — Phase 24 Plan 02 Task 1 executed on branch `feat/2026-07-11-render-stage-plan-01` (same branch as Plan 24-01): ephemeral `pm2 start --no-autorestart` process (`documind-render-test`) ran `scripts/publish-slides.mjs` server-side, exited 0, reproduced HTML/PDF/PPTX with fresh timestamps — proving Chrome AND LibreOffice binary resolution succeed under PM2's non-interactive process environment (RNDR-03). `pm2 env` deliberately not used. Evidence captured in `.planning/phases/24-render-stage/24-02-SUMMARY.md` (commit `6ee21f8`). Plan's assumption that LibreOffice was absent (expecting the warn branch) did not hold — the editable-PPTX success path fired instead, a stronger proof than the plan anticipated; documented honestly rather than silently following the stale assumption. Task 2 (`checkpoint:human-verify`, blocking) awaits human confirmation of this evidence — see SUMMARY for full detail. Branch still needs a PR merge to master.
+**Phase:** 24 - Render Stage — COMPLETE (2/2 plans, checkpoint approved 2026-07-27); Phase 23 - Foundation & Hygiene COMPLETE (verified 2026-07-10, human-approved 2026-07-11)
+**Plan:** 24-01 complete (renderDeck() processor + slides:build CLI); 24-02 complete (both tasks — Task 1 evidence capture + Task 2 checkpoint approved)
+**Status:** Phase 24 fully complete. RNDR-01/02/03 all verified and marked complete in REQUIREMENTS.md. Ready to plan Phase 25 (Translation Stage).
+**Last activity:** 2026-07-27 — Phase 24 Plan 02 Task 2 checkpoint (`checkpoint:human-verify`) APPROVED by the user. The user confirmed RNDR-03 is verified daemon-side and accepted the corrected framing documented in the SUMMARY: LibreOffice is installed at a non-default path, so the ephemeral PM2 render exercised the editable-PPTX SUCCESS path (`pptxEditable:true`, no warnings) rather than the warn branch the plan originally anticipated — no environment-blocked item remained to accept. No additional warn-branch test was run (already verified separately in Plan 24-01). `.planning/phases/24-render-stage/24-02-SUMMARY.md` finalized with the checkpoint resolution; `roadmap update-plan-progress 24` and `requirements mark-complete RNDR-03` both run successfully. Phase 24 (Render Stage) is now fully complete. Branch `feat/2026-07-11-render-stage-plan-01` still needs a PR merge to master.
 
 ### Prior activity
+
+- 2026-07-11 — Phase 24 Plan 02 Task 1 executed on branch `feat/2026-07-11-render-stage-plan-01` (same branch as Plan 24-01): ephemeral `pm2 start --no-autorestart` process (`documind-render-test`) ran `scripts/publish-slides.mjs` server-side, exited 0, reproduced HTML/PDF/PPTX with fresh timestamps — proving Chrome AND LibreOffice binary resolution succeed under PM2's non-interactive process environment (RNDR-03). `pm2 env` deliberately not used. Evidence captured in `.planning/phases/24-render-stage/24-02-SUMMARY.md` (commit `6ee21f8`). Plan's assumption that LibreOffice was absent (expecting the warn branch) did not hold — the editable-PPTX success path fired instead, a stronger proof than the plan anticipated; documented honestly rather than silently following the stale assumption. Task 2 (`checkpoint:human-verify`, blocking) awaited human confirmation of this evidence — resolved 2026-07-27 (see above).
 
 - 2026-07-11 — Phase 24 Plan 01 executed on branch `feat/2026-07-11-render-stage-plan-01`: `processors/slides-processor.mjs` (`renderDeck()`) + `scripts/publish-slides.mjs` CLI + `npm run slides:build`; RNDR-01/RNDR-02 marked complete. Spike confirmed three-call marp-cli invocation pattern (config-driven single call does not fan out to multiple formats). Added `--no-stdin` to all marp invocations (undocumented hang otherwise under non-TTY `execFile`). LibreOffice is now actually installed on this machine (SOFFICE_PATH resolves) — both RNDR-02 branches (editable/non-editable PPTX) verified via env override test. Branch needs a PR merge to master.
 
@@ -68,6 +70,7 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 - Phase 24 Plan 01: `--no-stdin` is required on every marp-cli invocation spawned via `execFile` — without it, marp-cli hangs indefinitely waiting on a non-TTY stdin stream (only surfaces outside an interactive shell, e.g. under PM2/daemon/cron). Not in the original research reference implementation; added as a Rule 3 blocking-issue auto-fix.
 - Phase 24 Plan 01: LibreOffice is now actually installed on this dev machine at a non-default path (real `SOFFICE_PATH` in `.env`) — the RNDR-02 "editable PPTX" branch is now the default-tested state here, reversing the Phase 23 research assumption that the warn/non-editable branch was default. Both branches remain correctly gated and were both explicitly verified (via a temporary `SOFFICE_PATH` env override for the warn branch). Other machines without LibreOffice still correctly fall back to non-editable + warning.
 - Phase 24 Plan 02: RNDR-03 (daemon-side render resolution) proven via ephemeral `pm2 start --no-autorestart` process, NOT `pm2 env` (confirmed unreliable for `.env`-loaded vars in this codebase). The render exercised the editable-PPTX success path under PM2 (not the warn branch 24-02-PLAN.md anticipated), since LibreOffice is installed at a non-default path here — both Chrome and LibreOffice binary resolution confirmed daemon-side in one run.
+- Phase 24 Plan 02: Task 2 checkpoint approved 2026-07-27 — user confirmed RNDR-03 verified daemon-side and accepted the corrected (stronger) evidence framing; no environment-blocked item remained to accept for this run. Phase 24 (Render Stage) is fully complete: RNDR-01, RNDR-02, RNDR-03 all marked complete in REQUIREMENTS.md.
 
 ### Prereq gaps (user-side)
 
@@ -93,7 +96,9 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 
 ## Session Log
 
-- 2026-07-11: Phase 24 Plan 02 Task 1 executed — ephemeral PM2 process (`documind-render-test`) ran `scripts/publish-slides.mjs`, exited 0, reproduced HTML/PDF/PPTX with fresh timestamps; RNDR-03 proven daemon-side (Chrome + LibreOffice both resolve under PM2). Evidence in `24-02-SUMMARY.md` (commit `6ee21f8`). Task 2 (`checkpoint:human-verify`, blocking) is PAUSED awaiting human confirmation — plan not yet marked complete, `state advance-plan` not yet run.
+- 2026-07-27: Phase 24 Plan 02 Task 2 checkpoint (`checkpoint:human-verify`) resolved — user typed "approved", confirming RNDR-03 verified daemon-side and accepting the corrected evidence framing (editable-PPTX success path, no environment-blocked item). `24-02-SUMMARY.md` finalized with the checkpoint resolution and a passing self-check. `roadmap update-plan-progress 24` marked Phase 24 Complete (2/2 plans); `requirements mark-complete RNDR-03` checked off RNDR-03 in REQUIREMENTS.md. Phase 24 (Render Stage) is now fully complete. Ready to plan Phase 25 (Translation Stage).
+
+- 2026-07-11: Phase 24 Plan 02 Task 1 executed — ephemeral PM2 process (`documind-render-test`) ran `scripts/publish-slides.mjs`, exited 0, reproduced HTML/PDF/PPTX with fresh timestamps; RNDR-03 proven daemon-side (Chrome + LibreOffice both resolve under PM2). Evidence in `24-02-SUMMARY.md` (commit `6ee21f8`). Task 2 (`checkpoint:human-verify`, blocking) was PAUSED awaiting human confirmation — now resolved (see above).
 
 - 2026-07-11: Phase 24 Plan 01 executed — `processors/slides-processor.mjs` (`renderDeck()`, three-call marp-cli HTML/PDF/PPTX render, SOFFICE_PATH pre-flight gating editable PPTX) + `scripts/publish-slides.mjs` CLI + `npm run slides:build`; RNDR-01/RNDR-02 marked complete. Deviation: added `--no-stdin` to all marp invocations (Rule 3, blocking — prevented an indefinite hang under non-TTY `execFile`). Executed on branch `feat/2026-07-11-render-stage-plan-01` (base: `master` @ `710bb80`) per plan's branching instruction (touches `package.json`).
 
