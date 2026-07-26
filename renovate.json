@@ -1,4 +1,66 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>DESIGN-DVW/RootDispatcher//config/renovate-base.json"]
+  "description": "INLINED COPY of the DVWDesign canonical preset (RootDispatcher//config/renovate-base.json). DocuMind is a PUBLIC repo and RootDispatcher is PRIVATE, so Renovate cannot resolve the shared preset here — it halted with \"Cannot find preset's package\" (issue #16) and stopped opening every PR. Public repos therefore inline the policy. KEEP IN SYNC with config/renovate-base.json in RootDispatcher; see docs/ecosystem/DEPENDENCY-GOVERNANCE.md › Public repositories.",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits"
+  ],
+  "timezone": "Europe/Paris",
+  "schedule": [
+    "before 9am on Monday"
+  ],
+  "labels": [
+    "dependencies"
+  ],
+  "prConcurrentLimit": 10,
+  "prHourlyLimit": 4,
+  "packageRules": [
+    {
+      "description": "Internal @design-dvw/* are private GitHub Packages governed by the shared-packages release + consumer-registry flow — NOT by Renovate. Disabling avoids private-registry 'no-result' lookup failures (the Renovate bot has no read:packages auth).",
+      "matchPackageNames": [
+        "@design-dvw/{/,}**"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "Group all Storybook packages so they move together in ONE PR (they must stay on the same version).",
+      "matchPackageNames": [
+        "storybook",
+        "@storybook/{/,}**",
+        "@chromatic-com/storybook"
+      ],
+      "groupName": "storybook",
+      "groupSlug": "storybook"
+    },
+    {
+      "description": "NO AUTOMERGE, ANY update type. Every dependency change lands through a reviewed PR — there is no unattended merge lane in this ecosystem (operator decision 2026-07-26). Staleness is handled by the PR-age watchdog that warns the operator, NOT by automerging. Deliberately last so it overrides any automerge inherited from config:recommended.",
+      "matchUpdateTypes": [
+        "major",
+        "minor",
+        "patch",
+        "pin",
+        "digest",
+        "lockFileMaintenance",
+        "rollback",
+        "bump",
+        "replacement"
+      ],
+      "automerge": false
+    },
+    {
+      "description": "Major version bumps are additionally labelled so the watchdog and reviewers can triage them first.",
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "labels": [
+        "dependencies",
+        "major-upgrade"
+      ]
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": false,
+    "description": "Renovate does NOT open security PRs. Dependabot owns security updates (org-enforced); this avoids duplicate security PRs."
+  }
 }
