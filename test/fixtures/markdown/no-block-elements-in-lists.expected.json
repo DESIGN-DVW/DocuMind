@@ -1,0 +1,17 @@
+[
+  {
+    "line": 5,
+    "detail": "Fenced code block inside a list item — lift it out of the list",
+    "fixable": false
+  },
+  {
+    "line": 11,
+    "detail": "Table inside a list item — lift it out of the list",
+    "fixable": false
+  },
+  {
+    "line": 17,
+    "detail": "Blockquote inside a list item — lift it out of the list",
+    "fixable": false
+  }
+]

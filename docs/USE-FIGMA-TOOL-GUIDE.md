@@ -28,7 +28,7 @@ From a Figma URL like:
 
 ```text
 
-https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/DVW-Design-Dev-Strategy?node-id=118-669
+https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/DVW-Design-Dev-Strategy?node-id=379-1233&t=nGrP3yFxML6BMviB-4/DVW-Design-Dev-Strategy?node-id=118-669
 
 ```
 

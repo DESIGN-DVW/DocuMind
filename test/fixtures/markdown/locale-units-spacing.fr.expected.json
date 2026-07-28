@@ -1,0 +1,47 @@
+[
+  {
+    "line": 7,
+    "detail": "French typography: narrow non-breaking space before °C",
+    "fixable": true
+  },
+  {
+    "line": 7,
+    "detail": "French typography: narrow non-breaking space before %",
+    "fixable": true
+  },
+  {
+    "line": 7,
+    "detail": "French typography: narrow non-breaking space before kg",
+    "fixable": true
+  },
+  {
+    "line": 9,
+    "detail": "French typography: narrow non-breaking space before ?",
+    "fixable": true
+  },
+  {
+    "line": 9,
+    "detail": "French typography: narrow non-breaking space before !",
+    "fixable": true
+  },
+  {
+    "line": 9,
+    "detail": "French typography: narrow non-breaking space before ;",
+    "fixable": true
+  },
+  {
+    "line": 9,
+    "detail": "French typography: narrow non-breaking space before :",
+    "fixable": true
+  },
+  {
+    "line": 13,
+    "detail": "French typography: narrow non-breaking space before »",
+    "fixable": true
+  },
+  {
+    "line": 13,
+    "detail": "French typography: narrow non-breaking space after «",
+    "fixable": true
+  }
+]

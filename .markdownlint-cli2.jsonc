@@ -30,7 +30,9 @@
     "archives",
     "docs/slides",
     "config/markdownlint",
-    "graphify-out"
+    "graphify-out",
+    "index",
+    "test/fixtures"
   ],
   "overrides": [
     {

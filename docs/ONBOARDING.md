@@ -66,7 +66,7 @@ Two Figma MCP servers are available:
 
 3. FigJam view via `generate_diagram` MCP tool + `register_diagram`
 
-**Central FigJam board:** `https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/DVW-Design-Dev-Strategy`
+**Central FigJam board:** `https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/DVW-Design-Dev-Strategy?node-id=379-1233&t=nGrP3yFxML6BMviB-4/DVW-Design-Dev-Strategy`
 
 ### Aikido Security MCP
 
