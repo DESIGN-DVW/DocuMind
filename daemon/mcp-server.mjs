@@ -8,22 +8,17 @@ import path from 'path';
 import { z } from 'zod';
 import { loadProfile } from '../context/loader.mjs';
 import { findRelated } from '../graph/sqlite-traversal.mjs';
-import { createRequire } from 'module';
 import fs from 'fs/promises';
 import { indexMarkdown } from '../processors/markdown-processor.mjs';
 import { runScan, generateDiagramSnapshot as _generateDiagramSnapshot } from '../orchestrator.mjs';
 import { relinkDiagram, propagateRelinkAllRepos } from '../processors/relink-processor.mjs';
 import {
-  fixCodeBlockLanguages,
-  fixBoldItalicToHeadingsOrLists,
-  fixLineBreaks,
-} from '../scripts/fix-markdown.mjs';
+  lintContent,
+  fixContent,
+  countChangedLines,
+  persistLintIssues,
+} from '../processors/lint-processor.mjs';
 import { writingNow } from './registry-lock.mjs';
-
-const require = createRequire(import.meta.url);
-// markdownlint >= 0.35 moved the sync API to the 'markdownlint/sync' subpath
-const { lint: markdownlintSync } = require('markdownlint/sync');
-const { applyFixes } = require('markdownlint');
 
 import {
   ROOT,
@@ -38,9 +33,6 @@ db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
 const ctx = await loadProfile();
-
-const MARKDOWNLINT_CONFIG_PATH = path.join(ROOT, 'config/.markdownlint.json');
-const RULES_DIR = path.join(ROOT, 'config/rules');
 
 // Derive registryPath for curate_diagram from profile JSON
 const profileFilePath = PROFILE_PATH;
@@ -670,31 +662,10 @@ server.registerTool(
       if (!valid) return pathError(file, ctx, startMs);
 
       const content = await fs.readFile(file, 'utf-8');
-      const config = JSON.parse(await fs.readFile(MARKDOWNLINT_CONFIG_PATH, 'utf-8'));
-
-      const customRules = [];
-      try {
-        customRules.push(require(path.join(RULES_DIR, 'no-blank-lines-in-tables.cjs')));
-        customRules.push(require(path.join(RULES_DIR, 'table-separator-spacing.cjs')));
-      } catch {
-        /* custom rules optional */
-      }
-
-      const rawResults = markdownlintSync({
-        strings: { [file]: content },
-        config,
-        customRules,
-      });
-
-      const issues = (rawResults[file] || []).map(issue => ({
-        line: issue.lineNumber,
-        rule: issue.ruleNames[0],
-        message: issue.ruleDescription,
-        detail: issue.errorDetail,
-        fixable: issue.fixInfo !== null,
-      }));
-
+      const issues = await lintContent(file, content);
       const fixableCount = issues.filter(i => i.fixable).length;
+
+      persistLintIssues(db, file, issues);
 
       return {
         content: [
@@ -703,7 +674,7 @@ server.registerTool(
             text: JSON.stringify({
               success: true,
               summary: `${issues.length} issues found (${fixableCount} auto-fixable)`,
-              issues,
+              issues: issues.map(({ ruleNames: _ruleNames, ...issue }) => issue),
               total: issues.length,
               fixable_count: fixableCount,
               duration_ms: Date.now() - startMs,
@@ -749,69 +720,44 @@ server.registerTool(
       if (!valid) return pathError(file, ctx, startMs);
 
       const content = await fs.readFile(file, 'utf-8');
-      const config = JSON.parse(await fs.readFile(MARKDOWNLINT_CONFIG_PATH, 'utf-8'));
 
-      const customRules = [];
-      try {
-        customRules.push(require(path.join(RULES_DIR, 'no-blank-lines-in-tables.cjs')));
-        customRules.push(require(path.join(RULES_DIR, 'table-separator-spacing.cjs')));
-      } catch {
-        /* custom rules optional */
-      }
+      // Runs markdownlint auto-fixes and the regex passes to convergence, so a
+      // pass that undoes an earlier pass gets corrected rather than shipped.
+      const result = await fixContent(file, content);
+      const linesChanged = countChangedLines(content, result.content);
 
-      // Pass 1 — markdownlint auto-fixes
-      const issues =
-        markdownlintSync({ strings: { [file]: content }, config, customRules })[file] || [];
-      const pass1 = applyFixes(content, issues);
-      const fixedRules = [
-        ...new Set(issues.filter(i => i.fixInfo !== null).map(i => i.ruleNames[0])),
-      ];
-
-      // Pass 2 — custom fixes from fix-markdown.mjs
-      let lines = pass1.split('\n');
-      const beforeCustom = lines.join('\n');
-      lines = fixCodeBlockLanguages(lines);
-      const afterCodeBlock = lines.join('\n');
-      lines = fixBoldItalicToHeadingsOrLists(lines);
-      lines = fixLineBreaks(lines);
-      const finalContent = lines.join('\n');
-
-      // Track which custom fix passes changed content
-      const customFixes = [];
-      if (afterCodeBlock !== beforeCustom) customFixes.push('code-block-language-detection');
-      if (finalContent !== afterCodeBlock) customFixes.push('custom-formatting-fixes');
-
-      // Count differing lines
-      const originalLines = content.split('\n');
-      const finalLines = finalContent.split('\n');
-      const maxLen = Math.max(originalLines.length, finalLines.length);
-      let linesChanged = 0;
-      for (let i = 0; i < maxLen; i++) {
-        if (originalLines[i] !== finalLines[i]) linesChanged++;
-      }
-
-      const changed = finalContent !== content;
-
-      if (changed) {
-        await fs.writeFile(file, finalContent, 'utf-8');
+      if (result.changed) {
+        await fs.writeFile(file, result.content, 'utf-8');
         await indexMarkdown(db, file, repoName, ctx);
         db.prepare("INSERT INTO documents_fts(documents_fts) VALUES('rebuild')").run();
       }
 
-      const allFixes = [...fixedRules, ...customFixes];
+      // Record what survived the fixer — these are the issues needing a human.
+      persistLintIssues(db, file, result.residualIssues, result.fixesApplied.join(', ') || null);
+
+      const residualFixable = result.residualIssues.filter(i => i.fixable);
 
       return {
         content: [
           {
             type: 'text',
             text: JSON.stringify(
-              changed
+              result.changed
                 ? {
                     success: true,
-                    summary: `Fixed ${path.basename(file)} — ${allFixes.length} fix type(s) applied`,
-                    fixes_applied: allFixes,
+                    summary: `Fixed ${path.basename(file)} — ${result.fixesApplied.length} fix type(s) applied in ${result.iterations} pass(es)`,
+                    fixes_applied: result.fixesApplied,
                     file,
                     lines_changed: linesChanged,
+                    iterations: result.iterations,
+                    converged: result.converged,
+                    residual_issues: result.residualIssues.length,
+                    residual_fixable: residualFixable.length,
+                    ...(result.converged
+                      ? {}
+                      : {
+                          warning: `Did not converge after ${result.iterations} passes — fix rules may be in conflict`,
+                        }),
                     duration_ms: Date.now() - startMs,
                   }
                 : {
@@ -820,6 +766,9 @@ server.registerTool(
                     fixes_applied: [],
                     file,
                     lines_changed: 0,
+                    iterations: result.iterations,
+                    converged: result.converged,
+                    residual_issues: result.residualIssues.length,
                     duration_ms: Date.now() - startMs,
                   }
             ),
