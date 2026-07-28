@@ -39,8 +39,8 @@ The system installs the following cron jobs:
 | ----- | ---------- | ----------- | --------- | ---------- |
 | **Scan** | `0 * * * *` | Every hour | `npm run scan:report` | `logs/cron-markdown-scan-hourly.log` |
 | **Index** | `5 * * * *` | Every hour (+5min) | `npm run index` | `logs/cron-markdown-index-hourly.log` |
-| **Validate** | `0 9 * * *` | Daily at 9:00 AM | `npm run validate` | `logs/cron-markdown-validate-daily.log` |
-| **Lint** | `0 10 * * *` | Daily at 10:00 AM | `npm run lint` | `logs/cron-markdown-lint-daily.log` |
+| **Validate** | `0 9 * * *` | Daily at 09:00 | `npm run validate` | `logs/cron-markdown-validate-daily.log` |
+| **Lint** | `0 10 * * *` | Daily at 10:00 | `npm run lint` | `logs/cron-markdown-lint-daily.log` |
 
 ### Schedule Explanation
 
@@ -50,9 +50,9 @@ The system installs the following cron jobs:
 
 - `5 * * * *` = Every hour at minute 5
 
-- `0 9 * * *` = Every day at 9:00 AM
+- `0 9 * * *` = Every day at 09:00
 
-- `0 10 * * *` = Every day at 10:00 AM
+- `0 10 * * *` = Every day at 10:00
 
 ---
 

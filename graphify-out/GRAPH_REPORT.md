@@ -164,7 +164,7 @@ Nodes (38): backfillClassifications(), backfillSummaries(), fixGitHubOrgReferenc
 ### Community 1 - "diagram_registry_md"
 
 Cohesion: 0.05975609756097561
-Nodes (41): Diagram Registry: any2figma entries (6-Pass Pipeline, AST Schema, Architecture Data Flow, Emitter Outputs, HTML Parser Flow), Diagram Registry Audit Report, any2figma Diagrams: 5 diagrams missing curated FigJam URLs, Node Version Mismatch: better-sqlite3 compiled for newer Node than active (v22.14.0 vs MODULE_VERSION 137), Orphaned PNG: GlossiaApp GlossiaAppFlow.png (no .mmd source), Unregistered .mmd: documind-workflow.mmd, Central FigJam Board: DVW-Design-Dev-Strategy (<https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/>), Curated Status: diagrams that have been moved to central FigJam board (has curated_url) (+33 more)
+Nodes (41): Diagram Registry: any2figma entries (6-Pass Pipeline, AST Schema, Architecture Data Flow, Emitter Outputs, HTML Parser Flow), Diagram Registry Audit Report, any2figma Diagrams: 5 diagrams missing curated FigJam URLs, Node Version Mismatch: better-sqlite3 compiled for newer Node than active (v22.14.0 vs MODULE_VERSION 137), Orphaned PNG: GlossiaApp GlossiaAppFlow.png (no .mmd source), Unregistered .mmd: documind-workflow.mmd, Central FigJam Board: DVW-Design-Dev-Strategy (<https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/DVW-Design-Dev-Strategy?node-id=379-1233&t=nGrP3yFxML6BMviB-4/>), Curated Status: diagrams that have been moved to central FigJam board (has curated_url) (+33 more)
 
 ### Community 2 - "readme_documind"
 
@@ -451,28 +451,28 @@ Nodes (1): graphify dependency
 
 - **Why does `log()` connect `setup_cron_log` to `processors_relink_processor_mjs`, `daemon_server_mjs`, `scripts_fix_markdown_mjs`, `scripts_fix_custom_errors_mjs`, `scripts_scan_enhanced_scanner_mjs`, `scripts_validate_custom_errors_mjs`, `scripts_generate_tree_schema_mjs`, `docs_07_api_jsdoc_scripts_prettify_prettify_js`, `propagate_org_fixes_propagateorgfixes`, `scan_all_repos_main`, `validate_timestamps_validatefiles`, `index_markdown_createindex`?**
 
-### _High betweenness centrality (0.150) - this node is a cross-community bridge._
+### *High betweenness centrality (0.150) - this node is a cross-community bridge.*
 
 - **Why does `processHook()` connect `processors_relink_processor_mjs` to `setup_cron_log`?**
 
-### _High betweenness centrality (0.019) - this node is a cross-community bridge._
+### *High betweenness centrality (0.019) - this node is a cross-community bridge.*
 
 - **Why does `processPendingChanges()` connect `processors_relink_processor_mjs` to `setup_cron_log`, `daemon_server_mjs`?**
 
-### _High betweenness centrality (0.018) - this node is a cross-community bridge._
+### *High betweenness centrality (0.018) - this node is a cross-community bridge.*
 
 - **Are the 44 inferred relationships involving `log()` (e.g. with `detectSimilarities()` and `detectStaleness()`) actually correct?**
 
-### _`log()` has 44 INFERRED edges - model-reasoned connections that need verification._
+### *`log()` has 44 INFERRED edges - model-reasoned connections that need verification.*
 
 - **Are the 4 inferred relationships involving `runDeepScan()` (e.g. with `indexKeywords()` and `log()`) actually correct?**
 
-### _`runDeepScan()` has 4 INFERRED edges - model-reasoned connections that need verification._
+### *`runDeepScan()` has 4 INFERRED edges - model-reasoned connections that need verification.*
 
 - **What connects `MarkDown Repository Function & Usage (AGENTS.md)`, `Markdown Linter (markdownlint + custom patterns)`, `Document Relationship Graph (8 relationship types)` to the rest of the system?**
 
-### _62 weakly-connected nodes found - possible documentation gaps or missing edges._
+### *62 weakly-connected nodes found - possible documentation gaps or missing edges.*
 
 - **Should `setup_cron_log` be split into smaller, more focused modules?**
 
-### _Cohesion score 0.06 - nodes in this community are weakly interconnected._
+### *Cohesion score 0.06 - nodes in this community are weakly interconnected.*

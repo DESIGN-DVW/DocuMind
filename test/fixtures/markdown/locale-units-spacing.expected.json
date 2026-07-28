@@ -1,0 +1,42 @@
+[
+  {
+    "line": 3,
+    "detail": "h is a code unit — no space: 4 h → 4h",
+    "fixable": true
+  },
+  {
+    "line": 3,
+    "detail": "ms is a code unit — no space: 0 ms → 0ms",
+    "fixable": true
+  },
+  {
+    "line": 3,
+    "detail": "rem is a code unit — no space: 5 rem → 5rem",
+    "fixable": true
+  },
+  {
+    "line": 3,
+    "detail": "px is a code unit — no space: 0 px → 0px",
+    "fixable": true
+  },
+  {
+    "line": 5,
+    "detail": "Measurement unit takes a non-breaking space before %",
+    "fixable": true
+  },
+  {
+    "line": 5,
+    "detail": "Measurement unit takes a non-breaking space before GB",
+    "fixable": true
+  },
+  {
+    "line": 5,
+    "detail": "Measurement unit takes a non-breaking space before °C",
+    "fixable": true
+  },
+  {
+    "line": 5,
+    "detail": "Measurement unit takes a non-breaking space before kg",
+    "fixable": true
+  }
+]
