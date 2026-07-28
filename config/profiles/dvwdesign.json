@@ -13,6 +13,7 @@
     { "pattern": "\\/scripts\\/", "classification": "engineering/scripts" },
     { "pattern": "\\/config\\/", "classification": "engineering/config" },
     { "pattern": "\\/tests?\\/", "classification": "engineering/tests" },
+    { "pattern": "\\/discoveries\\/", "classification": "discoveries/patterns" },
     { "pattern": "\\/docs\\/", "classification": "guides/documentation" },
     { "pattern": "\\.github\\/", "classification": "operations/ci-cd" },
     { "pattern": "package\\.json$", "classification": "engineering/config" }
