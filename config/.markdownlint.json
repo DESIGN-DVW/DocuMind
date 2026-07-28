@@ -12,7 +12,7 @@
   "MD019": true,
   "MD022": { "lines_above": 1, "lines_below": 1 },
   "MD023": true,
-  "MD025": true,
+  "MD025": { "front_matter_title": "" },
   "MD026": false,
   "MD027": true,
   "MD028": true,
@@ -57,6 +57,8 @@
   },
   "MD034": true,
   "MD035": { "style": "---" },
+  "MD060": false,
+  "// MD060 - table-column-style: OFF. It enforces padded/aligned table columns, which is exactly what the DVW table rules forbid. Alignment padding is diff noise with zero rendering effect. Do not enable. See also the retired MD060A custom rule.": "",
 
   "// DISABLED RULES": "",
   "MD002": false,
