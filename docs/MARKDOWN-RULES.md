@@ -2,7 +2,7 @@
 title: DVW Markdown Rules
 description: Generated registry of DocuMind custom markdownlint rules — IDs, status, fixability, and examples.
 version: 1.0.0
-updated: 2026-07-28
+updated: 2026-07-29
 category: standards
 lang: en
 ---
@@ -136,7 +136,7 @@ Tags: `links`
 ✅ [the brief](./MARKDOWN-STYLE-BRIEF.md#locale-policy)
 ❌ [the brief](./MARKDOWN-STYLE-BREIF.md)      — file does not exist
 ❌ [locale](./MARKDOWN-STYLE-BRIEF.md#locale)  — no such heading
-❌ [config](/config/.markdownlint.json)        — root-relative is ambiguous
+❌ [gone](/no/such/path.json)                  — leading slash resolves nowhere
 ```
 
 ## Enabling an opt-in rule

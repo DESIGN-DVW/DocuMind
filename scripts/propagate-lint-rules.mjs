@@ -2,8 +2,15 @@
 /**
  * propagate-lint-rules.mjs
  *
- * Propagates DVW001 (table-separator-spacing) and DVW002 (no-blank-lines-in-tables)
- * custom markdownlint rules to all DVWDesign repositories with markdown files.
+ * Propagates the DVW custom markdownlint rules to every DVWDesign repository
+ * with markdown files, along with the rule config and the support files the
+ * rules need at runtime.
+ *
+ * Rules are read from config/rules/ rather than listed here, and target repos
+ * are pointed at the config/rules/index.cjs registry rather than at individual
+ * files — a hand-maintained list silently misses every rule added afterwards,
+ * which is how DVW002 came to be missing from the editor config.
+ *
  * Also removes the retired MD060A (force-align-table-columns) rule everywhere —
  * column padding is cosmetic churn; markdown is not a design tool.
  *
@@ -181,9 +188,19 @@ function hasDevDep(repoPath, pkgName) {
   }
 }
 
+/** The one entry every repo should list — the registry, not individual rules. */
+const REGISTRY_ENTRY = './config/rules/index.cjs';
+
 /**
- * Merge customRules into an existing .markdownlint-cli2.jsonc file.
- * Adds our two rules if they're not already present.
+ * Migrate an existing .markdownlint-cli2.jsonc onto the registry.
+ *
+ * Repos provisioned before the registry existed list each rule file by hand,
+ * which is precisely the drift this replaces — a per-file list silently misses
+ * every rule added afterwards. Any `./config/rules/*.cjs` entry is collapsed
+ * into the single registry entry, and `extends` is pointed at the propagated
+ * rule config. Entries pointing outside config/rules/ are left alone: those
+ * are the repo's own rules, not ours to remove.
+ *
  * @param {string} existingContent - Current file content
  * @returns {string} Updated content
  */
@@ -198,33 +215,21 @@ function mergeCustomRules(existingContent) {
     return MARKDOWNLINT_CONFIG;
   }
 
-  if (!parsed.customRules) {
-    parsed.customRules = [];
-  }
+  const before = JSON.stringify(parsed);
 
-  const rulesNeeded = [
-    './config/rules/table-separator-spacing.cjs',
-    './config/rules/no-blank-lines-in-tables.cjs',
-  ];
-  const rulesRetired = ['./config/rules/force-align-table-columns.cjs'];
+  const foreign = (parsed.customRules ?? []).filter(
+    rule => !String(rule).startsWith('./config/rules/')
+  );
+  parsed.customRules = [REGISTRY_ENTRY, ...foreign];
 
-  let changed = false;
-  for (const rule of rulesNeeded) {
-    if (!parsed.customRules.includes(rule)) {
-      parsed.customRules.push(rule);
-      changed = true;
-    }
-  }
-  const withoutRetired = parsed.customRules.filter(rule => !rulesRetired.includes(rule));
-  if (withoutRetired.length !== parsed.customRules.length) {
-    parsed.customRules = withoutRetired;
-    changed = true;
-  }
+  // Point at the propagated rule config so enable flags travel with the rules
+  parsed.config = { ...(parsed.config ?? {}), extends: './config/.markdownlint.json' };
 
-  if (!changed) return existingContent;
+  if (JSON.stringify(parsed) === before) return existingContent;
 
-  // Re-serialize with leading comment preserved
-  const header = `// markdownlint-cli2 configuration\n// Custom rules propagated from DocuMind\n`;
+  const header =
+    '// markdownlint-cli2 configuration — propagated from DocuMind\n' +
+    '// Do not edit: run `node scripts/propagate-lint-rules.mjs` in DocuMind instead.\n';
   return header + JSON.stringify(parsed, null, 2) + '\n';
 }
 
