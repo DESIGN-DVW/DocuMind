@@ -57,7 +57,7 @@ All work this session is **uncommitted** (78 files modified/added). Changes live
 
 ### `generate_diagram` fileKey — confirmed resolved
 
-The Figma MCP `generate_diagram` tool now accepts `fileKey`. The central board key is embedded in the board URL `https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/DVW-Design-Dev-Strategy?node-id=379-1233&t=nGrP3yFxML6BMviB-4/`. The key is `L8gOzoOCb90ur2g9fDI9hm`. Diagrams now render into that file on the default page. Page-level targeting is still not supported — curation to the correct section remains a manual step.
+The Figma MCP `generate_diagram` tool now accepts `fileKey`. The central board key is embedded in the board URL `https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/`. The key is `L8gOzoOCb90ur2g9fDI9hm`. Diagrams now render into that file on the default page. Page-level targeting is still not supported — curation to the correct section remains a manual step.
 
 ### Diagram curation status (as of 2026-05-18)
 
@@ -201,7 +201,7 @@ Verify: `curl http://localhost:9000/health` returns `200`. The `action_log` tabl
 
 ### Priority 3 — Run DISPATCH-064 (FigJam curation batch)
 
-1. Open central board: `https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/DVW-Design-Dev-Strategy?node-id=379-1233&t=nGrP3yFxML6BMviB-4/`
+1. Open central board: `https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/`
 2. Check if Ecosystem diagrams (18/19/20) are visible — they should be at `node-id=81-333` area
 3. Move each to its correct section; copy individual `?node-id=XXX` URLs
 4. Run `/figma-curate` with each name + curated URL
@@ -231,7 +231,7 @@ The graph stack note: Kuzu is referenced in `server.mjs` imports but the user co
 
 | Item | Value |
 | ------ | ------- |
-| Central FigJam board | `https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/DVW-Design-Dev-Strategy?node-id=379-1233&t=nGrP3yFxML6BMviB-4/DVW-Design-Dev-Strategy` |
+| Central FigJam board | `https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/DVW-Design-Dev-Strategy` |
 | Central board file key | `L8gOzoOCb90ur2g9fDI9hm` |
 | DocuMind daemon port | `9000` |
 | action_log migration | `scripts/db/migrations/008-action-log.sql` |

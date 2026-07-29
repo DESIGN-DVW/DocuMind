@@ -232,7 +232,7 @@ The diagram is already in the correct section. No board move needed.
 
 ### If no `nodeId` was used (fallback — default page)
 
-1. Open the central board: `https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/DVW-Design-Dev-Strategy?node-id=379-1233&t=nGrP3yFxML6BMviB-4/`
+1. Open the central board: `https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/`
 2. Locate the diagram on the default page
 3. Move it to the correct repo section
 4. Copy the new `?node-id=XXX` URL from the browser address bar
@@ -308,7 +308,7 @@ Run `/figma-curate` with the diagram name and new URL:
 
 ```text
 /figma-curate
-{Diagram Name} -> https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/DVW-Design-Dev-Strategy?node-id=379-1233&t=nGrP3yFxML6BMviB-4/...?node-id=XXX
+{Diagram Name} -> https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/...?node-id=XXX
 ```
 
 This replaces the old curated URL across all repos automatically, and also exports a fresh Figma PNG to replace the stale one in `docs/diagrams/`.
@@ -350,7 +350,7 @@ The DocuMind web dashboard also shows diagram status. Open `http://localhost:900
 
 All curated diagrams live on a single FigJam board:
 
-**Board URL:** `https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/DVW-Design-Dev-Strategy?node-id=379-1233&t=nGrP3yFxML6BMviB-4/`
+**Board URL:** `https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/`
 
 The board is organized as follows:
 
@@ -372,7 +372,7 @@ Quick reference for locating diagram artifacts:
 | PNG preview (`.png`) | `docs/diagrams/` in each repository — initially mmdc 2× retina; replaced by Figma export on curation |
 | Registry database | DocuMind SQLite at `data/documind.db`, table `diagrams` |
 | Registry snapshot | `docs/diagrams/DIAGRAM-REGISTRY.md` in each repo (auto-generated, do not edit) |
-| Central FigJam board | `https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/DVW-Design-Dev-Strategy?node-id=379-1233&t=nGrP3yFxML6BMviB-4/` |
+| Central FigJam board | `https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/` |
 | Web dashboard | `http://localhost:9000` -- Diagrams tab |
 
 ---
