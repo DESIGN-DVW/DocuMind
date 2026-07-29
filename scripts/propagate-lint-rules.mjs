@@ -68,25 +68,72 @@ const ALL_TARGET_REPOS = [
   'shared-packages',
 ];
 
-const RULE_FILES = ['table-separator-spacing.cjs', 'no-blank-lines-in-tables.cjs'];
+/**
+ * Every rule module, read from the registry directory rather than listed here.
+ * A hardcoded list is how DVW002 came to be missing from the editor config and
+ * how the retired MD060A rule outlived its deletion.
+ */
+const RULE_FILES = fs
+  .readdirSync(RULES_SRC)
+  .filter(f => f.endsWith('.cjs'))
+  .sort();
+
+/**
+ * Files outside config/rules/ that the rules need at runtime.
+ *
+ * DVW009 requires the shared link resolver and DVW006 its duration
+ * vocabulary. Both degrade to a no-op when missing rather than breaking the
+ * registry, but a repo that receives the rules should receive working rules.
+ *
+ * @type {{src: string, dest: string}[]}
+ */
+const SUPPORT_FILES = [
+  {
+    src: path.join(DOCUMIND_PATH, 'config', '.markdownlint.json'),
+    dest: 'config/.markdownlint.json',
+  },
+  {
+    src: path.join(DOCUMIND_PATH, 'config', 'style-vocabulary.json'),
+    dest: 'config/style-vocabulary.json',
+  },
+  {
+    src: path.join(DOCUMIND_PATH, 'processors', 'link-resolver.cjs'),
+    dest: 'processors/link-resolver.cjs',
+  },
+];
 
 /** Retired rules to delete from target repos (and drop from their configs) */
 const OBSOLETE_RULE_FILES = ['force-align-table-columns.cjs'];
 
-/** Target .markdownlint-cli2.jsonc content (custom rules only, no extends) */
-const MARKDOWNLINT_CONFIG = `// markdownlint-cli2 configuration
-// Custom rules propagated from DocuMind
+/**
+ * Target .markdownlint-cli2.jsonc.
+ *
+ * Points at the registry and the propagated rule config rather than inlining
+ * either, so a repo cannot drift from DocuMind by editing its own copy.
+ */
+const MARKDOWNLINT_CONFIG = `// markdownlint-cli2 configuration — propagated from DocuMind
+// Do not edit: run \`node scripts/propagate-lint-rules.mjs\` in DocuMind instead.
+//
+//   config/.markdownlint.json  → rule configuration (also propagated)
+//   config/rules/index.cjs     → custom rule registry (auto-discovers *.cjs)
 {
-  "customRules": [
-    "./config/rules/table-separator-spacing.cjs",
-    "./config/rules/no-blank-lines-in-tables.cjs"
-  ],
+  "customRules": ["./config/rules/index.cjs"],
+  "config": {
+    "extends": "./config/.markdownlint.json"
+  },
   "ignores": [
     "node_modules",
     ".git",
     "dist",
     "build",
-    ".planning"
+    ".planning",
+    ".claude",
+    "archive",
+    "_archive",
+    "archives",
+    "index",
+    "graphify-out",
+    "test/fixtures"
   ]
 }
 `;
@@ -233,6 +280,23 @@ function propagateToRepo(repoName, dryRun) {
 
     result.actions.push(`Copy ${ruleFile} → config/rules/`);
     if (!dryRun) {
+      fs.copyFileSync(src, dest);
+    }
+  }
+
+  // 2a. Copy the rule config and the rules' runtime dependencies. Without the
+  // config the target repo loads the DVW rules but not their enable flags, so
+  // the opt-in prose rewriters would switch themselves on wherever
+  // `default: true` applies.
+  for (const { src, dest: relDest } of SUPPORT_FILES) {
+    if (!fs.existsSync(src)) {
+      result.errors.push(`Support file not found: ${src}`);
+      continue;
+    }
+    const dest = path.join(repoPath, relDest);
+    result.actions.push(`Copy ${path.basename(src)} → ${relDest}`);
+    if (!dryRun) {
+      fs.mkdirSync(path.dirname(dest), { recursive: true });
       fs.copyFileSync(src, dest);
     }
   }
