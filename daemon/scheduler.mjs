@@ -11,6 +11,7 @@ import cron from 'node-cron';
 import { runScan, generateDiagramSnapshot } from '../orchestrator.mjs';
 import { pullAllRepos } from './ingestion.mjs';
 import { detectObsolescence } from '../processors/obsolescence-detector.mjs';
+import { lintFile, persistLintIssues } from '../processors/lint-processor.mjs';
 import {
   CRON_HEARTBEAT,
   CRON_HOURLY,
@@ -193,7 +194,25 @@ export function initScheduler(db, root, ctx) {
           }
         }
       }
-      console.log(`[scheduler] Lint pass complete: ${fixed} repos OK, ${errors} errors`);
+      // Record what survived the auto-fix. The CLI only prints to stdout, so
+      // without this pass the linting_issues table stays empty and every lint
+      // metric on /stats reads zero regardless of the corpus's actual state.
+      let recorded = 0;
+      let open = 0;
+      for (const doc of db.prepare('SELECT path FROM documents').all()) {
+        try {
+          const issues = await lintFile(doc.path);
+          const result = persistLintIssues(db, doc.path, issues, 'nightly lint pass');
+          if (result.documentId != null) recorded++;
+          open += issues.length;
+        } catch {
+          // File deleted or unreadable since indexing — the next scan removes it
+        }
+      }
+
+      console.log(
+        `[scheduler] Lint pass complete: ${fixed} repos OK, ${errors} errors, ${open} open issue(s) recorded across ${recorded} documents`
+      );
     });
   }
 

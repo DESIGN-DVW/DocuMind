@@ -23,8 +23,20 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { resolveLink, headingSlugs, slugify } = require('../../processors/link-resolver.cjs');
 const { FENCE } = require('./_shared.cjs');
+
+// The resolver lives in processors/ because the validators and the graph
+// builder use it too. In a repo that received only the rules, it may be
+// absent — degrade this one rule to a no-op rather than throwing at registry
+// load and taking every other DVW rule down with it.
+let resolver = null;
+try {
+  resolver = require('../../processors/link-resolver.cjs');
+} catch {
+  process.stderr.write(
+    '[DVW009] processors/link-resolver.cjs not found — link validation disabled in this repo\n'
+  );
+}
 
 /** Inline links and images, with the `!` captured so images can be labelled. */
 const INLINE_LINK = /(!?)\[([^\]]*)\]\(([^)]*)\)/g;
@@ -36,7 +48,7 @@ function slugsFor(filePath) {
   if (slugCache.has(filePath)) return slugCache.get(filePath);
   let slugs = null;
   try {
-    slugs = headingSlugs(fs.readFileSync(filePath, 'utf8'));
+    slugs = resolver.headingSlugs(fs.readFileSync(filePath, 'utf8'));
   } catch {
     slugs = null; // unreadable or binary: existence alone is enough
   }
@@ -50,13 +62,15 @@ module.exports = {
   tags: ['links'],
   parser: 'none',
   function: function rule(params, onError) {
+    if (!resolver) return;
+
     const name = String(params.name || '');
     // Without a real path there is nothing to resolve against
     if (!name || !path.isAbsolute(name)) return;
 
     const fileDir = path.dirname(name);
     const lines = params.lines;
-    const ownSlugs = headingSlugs(lines.join('\n'));
+    const ownSlugs = resolver.headingSlugs(lines.join('\n'));
 
     let inFence = false;
 
@@ -73,7 +87,7 @@ module.exports = {
       for (const m of line.matchAll(INLINE_LINK)) {
         const target = m[3];
         const column = m.index + 1;
-        const link = resolveLink(target, fileDir);
+        const link = resolver.resolveLink(target, fileDir);
 
         const report = detail =>
           onError({ lineNumber: i + 1, detail, range: [column, m[0].length] });
@@ -95,7 +109,7 @@ module.exports = {
         }
 
         if (link.kind === 'anchor') {
-          if (link.fragment && !ownSlugs.has(slugify(link.fragment))) {
+          if (link.fragment && !ownSlugs.has(resolver.slugify(link.fragment))) {
             report(`No heading in this document matches "#${link.fragment}"`);
           }
           continue;
@@ -111,7 +125,7 @@ module.exports = {
         if (!link.fragment) continue;
 
         const slugs = slugsFor(link.resolvedPath);
-        if (slugs && !slugs.has(slugify(link.fragment))) {
+        if (slugs && !slugs.has(resolver.slugify(link.fragment))) {
           report(`No heading in ${link.filePart} matches "#${link.fragment}"`);
         }
       }

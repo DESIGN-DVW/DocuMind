@@ -51,17 +51,27 @@ Machine IDs follow the existing `DVWnnn` convention (markdownlint rule names can
 | DVW001 | DvW MD Rule #001 | `table-separator-spacing` | Separators are spaced: `\| - \|`, never compact `\|---\|` |
 | DVW002 | DvW MD Rule #002 | `no-blank-lines-in-tables` | No blank line between table rows — a blank line terminates a GFM table |
 
-### 3.2 Planned rules
+### 3.2 Style and structure rules
 
-| ID | Label | Name | Rule | Auto-fix |
-| - | - | - | - | - |
-| DVW003 | DvW MD Rule #003 | `no-block-elements-in-lists` | No fenced code, tables, or blockquotes nested inside list items | No — unnesting is ambiguous |
-| DVW004 | DvW MD Rule #004 | `iso-dates` | Dates are ISO 8601 `YYYY-MM-DD`; times are 24h | Unambiguous forms only; `03/04/2026` is flagged, never guessed |
-| DVW005 | DvW MD Rule #005 | `italicise-parentheticals` | Parenthetical asides are italicised, parens included: `*(like this)*` | Yes |
-| DVW006 | DvW MD Rule #006 | `italicise-durations` | Time and duration expressions are italicised in headings and paragraphs: *2 hours*, *3 semaines*, *Q1* | Yes |
-| DVW007 | DvW MD Rule #007 | `locale-units-spacing` | Number↔unit spacing per locale — see §5 | Yes |
-| DVW008 | DvW MD Rule #008 | `emoji-allowlist` | Only the approved sets — see §3.4 | No — removal is destructive |
-| DVW009 | DvW MD Rule #009 | `link-path-validation` | Relative links resolve on disk; anchors match a real heading; root-relative paths flagged | No |
+Generated reference with examples: [MARKDOWN-RULES.md](./MARKDOWN-RULES.md).
+
+| ID | Label | Name | Rule | Auto-fix | Status |
+| - | - | - | - | - | - |
+| DVW003 | DvW MD Rule #003 | `no-block-elements-in-lists` | No fenced code, tables, or blockquotes nested inside list items | No — unnesting is ambiguous | Enabled |
+| DVW004 | DvW MD Rule #004 | `iso-dates` | Dates are ISO 8601 `YYYY-MM-DD`; times are 24h | Unambiguous forms only; `03/04/2026` is flagged, never guessed | Enabled |
+| DVW005 | DvW MD Rule #005 | `italicise-parentheticals` | Parenthetical asides are italicised, parens included: `*(like this)*` | Yes | Opt-in |
+| DVW006 | DvW MD Rule #006 | `italicise-durations` | Time and duration expressions are italicised in headings and paragraphs: *2 hours*, *3 semaines*, *Q1* | Yes | Opt-in |
+| DVW007 | DvW MD Rule #007 | `locale-units-spacing` | Number↔unit spacing per locale — see §5 | Yes | Opt-in |
+| DVW008 | DvW MD Rule #008 | `emoji-allowlist` | Only the approved sets — see §3.4 | No — removal is destructive | Opt-in |
+| DVW009 | DvW MD Rule #009 | `link-path-validation` | Relative links resolve on disk; anchors match a real heading; dangling absolute paths flagged | No | Enabled |
+
+### 3.2.1 Why some rules are opt-in
+
+Pre-commit and the nightly cron both run `--fix`. A rule that rewrites prose therefore rewrites the whole corpus the moment it is enabled, unattended and unreviewed. The three prose rewriters and the dictionary pass ship disabled for that reason.
+
+DVW008 is disabled for a different reason: it is detect-only, but the corpus holds 184 violations and markdownlint has no warning severity. Enabling it fails `lint-staged` and blocks commits on any file containing a stray emoji. Clean the corpus, then enable.
+
+To enable one: flip the flag in `config/.markdownlint.json`, run `npm run lint:fix`, review the diff, and commit the flag together with the changes it produced.
 
 ### 3.3 Emphasis
 
@@ -86,7 +96,7 @@ Four approved sets. Everything else is flagged.
 | Footnote markers | `¹ ² ³ ⁴ ⁵` | References |
 | Severity | `🔴 🟠 🟡 🟢` | Status and risk levels |
 | State | `✓ ✅ ❌ 🚧 ⚠️` | Outcomes and warnings |
-| Flow | `⇆ ← ⇆ 🔀` | Direction and transformation |
+| Flow | `← → ↔ ⇆ ⇒ 🔀` | Direction and transformation |
 
 ### 3.5 Fenced code blocks
 

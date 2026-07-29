@@ -124,11 +124,19 @@ lines.push(
   ''
 );
 
-const output = lines.join('\n');
+let output = lines.join('\n');
+const current = await fs.readFile(OUT_PATH, 'utf8').catch(() => null);
+
+/** Compare ignoring the `updated:` stamp — a passing day is not drift. */
+const withoutStamp = s => (s ?? '').replace(/^updated: .*$/m, 'updated: -');
+const contentChanged = withoutStamp(current) !== withoutStamp(output);
+
+// Keep the existing date when only the date would change, so `--check` does
+// not start failing overnight and demand a no-op commit.
+if (!contentChanged && current) output = current;
 
 if (process.argv.includes('--check')) {
-  const current = await fs.readFile(OUT_PATH, 'utf8').catch(() => null);
-  if (current !== output) {
+  if (contentChanged) {
     console.error(
       'docs/MARKDOWN-RULES.md is out of date — run: node scripts/generate-rules-doc.mjs'
     );
