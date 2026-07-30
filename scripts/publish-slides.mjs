@@ -29,23 +29,23 @@ import { renderDeck } from '../processors/slides-processor.mjs';
 import { ROOT } from '../config/env.mjs';
 
 /**
- * Parses argv into an explicit deck path (if any) and recognized flags.
+ * Parses argv into explicit deck paths (if any) and recognized flags.
  * @param {string[]} argv - process.argv.slice(2)
- * @returns {{ deckArg: string|null, renderOnly: boolean }}
+ * @returns {{ deckArgs: string[], renderOnly: boolean }}
  */
 function parseArgs(argv) {
-  let deckArg = null;
+  const deckArgs = [];
   let renderOnly = false;
 
   for (const arg of argv) {
     if (arg === '--render-only') {
       renderOnly = true;
     } else if (!arg.startsWith('--')) {
-      deckArg = arg;
+      deckArgs.push(arg);
     }
   }
 
-  return { deckArg, renderOnly };
+  return { deckArgs, renderOnly };
 }
 
 /**
@@ -62,9 +62,11 @@ async function discoverDecks() {
 }
 
 async function main() {
-  const { deckArg } = parseArgs(process.argv.slice(2));
+  const { deckArgs } = parseArgs(process.argv.slice(2));
 
-  const decks = deckArg ? [path.resolve(ROOT, deckArg)] : await discoverDecks();
+  const decks = deckArgs.length
+    ? deckArgs.map(deck => path.resolve(ROOT, deck))
+    : await discoverDecks();
 
   if (decks.length === 0) {
     console.warn('[publish-slides] No EN decks found under docs/slides/ — nothing to render.');
@@ -88,4 +90,7 @@ async function main() {
   }
 }
 
-main();
+main().catch(err => {
+  console.error('[publish-slides] FAILED:', err.message);
+  process.exitCode = 1;
+});

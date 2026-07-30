@@ -120,9 +120,15 @@ export async function renderDeck(mdPath, { cwd = process.cwd() } = {}) {
     console.warn(msg);
     warnings.push(msg);
   }
+  // Pass the validated SOFFICE_PATH explicitly so marp-cli resolves the same
+  // LibreOffice binary we pre-flighted. env.mjs only puts SOFFICE_PATH into
+  // process.env when it comes from .env — for the default (non-standard on
+  // this machine) path the child would otherwise fall back to marp's own
+  // discovery and could fail `--pptx-editable` instead of using our binary.
   await execFileAsync('npx', pptxArgs, {
     cwd,
     timeout: editable ? RENDER_TIMEOUT_MS * 1.5 : RENDER_TIMEOUT_MS,
+    env: { ...process.env, SOFFICE_PATH },
   });
 
   return { ...outputs, pptxEditable: editable, warnings };
