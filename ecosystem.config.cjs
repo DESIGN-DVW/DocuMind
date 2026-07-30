@@ -52,7 +52,7 @@ module.exports = {
   }, {
     name: 'documind-inspector',
     script: 'npx',
-    args: '@modelcontextprotocol/inspector node daemon/mcp-server.mjs',
+    args: '@modelcontextprotocol/inspector@latest node daemon/mcp-server.mjs',
     interpreter: 'none',
     exec_mode: 'fork',
     instances: 1,
