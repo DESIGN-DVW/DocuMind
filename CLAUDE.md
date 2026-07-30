@@ -103,6 +103,38 @@ npm run daemon:logs         # pm2 logs documind
 
 ```
 
+## Deployment: the live worktree
+
+**The PM2 services do NOT run from this working checkout.** They run from a dedicated git worktree pinned to `master`:
+
+```text
+
+/Users/Shared/htdocs/github/DocuMind-live      # master — what PM2 executes
+/Users/Shared/htdocs/github/DVWDesign/DocuMind # your working checkout (any branch)
+
+```
+
+`documind`, `documind-mcp`, and `documind-inspector` all have `cwd` set to the live worktree. This decouples the running daemon from whatever branch anyone happens to have checked out — before this, a feature branch on the main checkout meant merged fixes silently never went live.
+
+### Shipping a change
+
+```bash
+
+git -C /Users/Shared/htdocs/github/DocuMind-live pull --ff-only
+pm2 restart documind documind-mcp
+
+```
+
+MCP clients cache the tool list at connection time — restart the client to pick up added/renamed tools or changed schemas.
+
+### Two rules that matter
+
+1. **Keep the worktree OUTSIDE `DOCUMIND_REPOS_DIR`.** `context/loader.mjs` `discoverRepos()` treats every directory under the repos dir containing `.git` as a repository — and a worktree has one. Placing it inside makes DocuMind index itself twice (a phantom `DocuMind-live` repo) and lets the scheduled markdown auto-fix rewrite the deployment checkout, which then conflicts on the next `pull`.
+
+2. **Runtime state is shared by symlink, not copied.** `.env`, `data/`, and `node_modules` in the live worktree are symlinks into the main checkout, so both point at the same database and the same secrets. `ROOT` is derived from the file's own location (`config/env.mjs`), so without these symlinks the worktree would silently create a second, empty database.
+
+Do not "fix" PM2 by repointing it at the working checkout — that reintroduces the stale-deploy problem this setup solves.
+
 ## Environment Configuration
 
 DocuMind loads configuration from environment variables, with optional `.env` file support via Node 22's `process.loadEnvFile()`. All config is centralized in `config/env.mjs`.
