@@ -55,6 +55,7 @@ const CLASSIFICATION_MAP = {
   memory: 'docs',
   dispatches: 'docs',
   proposals: 'docs',
+  discoveries: 'discoveries',
 };
 
 /**
@@ -197,6 +198,7 @@ export async function generateTreeMermaid(db, repoName, outputDir) {
         tests: 'fill:#9B59B6,color:#fff',
         scripts: 'fill:#E74C3C,color:#fff',
         assets: 'fill:#1ABC9C,color:#fff',
+        discoveries: 'fill:#D35400,color:#fff',
       };
       if (colors[folder.classification]) {
         lines.push(`    style ${id} ${colors[folder.classification]}`);
