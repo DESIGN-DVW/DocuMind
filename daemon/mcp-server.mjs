@@ -11,6 +11,8 @@ import { findRelated } from '../graph/sqlite-traversal.mjs';
 import { createRequire } from 'module';
 import fs from 'fs/promises';
 import { indexMarkdown } from '../processors/markdown-processor.mjs';
+import { analyzeRepo } from '../processors/tree-processor.mjs';
+import { listRepositories, resolveRepository, repoError } from './repo-resolver.mjs';
 import { runScan, generateDiagramSnapshot as _generateDiagramSnapshot } from '../orchestrator.mjs';
 import { relinkDiagram, propagateRelinkAllRepos } from '../processors/relink-processor.mjs';
 import {
@@ -101,6 +103,45 @@ async function generateDiagramSnapshot(db) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Tool 0: list_repos — Enumerate indexed repositories
+// ─────────────────────────────────────────────────────────────────────────────
+server.registerTool(
+  'list_repos',
+  {
+    description:
+      'List every indexed repository with its document count. Call this first to discover valid ' +
+      '`repo` values for the other tools — repository names are exact (e.g. "FigmailAPP", not "FigmailApp").',
+    inputSchema: {},
+  },
+  async () => {
+    try {
+      const repositories = listRepositories(db);
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(
+              {
+                total: repositories.length,
+                total_documents: repositories.reduce((sum, r) => sum + r.documents, 0),
+                repositories,
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    } catch (err) {
+      return {
+        content: [{ type: 'text', text: JSON.stringify({ error: err.message }) }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Tool 1: search_docs — Full-text search via FTS5
 // ─────────────────────────────────────────────────────────────────────────────
 server.registerTool(
@@ -124,9 +165,13 @@ server.registerTool(
       const conditions = ['documents_fts MATCH ?'];
       const params = [query];
 
-      if (repo) {
+      const resolution = resolveRepository(db, repo);
+      if (!resolution.ok) return repoError(resolution);
+      const repository = resolution.repository;
+
+      if (repository) {
         conditions.push('d.repository = ?');
-        params.push(repo);
+        params.push(repository);
       }
       if (category) {
         conditions.push('d.category = ?');
@@ -173,9 +218,15 @@ server.registerTool(
   'get_related',
   {
     description:
-      'Get documents related to a given document ID via graph traversal. Supports reverse traversal to find documents that reference this one.',
+      'Get documents related to a given document ID via graph traversal. Supports reverse traversal to find documents that reference this one. ' +
+      '`doc_id` is the integer `id` of a row in the documents table — obtain one from the `id` field of a search_docs or check_existing result ' +
+      '(IDs are sparse and non-contiguous, so do not guess small numbers). ' +
+      'An empty result means that document has no edges in the chosen direction — retry with direction:"both" before concluding there are none.',
     inputSchema: {
-      doc_id: z.number().int().describe('Document ID to traverse from'),
+      doc_id: z
+        .number()
+        .int()
+        .describe('Document ID (documents.id) to traverse from — get it from search_docs results'),
       hops: z.number().int().min(1).max(3).default(2).describe('Maximum traversal depth (1-3)'),
       direction: z
         .enum(['forward', 'reverse', 'both'])
@@ -229,9 +280,13 @@ server.registerTool(
       const conditions = [];
       const params = [];
 
-      if (repo) {
+      const resolution = resolveRepository(db, repo);
+      if (!resolution.ok) return repoError(resolution);
+      const repository = resolution.repository;
+
+      if (repository) {
         conditions.push('d.repository = ?');
-        params.push(repo);
+        params.push(repository);
       }
       if (category) {
         conditions.push('k.category = ?');
@@ -273,22 +328,55 @@ server.registerTool(
   'get_tree',
   {
     description:
-      'Get folder hierarchy for a repository. Returns classified folder structure with document counts and folder types.',
+      'Get folder hierarchy for a repository. Returns classified folder structure with document counts and folder types. ' +
+      'Repository names are matched case-insensitively; use list_repos to see indexed repositories. ' +
+      'If the hierarchy has not been analyzed yet, it is built on demand.',
     inputSchema: {
-      repo: z.string().describe('Repository name (required)'),
+      repo: z.string().describe('Repository name (required). Case-insensitive; see list_repos.'),
+      refresh: z
+        .boolean()
+        .default(false)
+        .describe('Re-analyze the folder hierarchy from disk even if cached rows exist.'),
     },
   },
-  async ({ repo }) => {
+  async ({ repo, refresh }) => {
     try {
-      const nodes = db
-        .prepare('SELECT * FROM folder_nodes WHERE repository = ? ORDER BY depth, path')
-        .all(repo);
+      const resolution = resolveRepository(db, repo);
+      if (!resolution.ok) return repoError(resolution);
+      const repository = resolution.repository;
+
+      const read = () =>
+        db
+          .prepare('SELECT * FROM folder_nodes WHERE repository = ? ORDER BY depth, path')
+          .all(repository);
+
+      let nodes = refresh ? [] : read();
+      let analyzed = false;
+
+      // Lazily populate folder_nodes. Previously this tool was a pure read of a
+      // table nothing ever wrote (analyzeRepo was not wired into any scan), so
+      // it returned {total:0, tree:[]} forever for every repository.
+      if (nodes.length === 0) {
+        await analyzeRepo(db, repository);
+        nodes = read();
+        analyzed = true;
+      }
 
       return {
         content: [
           {
             type: 'text',
-            text: JSON.stringify({ repository: repo, total: nodes.length, tree: nodes }, null, 2),
+            text: JSON.stringify(
+              {
+                repository,
+                ...(resolution.corrected ? { resolved_from: repo } : {}),
+                total: nodes.length,
+                analyzed_on_demand: analyzed,
+                tree: nodes,
+              },
+              null,
+              2
+            ),
           },
         ],
       };
@@ -308,10 +396,20 @@ server.registerTool(
   'check_existing',
   {
     description:
-      'Check whether documentation covering a topic already exists. Returns existence boolean, confidence score, and matching documents. Use before creating new docs to avoid duplication.',
+      'Check whether documentation covering a topic already exists. Returns existence boolean, confidence score, and matching documents. ' +
+      'Use before creating new docs to avoid duplication. ' +
+      'Pass a single topic via `query`, OR several via `topics` (each is checked independently and reported per topic). ' +
+      'Repository names are matched case-insensitively; see list_repos.',
     inputSchema: {
-      query: z.string().describe('Topic or subject to check for'),
-      repo: z.string().optional().describe('Limit check to a specific repository'),
+      query: z.string().optional().describe('A single topic or subject to check for'),
+      topics: z
+        .array(z.string())
+        .optional()
+        .describe('Several topics to check independently, e.g. ["MongoDB","emailing","MJML"]'),
+      repo: z
+        .string()
+        .optional()
+        .describe('Limit check to a specific repository (case-insensitive)'),
       threshold: z
         .number()
         .min(0)
@@ -320,19 +418,49 @@ server.registerTool(
         .describe('Confidence threshold for existence (0-1, default 0.5)'),
     },
   },
-  async ({ query, repo, threshold }) => {
+  async ({ query, topics, repo, threshold }) => {
     try {
-      const conditions = ['documents_fts MATCH ?'];
-      const params = [query];
+      const terms = [...(topics ?? []), ...(query ? [query] : [])]
+        .map(t => String(t).trim())
+        .filter(Boolean);
 
-      if (repo) {
-        conditions.push('d.repository = ?');
-        params.push(repo);
+      if (terms.length === 0) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                error: 'Provide `query` (a string) or `topics` (an array of strings).',
+              }),
+            },
+          ],
+          isError: true,
+        };
       }
 
-      params.push(10);
+      const resolution = resolveRepository(db, repo);
+      if (!resolution.ok) return repoError(resolution);
+      const repository = resolution.repository;
 
-      const sql = `
+      /**
+       * Runs the FTS existence check for one topic.
+       * @param {string} term
+       */
+      const checkOne = term => {
+        const conditions = ['documents_fts MATCH ?'];
+        // Quote the term so FTS5 treats it as a phrase — an unescaped topic
+        // containing operators (e.g. "auth AND (x)") would otherwise raise an
+        // FTS5 syntax error instead of simply not matching.
+        const params = [`"${term.replace(/"/g, '""')}"`];
+
+        if (repository) {
+          conditions.push('d.repository = ?');
+          params.push(repository);
+        }
+
+        params.push(10);
+
+        const sql = `
         SELECT d.id, d.path, d.repository, d.filename, d.category,
                rank,
                snippet(documents_fts, 3, '[', ']', '...', 32) as snippet
@@ -342,16 +470,26 @@ server.registerTool(
         ORDER BY rank LIMIT ?
       `;
 
-      const rows = db.prepare(sql).all(...params);
+        const rows = db.prepare(sql).all(...params);
 
-      const matches = rows.map(row => {
-        // FTS5 rank is negative float; closer to 0 = more relevant
-        const score = Math.max(0, Math.min(1, 1 - Math.abs(row.rank) / 20));
-        return { ...row, confidence: score };
-      });
+        const matches = rows.map(row => {
+          // FTS5 rank is negative float; closer to 0 = more relevant
+          const score = Math.max(0, Math.min(1, 1 - Math.abs(row.rank) / 20));
+          return { ...row, confidence: score };
+        });
 
-      const topScore = matches.length > 0 ? matches[0].confidence : 0;
-      const exists = topScore >= threshold;
+        const topScore = matches.length > 0 ? matches[0].confidence : 0;
+
+        return {
+          query: term,
+          exists: topScore >= threshold,
+          confidence: topScore,
+          matches: matches.map(({ rank: _rank, ...m }) => m),
+        };
+      };
+
+      const results = terms.map(checkOne);
+      const single = results.length === 1 ? results[0] : null;
 
       return {
         content: [
@@ -359,11 +497,16 @@ server.registerTool(
             type: 'text',
             text: JSON.stringify(
               {
-                query,
-                exists,
-                confidence: topScore,
+                // Single-topic calls keep the original flat shape for compatibility.
+                ...(single ?? {
+                  topics: terms,
+                  exists: results.some(r => r.exists),
+                  confidence: Math.max(...results.map(r => r.confidence)),
+                  results,
+                }),
                 threshold,
-                matches: matches.map(({ rank: _rank, ...m }) => m),
+                ...(repository ? { repository } : {}),
+                ...(resolution.corrected ? { resolved_from: repo } : {}),
               },
               null,
               2
@@ -399,9 +542,13 @@ server.registerTool(
       const conditions = [];
       const params = [];
 
-      if (repo) {
+      const resolution = resolveRepository(db, repo);
+      if (!resolution.ok) return repoError(resolution);
+      const repository = resolution.repository;
+
+      if (repository) {
         conditions.push('repository = ?');
-        params.push(repo);
+        params.push(repository);
       }
       if (stale_only) {
         conditions.push('stale = 1');
@@ -467,9 +614,13 @@ server.registerTool(
       const conditions = ['cs.similarity_score >= ?'];
       const params = [min_score];
 
-      if (repo) {
+      const resolution = resolveRepository(db, repo);
+      if (!resolution.ok) return repoError(resolution);
+      const repository = resolution.repository;
+
+      if (repository) {
         conditions.push('(d1.repository = ? OR d2.repository = ?)');
-        params.push(repo, repo);
+        params.push(repository, repository);
       }
       if (!include_reviewed) {
         conditions.push('cs.reviewed = 0');
@@ -541,9 +692,13 @@ server.registerTool(
       const conditions = [];
       const params = [];
 
-      if (repo) {
+      const resolution = resolveRepository(db, repo);
+      if (!resolution.ok) return repoError(resolution);
+      const repository = resolution.repository;
+
+      if (repository) {
         conditions.push('d.repository = ?');
-        params.push(repo);
+        params.push(repository);
       }
       if (deviation_type) {
         conditions.push('dev.deviation_type = ?');
