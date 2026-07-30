@@ -390,6 +390,29 @@ export async function bulkRelink(db, mappings, registryPath) {
 // Internal helpers
 // ---------------------------------------------------------------------------
 
+/**
+ * Substring-safe, idempotent replacement of oldUrl → newUrl.
+ *
+ * A plain `content.replaceAll(oldUrl, newUrl)` corrupts URLs when `newUrl`
+ * contains `oldUrl` as a substring (curated Figma URLs share the board stem
+ * of the generated URL they replace). On repeat runs it re-matches the
+ * `oldUrl` embedded inside an already-substituted `newUrl` and keeps appending
+ * the suffix — producing the doubled `…-4/DVW-Design-Dev-Strategy?node-id=…`
+ * corruption. Splitting on `newUrl` first preserves already-substituted
+ * regions untouched, so the operation is a no-op the second time through.
+ * @param {string} content
+ * @param {string} oldUrl
+ * @param {string} newUrl
+ * @returns {string}
+ */
+export function replaceUrlSafe(content, oldUrl, newUrl) {
+  if (!oldUrl || oldUrl === newUrl || !content.includes(oldUrl)) return content;
+  return content
+    .split(newUrl)
+    .map(segment => segment.split(oldUrl).join(newUrl))
+    .join(newUrl);
+}
+
 async function walkAndReplace(dir, oldUrl, newUrl, modified) {
   let entries;
   try {
@@ -407,10 +430,18 @@ async function walkAndReplace(dir, oldUrl, newUrl, modified) {
     if (entry.isDirectory()) {
       await walkAndReplace(full, oldUrl, newUrl, modified);
     } else if (entry.name.endsWith('.md')) {
+      // Never text-patch the auto-generated registry snapshot: it is rendered
+      // from the diagrams table (generateDiagramSnapshot) and patching it here
+      // is what fed doubled URLs back into the DB via the watcher reverse-sync.
+      if (entry.name === 'DIAGRAM-REGISTRY.md') continue;
+
       const content = await fs.readFile(full, 'utf-8');
       if (content.includes(oldUrl)) {
-        await fs.writeFile(full, content.replaceAll(oldUrl, newUrl), 'utf-8');
-        modified.push(full);
+        const updated = replaceUrlSafe(content, oldUrl, newUrl);
+        if (updated !== content) {
+          await fs.writeFile(full, updated, 'utf-8');
+          modified.push(full);
+        }
       }
     }
   }

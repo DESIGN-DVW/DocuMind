@@ -421,6 +421,18 @@ const x = 1;
 
 Enforced by MD040 (markdownlint) + auto-detected by `fix-markdown.mjs`.
 
+## Discoveries Category
+
+`docs/discoveries/` is the durable home for cross-repo patterns, fixes, and insights — the "Documentation/patterns → index in DocuMind" leg of the ecosystem Discovery Policy (canonical in `RootDispatcher/memory/global-rules.md`, mirrored in `~/.claude/CLAUDE.md` §7).
+
+- **Classification:** any file under `docs/discoveries/` classifies as `discoveries/*` via the path rule in `config/profiles/dvwdesign.json` (placed before the generic `\/docs\/` catch-all so it wins). A file may override the subtype (`discoveries/patterns` | `discoveries/integrations` | `discoveries/insights`) in its `classification` frontmatter.
+
+- **Folder type:** `processors/tree-processor.mjs` maps the `discoveries` folder to a distinct `discoveries` classification with its own Mermaid color, so it renders as a first-class node in tree/graph output.
+
+- **Filing a discovery:** copy `docs/discoveries/TEMPLATE.md` → `docs/discoveries/<YYYY-MM-DD>-<slug>.md`, write the finding (what / why it matters / how to apply), then index it with `mcp__documind__index_file`. Ecosystem-wide news is additionally announced via `mcp__agenthub__publish_discovery`; repo-targeted changes go out as a `RootDispatcher` dispatch.
+
+See `docs/discoveries/README.md` for the full workflow and the Discovery Policy fan-out table.
+
 ## Dependencies
 
 ### Runtime
