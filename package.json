@@ -60,7 +60,7 @@
     "daemon:dev": "node daemon/server.mjs",
     "db:migrate": "node scripts/db/migrate.mjs",
     "mcp:dev": "node daemon/mcp-server.mjs",
-    "mcp:inspect": "npx @modelcontextprotocol/inspector node daemon/mcp-server.mjs",
+    "mcp:inspect": "npx @modelcontextprotocol/inspector@latest node daemon/mcp-server.mjs",
     "graphify": "graphify .",
     "graphify:update": "graphify . --update",
     "graphify:deep": "graphify . --mode deep",
