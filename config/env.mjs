@@ -172,6 +172,12 @@ export const MCP_MODE = process.env.DOCUMIND_MCP_MODE ?? 'stdio';
 export const MCP_TOKEN = process.env.DOCUMIND_MCP_TOKEN ?? null;
 
 /**
+ * Bearer token(s) for the daemon REST API (comma-separated for rotation).
+ * Required: the daemon exposes write routes and must never run open.
+ */
+export const API_TOKEN = process.env.DOCUMIND_API_TOKEN ?? null;
+
+/**
  * Allowed CORS origins for MCP HTTP endpoint (comma-separated).
  * Empty string disables CORS headers. Use '*' to allow all origins.
  * @constant {string}

@@ -30,7 +30,9 @@ import { processHook } from './hooks.mjs';
 import { initIngestion } from './ingestion.mjs';
 import { loadProfile } from '../context/loader.mjs';
 import { commonDir } from '../context/utils.mjs';
-import { ROOT, PORT, HOST, DB_PATH, REPOS_DIR, MCP_MODE } from '../config/env.mjs';
+import { ROOT, PORT, HOST, DB_PATH, REPOS_DIR, MCP_MODE, API_TOKEN } from '../config/env.mjs';
+import rateLimit from 'express-rate-limit';
+import { createBearerAuth, parseTokens } from './bearer-auth.mjs';
 import { traverseGraph } from '../graph/sqlite-traversal.mjs';
 import { LOCAL_BASE_PATH } from '../config/constants.mjs';
 
@@ -134,6 +136,27 @@ const app = express();
 // HSTS disabled: plain HTTP only, HSTS would make browsers refuse HTTP connections.
 app.use(helmet({ contentSecurityPolicy: false, hsts: false }));
 app.use(express.json({ limit: '10mb' }));
+
+// --- Auth + rate limiting ---
+// Registered before every route below, so a newly added route is protected by
+// default rather than by remembering to protect it. Two paths are exempt:
+//   /health    — uptime probes and Docker HEALTHCHECK, no data exposure
+//   /dashboard — static assets only; the data they fetch is gated like anything
+//                else, so the UI loads but requires a token to populate.
+const API_TOKENS = parseTokens(API_TOKEN, 'API', 'DOCUMIND_API_TOKEN');
+const isPublicPath = req => req.path === '/health' || req.path.startsWith('/dashboard');
+
+app.use(
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 600,
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: isPublicPath,
+  })
+);
+
+app.use(createBearerAuth({ tokens: API_TOKENS, label: 'API', skip: isPublicPath }));
 
 // Dashboard static files
 app.use('/dashboard', express.static(path.join(ROOT, 'dashboard')));
