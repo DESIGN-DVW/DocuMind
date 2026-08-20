@@ -13,6 +13,7 @@ import fs from 'fs/promises';
 import { indexMarkdown } from '../processors/markdown-processor.mjs';
 import { analyzeRepo } from '../processors/tree-processor.mjs';
 import { listRepositories, resolveRepository, repoError } from './repo-resolver.mjs';
+import { createBearerAuth, parseTokens } from './bearer-auth.mjs';
 import { runScan, generateDiagramSnapshot as _generateDiagramSnapshot } from '../orchestrator.mjs';
 import { relinkDiagram, propagateRelinkAllRepos } from '../processors/relink-processor.mjs';
 import {
@@ -1285,51 +1286,13 @@ if (MCP_MODE === 'stdio') {
   await server.connect(transport);
   console.log('[mcp-server] DocuMind MCP ready (stdio)');
 } else if (MCP_MODE === 'http') {
-  // --- Validate token requirement ---
-  if (!MCP_TOKEN) {
-    console.error('[MCP] DOCUMIND_MCP_TOKEN is required in HTTP mode. Exiting.');
-    process.exit(1);
-  }
-
-  const VALID_TOKENS = new Set(
-    MCP_TOKEN.split(',')
-      .map(t => t.trim())
-      .filter(Boolean)
-  );
-
-  if (VALID_TOKENS.size === 0) {
-    console.error('[MCP] DOCUMIND_MCP_TOKEN is set but contains no valid tokens. Exiting.');
-    process.exit(1);
-  }
-
-  // --- Bearer auth middleware ---
-  function bearerAuthMiddleware(req, res, next) {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      const ip = req.ip || req.socket?.remoteAddress;
-      console.error(
-        `[MCP] Auth failed: missing token | ${new Date().toISOString()} | ${ip} | ${req.headers.origin ?? ''}`
-      );
-      return res.status(401).json({
-        jsonrpc: '2.0',
-        error: { code: -32001, message: 'Unauthorized' },
-        id: null,
-      });
-    }
-    const token = authHeader.slice(7).trim();
-    if (!VALID_TOKENS.has(token)) {
-      const ip = req.ip || req.socket?.remoteAddress;
-      console.error(
-        `[MCP] Auth failed: invalid token | ${new Date().toISOString()} | ${ip} | ${req.headers.origin ?? ''}`
-      );
-      return res.status(401).json({
-        jsonrpc: '2.0',
-        error: { code: -32001, message: 'Unauthorized' },
-        id: null,
-      });
-    }
-    next();
-  }
+  // --- Auth (shared with the daemon REST API — see daemon/bearer-auth.mjs) ---
+  const VALID_TOKENS = parseTokens(MCP_TOKEN, 'MCP', 'DOCUMIND_MCP_TOKEN');
+  const bearerAuthMiddleware = createBearerAuth({
+    tokens: VALID_TOKENS,
+    label: 'MCP',
+    jsonRpc: true,
+  });
 
   // --- CORS middleware for /mcp (browser-based MCP clients) ---
   const CORS_ORIGINS = MCP_CORS_ORIGINS
