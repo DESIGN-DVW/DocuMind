@@ -30,7 +30,7 @@ import { processHook } from './hooks.mjs';
 import { initIngestion } from './ingestion.mjs';
 import { loadProfile } from '../context/loader.mjs';
 import { commonDir } from '../context/utils.mjs';
-import { ROOT, PORT, DB_PATH, REPOS_DIR, MCP_MODE } from '../config/env.mjs';
+import { ROOT, PORT, HOST, DB_PATH, REPOS_DIR, MCP_MODE } from '../config/env.mjs';
 import { traverseGraph } from '../graph/sqlite-traversal.mjs';
 import { LOCAL_BASE_PATH } from '../config/constants.mjs';
 
@@ -918,8 +918,8 @@ app.post('/diagrams/reverse-sync', async (req, res) => {
 });
 
 // --- Start ---
-const server = app.listen(PORT, () => {
-  console.log(`DocuMind v2.0 listening on port ${PORT}`);
+const server = app.listen(PORT, HOST, () => {
+  console.log(`DocuMind v2.0 listening on ${HOST}:${PORT}`);
   console.log(`Database: ${DB_PATH}`);
 
   // Initialize background services

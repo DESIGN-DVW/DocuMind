@@ -47,6 +47,13 @@ try {
  */
 export const PORT = Number(process.env.PORT ?? 9000);
 
+/**
+ * Interface to bind the daemon to. Defaults to loopback: the daemon exposes
+ * unauthenticated write routes, so it must not be reachable from the LAN.
+ * Set DOCUMIND_HOST=0.0.0.0 only behind a gateway or inside a container.
+ */
+export const HOST = process.env.DOCUMIND_HOST ?? '127.0.0.1';
+
 // ============================================================================
 // DATABASE
 // ============================================================================
