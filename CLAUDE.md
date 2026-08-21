@@ -559,17 +559,30 @@ This repo is part of the DVWDesign ecosystem coordinated by RootDispatcher.
 
 1. Read memory file: `/Users/Shared/htdocs/github/DVWDesign/RootDispatcher/memory/repos/DocuMind.md`
 
-2. Check pending dispatches: `RootDispatcher/dispatches/pending/ALL/` and `RootDispatcher/dispatches/pending/DocuMind/`
+2. List dispatches addressed to this repo — do NOT read `pending/ALL/` directly:
+
+   ```bash
+   node /Users/Shared/htdocs/github/DVWDesign/RootDispatcher/scripts/my-dispatches.mjs --repo DocuMind
+   ```
+
+   Read only what it lists. If it prints nothing, there is nothing to do. The `/my-dispatches` slash command wraps this.
 
 3. Read shared conventions if needed: `RootDispatcher/memory/global-rules.md`
 
-4. Apply pending dispatches and move to `dispatches/applied/`
+4. Apply the listed dispatches, then record completion with `dispatch-ack.mjs` (see Session End). **Never move a shared (`pending/ALL/`) dispatch file yourself** — that removes it from every other target's pending list.
 
 ### Session End Protocol
 
 1. Update memory file with current state
 
-2. Move applied dispatches to `dispatches/applied/`
+2. Record dispatch completion — do NOT move shared dispatch files by hand:
+
+   ```bash
+   node /Users/Shared/htdocs/github/DVWDesign/RootDispatcher/scripts/dispatch-ack.mjs \
+     --repo DocuMind --dispatch DISPATCH-NNN --note "one-line result"
+   ```
+
+   Repo-scoped dispatches (`pending/DocuMind/`) move to `applied/` automatically; shared dispatches (`pending/ALL/`) stay in place and only move once every target has acked.
 
 3. Append to `RootDispatcher/memory/changelog.jsonl`
 
