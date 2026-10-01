@@ -448,6 +448,7 @@ async function getRepoFiles(ctx, repo) {
         '**/dist/**',
         '**/build/**',
         '**/.claude/worktrees/**',
+        ...(ctx.scanIgnore ?? []),
       ],
       absolute: true,
     });

@@ -181,5 +181,6 @@
       "path": "docs",
       "active": true
     }
-  ]
+  ],
+  "scanIgnore": ["**/vendor/**", "**/SpiritOf_Sources/**", "**/.DS_Store"]
 }

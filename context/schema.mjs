@@ -67,6 +67,10 @@ export const profileSchema = z
       .describe(
         'Non-repository markdown roots (briefs, Obsidian notes) — additive to repositories'
       ),
+    scanIgnore: z
+      .array(z.string())
+      .optional()
+      .describe('Extra glob patterns excluded from scans, appended to the built-in defaults'),
     classificationRules: z
       .array(classificationRuleSchema)
       .describe('Ordered classification rules — first match wins'),

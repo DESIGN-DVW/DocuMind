@@ -176,6 +176,7 @@ async function buildCtx(validated, profileFilePath) {
   return {
     profileId: validated.id,
     repoRoots,
+    scanIgnore: validated.scanIgnore ?? [],
     classificationRules,
     keywordTaxonomy: validated.keywordTaxonomy,
     relationshipTypes: validated.relationshipTypes,
