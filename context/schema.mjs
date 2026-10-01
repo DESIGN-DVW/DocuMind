@@ -16,6 +16,18 @@ const repositorySchema = z.object({
   active: z.boolean().default(true).describe('Whether to include this repo in scans'),
 });
 
+// A doc SOURCE is not a repository: no code, no git, nothing to scan for
+// relationships. It is a tree of markdown that must still be searchable —
+// Dave's strategy briefs and the Obsidian session logs under
+// DVWDesign/docs live here. Without this, index_file rejects them outright
+// ("not under any known repo root") and search_docs cannot see them, so any
+// agent following the MCP-first protocol concludes the rule does not exist.
+const sourceSchema = z.object({
+  name: z.string().describe('Source display name, used as the `repo` filter value'),
+  path: z.string().describe('Path relative to the registry basePath, or absolute'),
+  active: z.boolean().default(true).describe('Whether to include this source in scans'),
+});
+
 const classificationRuleSchema = z.object({
   pattern: z.string().describe('Regex pattern string (no delimiters) tested against document path'),
   classification: z
@@ -49,6 +61,12 @@ export const profileSchema = z
       .string()
       .optional()
       .describe('Path to external repository registry JSON (relative to profile file)'),
+    sources: z
+      .array(sourceSchema)
+      .optional()
+      .describe(
+        'Non-repository markdown roots (briefs, Obsidian notes) — additive to repositories'
+      ),
     classificationRules: z
       .array(classificationRuleSchema)
       .describe('Ordered classification rules — first match wins'),

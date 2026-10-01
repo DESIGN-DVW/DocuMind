@@ -112,6 +112,10 @@ export async function loadProfile(profilePath) {
  */
 async function buildCtx(validated, profileFilePath) {
   let repoRoots;
+  // Base directory that relative `sources` paths resolve against. REPOS_DIR mode
+  // is the live configuration, so it comes first; the registry branch overrides
+  // with its own basePath below.
+  let sourceBaseDir = REPOS_DIR || path.dirname(profileFilePath);
 
   if (REPOS_DIR) {
     // REPOS_DIR takes priority — auto-discover repos by scanning for .git dirs
@@ -145,7 +149,23 @@ async function buildCtx(validated, profileFilePath) {
     repoRoots = registry.repositories
       .filter(r => r.active !== false)
       .map(r => ({ name: r.name, path: path.join(registry.basePath, r.path) }));
+    sourceBaseDir = registry.basePath;
   }
+
+  // Doc sources are additive roots that are not repositories — no code, no git.
+  // They join repoRoots so that path validation, repo-name derivation and the
+  // scanner treat them exactly like any other root; only their provenance
+  // differs. Later entries never shadow a repository with the same name.
+  const existingNames = new Set(repoRoots.map(r => r.name));
+  const sourceRoots = (validated.sources ?? [])
+    .filter(s => s.active !== false)
+    .filter(s => !existingNames.has(s.name))
+    .map(s => ({
+      name: s.name,
+      path: path.isAbsolute(s.path) ? s.path : path.join(sourceBaseDir, s.path),
+      source: true,
+    }));
+  repoRoots = [...repoRoots, ...sourceRoots];
 
   // Compile regex patterns once — not on every document classification call
   const classificationRules = validated.classificationRules.map(r => ({

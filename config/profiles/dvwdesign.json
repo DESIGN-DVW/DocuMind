@@ -4,19 +4,86 @@
   "version": "1.0.0",
   "repositoryRegistryPath": "../../../RootDispatcher/config/repository-registry.json",
   "classificationRules": [
-    { "pattern": "\\/docs\\/api\\/", "classification": "engineering/api-docs" },
-    { "pattern": "CLAUDE\\.md$", "classification": "engineering/architecture" },
-    { "pattern": "\\/.planning\\/", "classification": "engineering/architecture" },
-    { "pattern": "ADR[-_]", "classification": "engineering/architecture/adrs" },
-    { "pattern": "README\\.md$", "classification": "references/readme" },
-    { "pattern": "CHANGELOG", "classification": "operations/changelog" },
-    { "pattern": "\\/scripts\\/", "classification": "engineering/scripts" },
-    { "pattern": "\\/config\\/", "classification": "engineering/config" },
-    { "pattern": "\\/tests?\\/", "classification": "engineering/tests" },
-    { "pattern": "\\/discoveries\\/", "classification": "discoveries/patterns" },
-    { "pattern": "\\/docs\\/", "classification": "guides/documentation" },
-    { "pattern": "\\.github\\/", "classification": "operations/ci-cd" },
-    { "pattern": "package\\.json$", "classification": "engineering/config" }
+    {
+      "pattern": "\\/docs\\/api\\/",
+      "classification": "engineering/api-docs"
+    },
+    {
+      "pattern": "CLAUDE\\.md$",
+      "classification": "engineering/architecture"
+    },
+    {
+      "pattern": "\\/.planning\\/",
+      "classification": "engineering/architecture"
+    },
+    {
+      "pattern": "ADR[-_]",
+      "classification": "engineering/architecture/adrs"
+    },
+    {
+      "pattern": "README\\.md$",
+      "classification": "references/readme"
+    },
+    {
+      "pattern": "CHANGELOG",
+      "classification": "operations/changelog"
+    },
+    {
+      "pattern": "\\/scripts\\/",
+      "classification": "engineering/scripts"
+    },
+    {
+      "pattern": "\\/config\\/",
+      "classification": "engineering/config"
+    },
+    {
+      "pattern": "\\/tests?\\/",
+      "classification": "engineering/tests"
+    },
+    {
+      "pattern": "\\/discoveries\\/",
+      "classification": "discoveries/patterns"
+    },
+    {
+      "pattern": "\\/docs\\/briefs\\/",
+      "classification": "strategy/briefs"
+    },
+    {
+      "pattern": "\\/docs\\/Sessions\\/",
+      "classification": "operations/sessions"
+    },
+    {
+      "pattern": "\\/docs\\/Security-Policy\\/",
+      "classification": "references/security-policy"
+    },
+    {
+      "pattern": "\\/docs\\/decisions\\/",
+      "classification": "strategy/decisions"
+    },
+    {
+      "pattern": "\\/docs\\/meetings\\/",
+      "classification": "strategy/meetings"
+    },
+    {
+      "pattern": "\\/docs\\/discussions\\/",
+      "classification": "strategy/discussions"
+    },
+    {
+      "pattern": "\\/docs\\/workflows\\/",
+      "classification": "operations/workflows"
+    },
+    {
+      "pattern": "\\/docs\\/",
+      "classification": "guides/documentation"
+    },
+    {
+      "pattern": "\\.github\\/",
+      "classification": "operations/ci-cd"
+    },
+    {
+      "pattern": "package\\.json$",
+      "classification": "engineering/config"
+    }
   ],
   "keywordTaxonomy": {
     "technology": [
@@ -107,5 +174,12 @@
   "lintRules": {
     "profile": "strict",
     "customPatternsPath": "config/custom-error-patterns.json"
-  }
+  },
+  "sources": [
+    {
+      "name": "DVW-Docs",
+      "path": "docs",
+      "active": true
+    }
+  ]
 }
