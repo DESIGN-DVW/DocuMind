@@ -100,7 +100,7 @@
     "helmet": "^8.1.0",
     "ignore": "^5.3.0",
     "mammoth": "^1.11.0",
-    "markdown-it": "^14.0.0",
+    "markdown-it": "^14.3.2",
     "natural": "^8.1.1",
     "node-cron": "^3.0.3",
     "ora": "^8.0.1",
@@ -118,7 +118,7 @@
     "jsdoc": "^4.0.5",
     "lint-staged": "^16.2.6",
     "markdown-link-check": "^3.14.1",
-    "markdownlint-cli2": "^0.23.0",
+    "markdownlint-cli2": "^0.23.3",
     "prettier": "^3.6.2",
     "puppeteer": "^24.30.0",
     "tree-cli": "^0.6.7"
