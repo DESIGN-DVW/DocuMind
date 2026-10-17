@@ -86,7 +86,7 @@
   "author": "DESIGN-DVW",
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.27.1",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "better-sqlite3": "^12.6.2",
     "chalk": "^5.3.0",
     "chokidar": "^4.0.3",
