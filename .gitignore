@@ -52,3 +52,7 @@ data/documind.kuzu/
 docs/slides/**/*.html
 docs/slides/**/*.pdf
 docs/slides/**/*.pptx
+
+# Graphify per-file extraction cache — rebuilt by `graphify update .`.
+# graph.json and GRAPH_REPORT.md stay tracked; this is build state.
+graphify-out/cache/

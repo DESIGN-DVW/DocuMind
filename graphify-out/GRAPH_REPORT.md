@@ -1,478 +1,367 @@
-# Graph Report - .  (2026-04-21)
+# Graph Report - .  (2026-10-18)
 
 ## Corpus Check
 
-- 94 files · ~115,490 words
-
+- 55 files · ~135,529 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
 
-- 445 nodes · 650 edges · 47 communities detected
-
-- Extraction: 85% EXTRACTED · 15% INFERRED · 0% AMBIGUOUS · INFERRED: 100 edges (avg confidence: 0.81)
-
+- 440 nodes · 651 edges · 44 communities detected
+- Extraction: 83% EXTRACTED · 17% INFERRED · 0% AMBIGUOUS · INFERRED: 109 edges (avg confidence: 0.81)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
 
-- [[_COMMUNITY_setup_cron_log|setup_cron_log]]
-
-- [[_COMMUNITY_diagram_registry_md|diagram_registry_md]]
-
-- [[_COMMUNITY_readme_documind|readme_documind]]
-
-- [[_COMMUNITY_docs_markdown_error_patterns|docs_markdown_error_patterns]]
-
-- [[_COMMUNITY_processors_relink_processor_mjs|processors_relink_processor_mjs]]
-
-- [[_COMMUNITY_daemon_server_mjs|daemon_server_mjs]]
-
-- [[_COMMUNITY_query_utils_getdatabase|query_utils_getdatabase]]
-
-- [[_COMMUNITY_rootdispatcher_notification_custom_error_system|rootdispatcher_notification_custom_error_system]]
-
-- [[_COMMUNITY_claude_md|claude_md]]
-
-- [[_COMMUNITY_glossiaapp_migration_guide|glossiaapp_migration_guide]]
-
-- [[_COMMUNITY_scripts_fix_markdown_mjs|scripts_fix_markdown_mjs]]
-
-- [[_COMMUNITY_scripts_fix_custom_errors_mjs|scripts_fix_custom_errors_mjs]]
-
-- [[_COMMUNITY_scripts_scan_enhanced_scanner_mjs|scripts_scan_enhanced_scanner_mjs]]
-
-- [[_COMMUNITY_scripts_validate_custom_errors_mjs|scripts_validate_custom_errors_mjs]]
-
-- [[_COMMUNITY_setup_complete_markdown_mgmt|setup_complete_markdown_mgmt]]
-
-- [[_COMMUNITY_scripts_generate_tree_schema_mjs|scripts_generate_tree_schema_mjs]]
-
-- [[_COMMUNITY_diagram_workflow|diagram_workflow]]
-
-- [[_COMMUNITY_docs_07_api_jsdoc_scripts_prettify_prettify_js|docs_07_api_jsdoc_scripts_prettify_prettify_js]]
-
-- [[_COMMUNITY_md_vs_mdx_usage_guide|md_vs_mdx_usage_guide]]
-
-- [[_COMMUNITY_config_constants_mjs|config_constants_mjs]]
-
-- [[_COMMUNITY_commonnav_init|commonnav_init]]
-
-- [[_COMMUNITY_scripts_propagate_lint_rules_mjs|scripts_propagate_lint_rules_mjs]]
-
-- [[_COMMUNITY_propagate_org_fixes_propagateorgfixes|propagate_org_fixes_propagateorgfixes]]
-
-- [[_COMMUNITY_scan_all_repos_main|scan_all_repos_main]]
-
-- [[_COMMUNITY_graph_kuzu_queries_mjs|graph_kuzu_queries_mjs]]
-
-- [[_COMMUNITY_processors_mermaid_processor_mjs|processors_mermaid_processor_mjs]]
-
-- [[_COMMUNITY_migrate_backupdatabase|migrate_backupdatabase]]
-
-- [[_COMMUNITY_docs_propagation_summary|docs_propagation_summary]]
-
-- [[_COMMUNITY_processors_word_processor_mjs|processors_word_processor_mjs]]
-
-- [[_COMMUNITY_pdf_processor_indexpdf|pdf_processor_indexpdf]]
-
-- [[_COMMUNITY_validate_timestamps_validatefiles|validate_timestamps_validatefiles]]
-
-- [[_COMMUNITY_index_markdown_createindex|index_markdown_createindex]]
-
-- [[_COMMUNITY_scripts_db_reset_database_mjs|scripts_db_reset_database_mjs]]
-
-- [[_COMMUNITY_usage_guide|usage_guide]]
-
-- [[_COMMUNITY_apache_license|apache_license]]
-
-- [[_COMMUNITY_docs_07_api_jsdoc_scripts_search_js|docs_07_api_jsdoc_scripts_search_js]]
-
-- [[_COMMUNITY_agents_md|agents_md]]
-
-- [[_COMMUNITY_documind_workflow_diagram_concept|documind_workflow_diagram_concept]]
-
-- [[_COMMUNITY_eslint_config_js|eslint_config_js]]
-
-- [[_COMMUNITY_docs_07_api_jsdoc_scripts_polyfill_js|docs_07_api_jsdoc_scripts_polyfill_js]]
-
-- [[_COMMUNITY_docs_07_api_jsdoc_scripts_linenumber_js|docs_07_api_jsdoc_scripts_linenumber_js]]
-
-- [[_COMMUNITY_docs_07_api_jsdoc_scripts_prettify_lang_css_js|docs_07_api_jsdoc_scripts_prettify_lang_css_js]]
-
-- [[_COMMUNITY_scripts_rebuild_kuzu_graph_mjs|scripts_rebuild_kuzu_graph_mjs]]
-
-- [[_COMMUNITY_scripts_kuzu_smoke_test_mjs|scripts_kuzu_smoke_test_mjs]]
-
-- [[_COMMUNITY_scripts_db_init_database_mjs|scripts_db_init_database_mjs]]
-
-- [[_COMMUNITY_repository_structure|repository_structure]]
-
-- [[_COMMUNITY_requirements_graphify_dep|requirements_graphify_dep]]
+- [[_COMMUNITY_Community 0|Community 0]]
+- [[_COMMUNITY_Community 1|Community 1]]
+- [[_COMMUNITY_Community 2|Community 2]]
+- [[_COMMUNITY_Community 3|Community 3]]
+- [[_COMMUNITY_Community 4|Community 4]]
+- [[_COMMUNITY_Community 5|Community 5]]
+- [[_COMMUNITY_Community 6|Community 6]]
+- [[_COMMUNITY_Community 7|Community 7]]
+- [[_COMMUNITY_Community 8|Community 8]]
+- [[_COMMUNITY_Community 9|Community 9]]
+- [[_COMMUNITY_Community 10|Community 10]]
+- [[_COMMUNITY_Community 11|Community 11]]
+- [[_COMMUNITY_Community 12|Community 12]]
+- [[_COMMUNITY_Community 13|Community 13]]
+- [[_COMMUNITY_Community 14|Community 14]]
+- [[_COMMUNITY_Community 15|Community 15]]
+- [[_COMMUNITY_Community 16|Community 16]]
+- [[_COMMUNITY_Community 17|Community 17]]
+- [[_COMMUNITY_Community 18|Community 18]]
+- [[_COMMUNITY_Community 19|Community 19]]
+- [[_COMMUNITY_Community 20|Community 20]]
+- [[_COMMUNITY_Community 21|Community 21]]
+- [[_COMMUNITY_Community 22|Community 22]]
+- [[_COMMUNITY_Community 23|Community 23]]
+- [[_COMMUNITY_Community 24|Community 24]]
+- [[_COMMUNITY_Community 25|Community 25]]
+- [[_COMMUNITY_Community 26|Community 26]]
+- [[_COMMUNITY_Community 27|Community 27]]
+- [[_COMMUNITY_Community 28|Community 28]]
+- [[_COMMUNITY_Community 29|Community 29]]
+- [[_COMMUNITY_Community 30|Community 30]]
+- [[_COMMUNITY_Community 31|Community 31]]
+- [[_COMMUNITY_Community 32|Community 32]]
+- [[_COMMUNITY_Community 33|Community 33]]
+- [[_COMMUNITY_Community 34|Community 34]]
+- [[_COMMUNITY_Community 35|Community 35]]
+- [[_COMMUNITY_Community 36|Community 36]]
+- [[_COMMUNITY_Community 37|Community 37]]
+- [[_COMMUNITY_Community 38|Community 38]]
+- [[_COMMUNITY_Community 39|Community 39]]
+- [[_COMMUNITY_Community 40|Community 40]]
+- [[_COMMUNITY_Community 41|Community 41]]
+- [[_COMMUNITY_Community 42|Community 42]]
+- [[_COMMUNITY_Community 43|Community 43]]
 
 ## God Nodes (most connected - your core abstractions)
 
-1. `log()` - 49 edges
-
-2. `getDatabase()` - 17 edges
-
-3. `DocuMind CLAUDE.md - Comprehensive Usage Guide` - 13 edges
-
-4. `DocuMind Documentation Intelligence System` - 12 edges
-
-5. `runDeepScan()` - 11 edges
-
-6. `Markdown Error Patterns Schema and Detection Guide` - 11 edges
-
-7. `validateFile()` - 9 edges
-
-8. `Diagram Registry — All Repositories (auto-generated by DocuMind MCP)` - 9 edges
-
-9. `generateSchema()` - 8 edges
-
-10. `Markdown Management System Setup` - 8 edges
+1. `log()` - 42 edges
+2. `get()` - 22 edges
+3. `getDatabase()` - 17 edges
+4. `DocuMind CLAUDE.md - Comprehensive Usage Guide` - 13 edges
+5. `Markdown Error Patterns Schema and Detection Guide` - 11 edges
+6. `runDeepScan()` - 10 edges
+7. `DocuMind Documentation Intelligence System` - 10 edges
+8. `validateFile()` - 9 edges
+9. `Diagram Registry — All Repositories (auto-generated by DocuMind MCP)` - 9 edges
+10. `processHook()` - 8 edges
 
 ## Surprising Connections (you probably didn't know these)
 
-- `ESLint Config` --references--> `DocuMind Documentation Intelligence System`  [INFERRED]
-
-  eslint.config.js → README.md
-
-- `scan-all-repos.mjs script` --semantically_similar_to--> `scan-all-repos.mjs`  [INFERRED] [semantically similar]
-
-  README.md → SETUP-COMPLETE.md
-
-- `initScheduler()` --calls--> `log()`  [INFERRED]
-
-  daemon/scheduler.mjs → scripts/setup-cron.mjs
-
-- `initIngestion()` --calls--> `log()`  [INFERRED]
-
-  daemon/ingestion.mjs → scripts/setup-cron.mjs
-
 - `initWatcher()` --calls--> `log()`  [INFERRED]
-
   daemon/watcher.mjs → scripts/setup-cron.mjs
+- `SQLite Database Schema (8 tables)` --semantically_similar_to--> `SQLite Database (8173+ documents)`  [INFERRED] [semantically similar]
+  docs/AGENT-QUICK-REFERENCE.md → README.md
+- `launchd macOS Alternative to Cron` --semantically_similar_to--> `Cron Automation (hourly scan, daily lint/validate)`  [INFERRED] [semantically similar]
+  docs/CRON-SETUP.md → SETUP-COMPLETE.md
+- `cosineSimilarity()` --calls--> `get()`  [INFERRED]
+  orchestrator.mjs → scripts/export-figma-png.mjs
+- `detectSimilarities()` --calls--> `get()`  [INFERRED]
+  orchestrator.mjs → scripts/export-figma-png.mjs
+
+## Hyperedges (group relationships)
+
+- **DocuMind Core Services (API + MCP + PM2 + SQLite)** — concept_express_api, concept_mcp_server, concept_pm2_daemon, concept_sqlite_fts5 [EXTRACTED 1.00]
+- **Diagram Creation Pipeline (MMD + PNG + FigJam + Registry)** — concept_mermaid_cli, concept_generate_diagram_tool, concept_diagram_registry, concept_triple_output_rule [EXTRACTED 1.00]
+- **Markdown Quality Enforcement: markdownlint + DVW001 + fix-custom-errors + husky** — markdownlint_cli2_config, dvw001_table_separator_rule, fix_custom_errors_mjs, husky_lint_staged [EXTRACTED 0.90]
+- **DocuMind 4-Phase Development Roadmap** — readme_phase1, readme_phase2, readme_phase3, readme_phase4 [EXTRACTED 0.95]
+- **Markdown Quality Assurance Pipeline** — docs_tooling_husky, docs_tooling_lint_staged, readme_markdownlint_config, docs_phase2_validate_script, docs_phase2_fix_script [INFERRED 0.82]
+- **Custom Error Detection and Fixing System** — docs_markdown_error_patterns, docs_phase2_custom_patterns_json, docs_phase2_validate_script, docs_phase2_fix_script [EXTRACTED 0.92]
+- **GitHub Organization Consolidation Campaign: Audit → Fix → Migrate → Invite** — github_org_audit_report, org_naming_fix_summary, glossiaapp_migration_guide, user_invitation_guide, migration_steps_guide [EXTRACTED 0.95]
+- **DocuMind Build Phases: Phase 1 DB Foundation → Phase 2 Similarity → Phase 3 AI Learning → Phase 4 MCP Server** — phase1_completion_documind_system, phase1_phase2_plan, phase1_phase3_plan, phase1_phase4_plan, onboarding_documind_mcp_tools [EXTRACTED 0.95]
+- **Diagram Lifecycle System: Triple Output Standard + Registry + Curation Workflow + FigJam Board** — figma_mcp_triple_output_standard, figma_mcp_diagram_registry_infra, diagram_registry_md, diagram_registry_central_figjam_board, diagram_registry_audit [INFERRED 0.88]
 
 ## Communities
 
-### Community 0 - "setup_cron_log"
+### Community 0 - "Community 0"
 
-Cohesion: 0.0647307924984876
-Nodes (38): backfillClassifications(), backfillSummaries(), fixGitHubOrgReferences(), extractKeywords(), indexKeywords(), initKuzuSchema(), insertEdge(), rebuildKuzuGraph() (+30 more)
+Cohesion: 0.07
+Nodes (36): backfillClassifications(), backfillSummaries(), fixGitHubOrgReferences(), createIndex(), main(), initIngestion(), pullAllRepos(), extractKeywords() (+28 more)
 
-### Community 1 - "diagram_registry_md"
+### Community 1 - "Community 1"
 
-Cohesion: 0.05975609756097561
+Cohesion: 0.06
 Nodes (41): Diagram Registry: any2figma entries (6-Pass Pipeline, AST Schema, Architecture Data Flow, Emitter Outputs, HTML Parser Flow), Diagram Registry Audit Report, any2figma Diagrams: 5 diagrams missing curated FigJam URLs, Node Version Mismatch: better-sqlite3 compiled for newer Node than active (v22.14.0 vs MODULE_VERSION 137), Orphaned PNG: GlossiaApp GlossiaAppFlow.png (no .mmd source), Unregistered .mmd: documind-workflow.mmd, Central FigJam Board: DVW-Design-Dev-Strategy (<https://www.figma.com/board/L8gOzoOCb90ur2g9fDI9hm/>), Curated Status: diagrams that have been moved to central FigJam board (has curated_url) (+33 more)
 
-### Community 2 - "readme_documind"
+### Community 2 - "Community 2"
 
-Cohesion: 0.08275862068965517
-Nodes (30): Canonical Document Determination, Automatic Document Category Detection, Content Hashing SHA-256, SQLite Database Schema (8 tables), enhanced-scanner.mjs, query-utils.mjs (20+ query functions), DocuMind Agent Quick Reference, Similarity Detection (string-similarity library) (+22 more)
+Cohesion: 0.08
+Nodes (23): getGitHubUrl(), getLocalPath(), get(), deriveRepoName(), processHook(), generateDiagram(), detectObsolescence(), cosineSimilarity() (+15 more)
 
-### Community 3 - "docs_markdown_error_patterns"
+### Community 3 - "Community 3"
 
-Cohesion: 0.1164021164021164
-Nodes (28): CI/CD Integration for Custom Validation, Custom Error Validation Usage Guide, Error Category 1: Context-Dependent Numbering Issues, Error Category 2: Heading Context Issues, Error Category 3: Code Block Issues, Error Category 4: Link and Reference Issues, Error Category 5: Table Formatting Issues, Error Category 6: Indentation and Whitespace (+20 more)
+Cohesion: 0.08
+Nodes (8): createBearerAuth(), parseTokens(), makeApp(), listRepositories(), normalizeRepoName(), repoNameScore(), resolveRepository(), initWatcher()
 
-### Community 4 - "processors_relink_processor_mjs"
+### Community 4 - "Community 4"
 
-Cohesion: 0.1761904761904762
-Nodes (17): deriveRepoName(), processHook(), classifyPath(), extractSummary(), indexMarkdown(), processMarkdown(), bulkRelink(), parseRegistryMarkdown() (+9 more)
+Cohesion: 0.1
+Nodes (26): Canonical Document Determination, Automatic Document Category Detection, Content Hashing SHA-256, SQLite Database Schema (8 tables), DocuMind Agent Quick Reference, Similarity Detection (string-similarity library), Canonical Document Scoring Algorithm, DocuMind System Design Conversation 2025-11-07 (+18 more)
 
-### Community 5 - "daemon_server_mjs"
+### Community 5 - "Community 5"
 
-Cohesion: 0.11764705882352941
-Nodes (4): initIngestion(), pullAllRepos(), initScheduler(), initWatcher()
+Cohesion: 0.12
+Nodes (25): CI/CD Integration for Custom Validation, Custom Error Validation Usage Guide, Error Category 1: Context-Dependent Numbering Issues, Error Category 2: Heading Context Issues, Error Category 3: Code Block Issues, Error Category 4: Link and Reference Issues, Error Category 5: Table Formatting Issues, Error Category 6: Indentation and Whitespace (+17 more)
 
-### Community 6 - "query_utils_getdatabase"
+### Community 6 - "Community 6"
 
-Cohesion: 0.21568627450980393
+Cohesion: 0.22
 Nodes (17): findDuplicates(), findSimilarDocuments(), getCanonicalDocument(), getCategoryStats(), getDatabase(), getDeviationStats(), getGlobalStats(), getLearningPatterns() (+9 more)
 
-### Community 7 - "rootdispatcher_notification_custom_error_system"
+### Community 7 - "Community 7"
 
-Cohesion: 0.13071895424836602
+Cohesion: 0.13
 Nodes (18): 16 Custom Markdown Error Patterns (8 categories), 7 Automated Fix Functions (trailing spaces, list indentation, table separators, etc.), Custom Error System Phase 1: Foundation & Documentation (Complete), Custom Error System Phase 2: Automation & Fixing (Complete), Custom Markdown Error System — Implementation Progress, Recommended Tooling Additions for DocuMind, GitHub Actions CI/CD for Documentation Validation and Auto-Deploy, Husky Git Pre-Commit Hooks + lint-staged (+10 more)
 
-### Community 8 - "claude_md"
+### Community 8 - "Community 8"
 
-Cohesion: 0.19117647058823528
+Cohesion: 0.19
 Nodes (17): DocuMind CLAUDE.md - Comprehensive Usage Guide, Canonical Document Registry (source of truth per subject), Convention Deviation Detection and Tracking, Document Relationship Graph (8 relationship types), DocuMind Express REST API (port 9000), chokidar File Watcher (auto-reindex on .md changes), TF-IDF Keyword Extraction, DocuMind MCP Server (stdio transport) (+9 more)
 
-### Community 9 - "glossiaapp_migration_guide"
+### Community 9 - "Community 9"
 
-Cohesion: 0.22857142857142856
+Cohesion: 0.27
+Nodes (14): blockType(), detectLanguage(), detectListIndent(), extractBoldItalicText(), findMarkdownFiles(), findPreviousHeading(), fixBoldItalicToHeadingsOrLists(), fixCodeBlockLanguages() (+6 more)
+
+### Community 10 - "Community 10"
+
+Cohesion: 0.23
 Nodes (15): Three Naming Schemes: DESIGN-DVW (8 repos), DVW-Design (1 repo), DVWDesign (non-existent in docs), Recommended Option 1: Consolidate all repos to DESIGN-DVW, GitHub Organization Audit Report, DESIGN-DVW GitHub Organization (Primary), DVW-Design GitHub Organization (Legacy), GlossiaApp Migration Guide: DVW-Design → DESIGN-DVW, GitHub Repository Transfer Method (Option A — Recommended), GlossiaApp Migration & User Invitation — Action Steps (+7 more)
 
-### Community 10 - "scripts_fix_markdown_mjs"
+### Community 11 - "Community 11"
 
-Cohesion: 0.27472527472527475
-Nodes (13): detectLanguage(), detectListIndent(), extractBoldItalicText(), findMarkdownFiles(), findPreviousHeading(), fixBoldItalicToHeadingsOrLists(), fixCodeBlockLanguages(), fixLineBreaks() (+5 more)
-
-### Community 11 - "scripts_fix_custom_errors_mjs"
-
-Cohesion: 0.1978021978021978
+Cohesion: 0.2
 Nodes (6): findMarkdownFiles(), fixFile(), getLineNumber(), main(), processRepository(), validateInternalLinks()
 
-### Community 12 - "scripts_scan_enhanced_scanner_mjs"
-
-Cohesion: 0.24358974358974358
-Nodes (11): detectCategory(), generateHash(), main(), parseMarkdownFile(), recordScanHistory(), scanRepository(), updateStatistics(), upsertDocument() (+3 more)
-
-### Community 13 - "scripts_validate_custom_errors_mjs"
+### Community 12 - "Community 12"
 
 Cohesion: 0.4
 Nodes (10): generateReport(), getColumnNumber(), getLineNumber(), main(), runValidation(), validateFile(), validateMixedListTypes(), validateMultipleH1() (+2 more)
 
-### Community 14 - "setup_complete_markdown_mgmt"
+### Community 13 - "Community 13"
 
-Cohesion: 0.23636363636363636
-Nodes (11): launchd macOS Alternative to Cron, Cron Setup Guide for Markdown Management, Quick Start Guide Markdown Management, Cron Automation (hourly scan, daily lint/validate), setup-cron.mjs, fix-markdown.mjs, index-markdown.mjs, Markdown Management System Setup (+3 more)
+Cohesion: 0.36
+Nodes (8): B(), C(), D(), E(), L(), M(), u(), x()
 
-### Community 15 - "scripts_generate_tree_schema_mjs"
+### Community 14 - "Community 14"
 
 Cohesion: 0.4
 Nodes (9): analyzeDirectory(), calculateMaxDepth(), countFiles(), detectTechnologies(), formatBytes(), generateSchema(), getDirectorySize(), getRepoName() (+1 more)
 
-### Community 16 - "diagram_workflow"
+### Community 15 - "Community 15"
 
-Cohesion: 0.28888888888888886
+Cohesion: 0.29
 Nodes (10): Diagram Lifecycle (Generated → Curated → Stale), Diagram Registry (FigJam + Mermaid + PNG lifecycle), Central FigJam Board for Diagrams, generate_diagram MCP Tool (Mermaid → FigJam), Triple Output Rule (MMD + PNG + FigJam + Registry), use_figma MCP Write Tool (Figma Plugin API), FigJam Diagram Registry Workflow, Rationale: Diagram registry prevents drift between .mmd source and FigJam views (+2 more)
 
-### Community 17 - "docs_07_api_jsdoc_scripts_prettify_prettify_js"
+### Community 16 - "Community 16"
 
-Cohesion: 0.4166666666666667
-Nodes (8): B(), C(), D(), E(), L(), M(), u(), x()
+Cohesion: 0.42
+Nodes (8): detectCategory(), generateHash(), main(), parseMarkdownFile(), recordScanHistory(), scanRepository(), updateStatistics(), upsertDocument()
 
-### Community 18 - "md_vs_mdx_usage_guide"
+### Community 17 - "Community 17"
 
-Cohesion: 0.3055555555555556
-Nodes (9): DVW001 Table Separator Spacing Rule, fix-markdown.mjs Script, Markdown Formatting Standards, markdownlint-cli2.jsonc Configuration, MD040 Fenced Code Block Language Identifier Rule, Rationale: Why .md Is Always Default (No MDX Renderer in Workspace), MD vs MDX Usage Guide, MDX in Storybook (addon-docs) (+1 more)
+Cohesion: 0.43
+Nodes (5): discoverDecks(), main(), parseArgs(), renderDeck(), sofficeResolvable()
 
-### Community 19 - "config_constants_mjs"
+### Community 18 - "Community 18"
 
-Cohesion: 0.2857142857142857
-Nodes (0):
-
-### Community 20 - "commonnav_init"
-
-Cohesion: 0.3333333333333333
+Cohesion: 0.33
 Nodes (3): hideAllButCurrent(), init(), scrollToNavItem()
 
-### Community 21 - "scripts_propagate_lint_rules_mjs"
+### Community 19 - "Community 19"
 
-Cohesion: 0.5333333333333333
+Cohesion: 0.6
+Nodes (5): classifyPath(), extractSummary(), indexMarkdown(), processMarkdown(), toISOSafe()
+
+### Community 20 - "Community 20"
+
+Cohesion: 0.53
 Nodes (4): detectPackageManager(), hasDevDep(), mergeCustomRules(), propagateToRepo()
 
-### Community 22 - "propagate_org_fixes_propagateorgfixes"
+### Community 21 - "Community 21"
+
+Cohesion: 0.4
+Nodes (6): Markdown Formatting Standards, MD040 Fenced Code Block Language Identifier Rule, Rationale: Why .md Is Always Default (No MDX Renderer in Workspace), MD vs MDX Usage Guide, MDX in Storybook (addon-docs), Mermaid Diagram Tier (Tier 2 — Source-Controlled)
+
+### Community 22 - "Community 22"
 
 Cohesion: 0.7
 Nodes (4): copyFile(), ensureDirectoryExists(), propagateOrgFixes(), updatePackageJson()
 
-### Community 23 - "scan_all_repos_main"
+### Community 23 - "Community 23"
 
-Cohesion: 0.8333333333333334
-Nodes (3): generateMarkdownReport(), main(), scanRepository()
+Cohesion: 0.6
+Nodes (5): launchd macOS Alternative to Cron, Cron Setup Guide for Markdown Management, Quick Start Guide Markdown Management, Cron Automation (hourly scan, daily lint/validate), Markdown Management System Setup
 
-### Community 24 - "graph_kuzu_queries_mjs"
+### Community 24 - "Community 24"
 
-Cohesion: 0.8333333333333334
-Nodes (3): kuzuFindRelated(), kuzuTraverseGraph(), runQuery()
-
-### Community 25 - "processors_mermaid_processor_mjs"
-
-Cohesion: 0.5
-Nodes (0):
-
-### Community 26 - "migrate_backupdatabase"
-
-Cohesion: 0.8333333333333334
+Cohesion: 0.83
 Nodes (3): backupDatabase(), copyIfExists(), safeTimestamp()
 
-### Community 27 - "docs_propagation_summary"
+### Community 25 - "Community 25"
 
-Cohesion: 0.6666666666666666
-Nodes (4): config/constants.mjs (org naming central config), DESIGN-DVW GitHub Organization, fix-github-org-references.mjs, Organization Fixes Propagation Summary
-
-### Community 28 - "processors_word_processor_mjs"
-
-Cohesion: 0.6666666666666666
+Cohesion: 0.67
 Nodes (0):
 
-### Community 29 - "pdf_processor_indexpdf"
+### Community 26 - "Community 26"
+
+Cohesion: 0.67
+Nodes (0):
+
+### Community 27 - "Community 27"
 
 Cohesion: 1.0
 Nodes (2): indexPdf(), processPdf()
 
-### Community 30 - "validate_timestamps_validatefiles"
+### Community 28 - "Community 28"
 
 Cohesion: 1.0
 Nodes (2): main(), validateFiles()
 
-### Community 31 - "index_markdown_createindex"
+### Community 29 - "Community 29"
 
-Cohesion: 1.0
-Nodes (2): createIndex(), main()
-
-### Community 32 - "scripts_db_reset_database_mjs"
-
-Cohesion: 0.6666666666666666
+Cohesion: 0.67
 Nodes (0):
 
-### Community 33 - "usage_guide"
+### Community 30 - "Community 30"
 
-Cohesion: 0.6666666666666666
+Cohesion: 0.67
 Nodes (3): DocuMind REST API (port 9000), DocuMind MCP Tools Reference (14 tools), DocuMind Usage Guide
 
-### Community 34 - "apache_license"
+### Community 31 - "Community 31"
 
-Cohesion: 0.6666666666666666
+Cohesion: 0.67
 Nodes (3): Apache License 2.0, Source Sans Pro Light Webfont (SVG), Source Sans Pro Regular Webfont (SVG)
 
-### Community 35 - "docs_07_api_jsdoc_scripts_search_js"
+### Community 32 - "Community 32"
 
 Cohesion: 1.0
 Nodes (0):
 
-### Community 36 - "agents_md"
+### Community 33 - "Community 33"
+
+Cohesion: 1.0
+Nodes (0):
+
+### Community 34 - "Community 34"
 
 Cohesion: 1.0
 Nodes (2): MarkDown Repository Function & Usage (AGENTS.md), Markdown Linter (markdownlint + custom patterns)
 
-### Community 37 - "documind_workflow_diagram_concept"
+### Community 35 - "Community 35"
 
 Cohesion: 1.0
 Nodes (2): DocuMind Workflow (Scan → Validate → Index → Report → Commit), DocuMind Workflow Diagram
 
-### Community 38 - "eslint_config_js"
+### Community 36 - "Community 36"
+
+Cohesion: 1.0
+Nodes (2): DESIGN-DVW GitHub Organization, Organization Fixes Propagation Summary
+
+### Community 37 - "Community 37"
 
 Cohesion: 1.0
 Nodes (0):
 
-### Community 39 - "docs_07_api_jsdoc_scripts_polyfill_js"
+### Community 38 - "Community 38"
 
 Cohesion: 1.0
 Nodes (0):
 
-### Community 40 - "docs_07_api_jsdoc_scripts_linenumber_js"
+### Community 39 - "Community 39"
 
 Cohesion: 1.0
 Nodes (0):
 
-### Community 41 - "docs_07_api_jsdoc_scripts_prettify_lang_css_js"
+### Community 40 - "Community 40"
 
 Cohesion: 1.0
 Nodes (0):
 
-### Community 42 - "scripts_rebuild_kuzu_graph_mjs"
+### Community 41 - "Community 41"
 
 Cohesion: 1.0
 Nodes (0):
 
-### Community 43 - "scripts_kuzu_smoke_test_mjs"
-
-Cohesion: 1.0
-Nodes (0):
-
-### Community 44 - "scripts_db_init_database_mjs"
-
-Cohesion: 1.0
-Nodes (0):
-
-### Community 45 - "repository_structure"
+### Community 42 - "Community 42"
 
 Cohesion: 1.0
 Nodes (1): Repository Structure (tree)
 
-### Community 46 - "requirements_graphify_dep"
+### Community 43 - "Community 43"
 
 Cohesion: 1.0
 Nodes (1): graphify dependency
 
 ## Knowledge Gaps
 
-- **62 isolated node(s):** `MarkDown Repository Function & Usage (AGENTS.md)`, `Markdown Linter (markdownlint + custom patterns)`, `Document Relationship Graph (8 relationship types)`, `TF-IDF Keyword Extraction`, `Central FigJam Board for Diagrams` (+57 more)
-
+- **56 isolated node(s):** `MarkDown Repository Function & Usage (AGENTS.md)`, `Markdown Linter (markdownlint + custom patterns)`, `Document Relationship Graph (8 relationship types)`, `TF-IDF Keyword Extraction`, `Central FigJam Board for Diagrams` (+51 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-
-- **Thin community `docs_07_api_jsdoc_scripts_search_js`** (2 nodes): `search.js`, `contains()`
-
+- **Thin community `Community 32`** (2 nodes): `makeDb()`, `repo-resolution.test.mjs`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-
-- **Thin community `agents_md`** (2 nodes): `MarkDown Repository Function & Usage (AGENTS.md)`, `Markdown Linter (markdownlint + custom patterns)`
-
+- **Thin community `Community 33`** (2 nodes): `search.js`, `contains()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-
-- **Thin community `documind_workflow_diagram_concept`** (2 nodes): `DocuMind Workflow (Scan → Validate → Index → Report → Commit)`, `DocuMind Workflow Diagram`
-
+- **Thin community `Community 34`** (2 nodes): `MarkDown Repository Function & Usage (AGENTS.md)`, `Markdown Linter (markdownlint + custom patterns)`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-
-- **Thin community `eslint_config_js`** (1 nodes): `eslint.config.js`
-
+- **Thin community `Community 35`** (2 nodes): `DocuMind Workflow (Scan → Validate → Index → Report → Commit)`, `DocuMind Workflow Diagram`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-
-- **Thin community `docs_07_api_jsdoc_scripts_polyfill_js`** (1 nodes): `polyfill.js`
-
+- **Thin community `Community 36`** (2 nodes): `DESIGN-DVW GitHub Organization`, `Organization Fixes Propagation Summary`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-
-- **Thin community `docs_07_api_jsdoc_scripts_linenumber_js`** (1 nodes): `linenumber.js`
-
+- **Thin community `Community 37`** (1 nodes): `relink-url-safe.test.mjs`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-
-- **Thin community `docs_07_api_jsdoc_scripts_prettify_lang_css_js`** (1 nodes): `lang-css.js`
-
+- **Thin community `Community 38`** (1 nodes): `polyfill.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-
-- **Thin community `scripts_rebuild_kuzu_graph_mjs`** (1 nodes): `rebuild-kuzu-graph.mjs`
-
+- **Thin community `Community 39`** (1 nodes): `linenumber.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-
-- **Thin community `scripts_kuzu_smoke_test_mjs`** (1 nodes): `kuzu-smoke-test.mjs`
-
+- **Thin community `Community 40`** (1 nodes): `lang-css.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-
-- **Thin community `scripts_db_init_database_mjs`** (1 nodes): `init-database.mjs`
-
+- **Thin community `Community 41`** (1 nodes): `init-database.mjs`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-
-- **Thin community `repository_structure`** (1 nodes): `Repository Structure (tree)`
-
+- **Thin community `Community 42`** (1 nodes): `Repository Structure (tree)`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-
-- **Thin community `requirements_graphify_dep`** (1 nodes): `graphify dependency`
-
+- **Thin community `Community 43`** (1 nodes): `graphify dependency`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
 
-### Questions this graph is uniquely positioned to answer
+_Questions this graph is uniquely positioned to answer:_
 
-- **Why does `log()` connect `setup_cron_log` to `processors_relink_processor_mjs`, `daemon_server_mjs`, `scripts_fix_markdown_mjs`, `scripts_fix_custom_errors_mjs`, `scripts_scan_enhanced_scanner_mjs`, `scripts_validate_custom_errors_mjs`, `scripts_generate_tree_schema_mjs`, `docs_07_api_jsdoc_scripts_prettify_prettify_js`, `propagate_org_fixes_propagateorgfixes`, `scan_all_repos_main`, `validate_timestamps_validatefiles`, `index_markdown_createindex`?**
-
-### _High betweenness centrality (0.150) - this node is a cross-community bridge._
-
-- **Why does `processHook()` connect `processors_relink_processor_mjs` to `setup_cron_log`?**
-
-### _High betweenness centrality (0.019) - this node is a cross-community bridge._
-
-- **Why does `processPendingChanges()` connect `processors_relink_processor_mjs` to `setup_cron_log`, `daemon_server_mjs`?**
-
-### _High betweenness centrality (0.018) - this node is a cross-community bridge._
-
-- **Are the 44 inferred relationships involving `log()` (e.g. with `detectSimilarities()` and `detectStaleness()`) actually correct?**
-
-### _`log()` has 44 INFERRED edges - model-reasoned connections that need verification._
-
-- **Are the 4 inferred relationships involving `runDeepScan()` (e.g. with `indexKeywords()` and `log()`) actually correct?**
-
-### _`runDeepScan()` has 4 INFERRED edges - model-reasoned connections that need verification._
-
+- **Why does `log()` connect `Community 0` to `Community 2`, `Community 3`, `Community 9`, `Community 11`, `Community 12`, `Community 13`, `Community 14`, `Community 16`, `Community 17`, `Community 22`, `Community 28`?**
+  _High betweenness centrality (0.194) - this node is a cross-community bridge._
+- **Why does `get()` connect `Community 2` to `Community 0`, `Community 16`, `Community 3`, `Community 6`?**
+  _High betweenness centrality (0.090) - this node is a cross-community bridge._
+- **Why does `processPendingChanges()` connect `Community 2` to `Community 0`, `Community 19`, `Community 3`?**
+  _High betweenness centrality (0.036) - this node is a cross-community bridge._
+- **Are the 37 inferred relationships involving `log()` (e.g. with `detectSimilarities()` and `detectStaleness()`) actually correct?**
+  _`log()` has 37 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 21 inferred relationships involving `get()` (e.g. with `cosineSimilarity()` and `detectSimilarities()`) actually correct?**
+  _`get()` has 21 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `MarkDown Repository Function & Usage (AGENTS.md)`, `Markdown Linter (markdownlint + custom patterns)`, `Document Relationship Graph (8 relationship types)` to the rest of the system?**
-
-### _62 weakly-connected nodes found - possible documentation gaps or missing edges._
-
-- **Should `setup_cron_log` be split into smaller, more focused modules?**
-
-### _Cohesion score 0.06 - nodes in this community are weakly interconnected._
+  _56 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `Community 0` be split into smaller, more focused modules?**
+  _Cohesion score 0.07 - nodes in this community are weakly interconnected._

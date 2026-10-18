@@ -52,16 +52,14 @@ npm run db:reset               # Reset database
 
 npm run scan:enhanced          # Scan all repos with content hashing
 
-# Analysis (Phase 2)
+# Analysis — now runs inside orchestrator.mjs on the daily scan,
+# not as standalone scripts. Trigger a scan to refresh it:
 
-npm run analyze:similarities   # Detect similar documents
-npm run analyze:deviations     # Detect inconsistencies
-npm run analyze:all            # Run all analysis
+curl -X POST -H "Authorization: Bearer $DOCUMIND_API_TOKEN" http://localhost:9000/scan
 
-# Reporting (Phase 2)
-
-npm run report:dashboard       # Visual deviation dashboard
-npm run report:canonical       # Canonical document report
+# Reporting — use the dashboards instead of the removed report scripts:
+# http://localhost:9000/dashboard/diagrams.html
+# http://localhost:9000/dashboard/obsolete.html
 
 # Legacy (Phase 0)
 
