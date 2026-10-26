@@ -23,7 +23,9 @@ import { runScan } from '../orchestrator.mjs';
  */
 function deriveRepoName(filePath, ctx) {
   for (const root of ctx.repoRoots) {
-    if (filePath.startsWith(root.path)) return root.name;
+    // Boundary-aware: a bare startsWith lets `/…/docs` claim `/…/docs-archive`,
+    // and `/…/DocuMind` claim `/…/DocuMind-live`.
+    if (filePath === root.path || filePath.startsWith(root.path + '/')) return root.name;
   }
   // Fallback: extract from path segments
   const segments = filePath.split('/');
