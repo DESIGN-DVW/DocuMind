@@ -1,7 +1,7 @@
 # Stage 1 — builder: compile native modules on Linux
 # Pin to native build platform so npm ci (better-sqlite3) runs natively, not under QEMU emulation
 ARG BUILDPLATFORM
-FROM --platform=${BUILDPLATFORM:-linux/amd64} node:22-bookworm-slim AS builder
+FROM --platform=${BUILDPLATFORM:-linux/amd64} node:24-bookworm-slim AS builder
 
 WORKDIR /app
 
@@ -21,7 +21,7 @@ RUN npm prune --omit=dev
 COPY . .
 
 # Stage 2 — runtime: minimal image with only what the daemon needs
-FROM node:22-bookworm-slim AS runtime
+FROM node:24-bookworm-slim AS runtime
 
 WORKDIR /app
 
