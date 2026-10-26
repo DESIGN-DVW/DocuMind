@@ -12,7 +12,7 @@
   "MD019": true,
   "MD022": { "lines_above": 1, "lines_below": 1 },
   "MD023": true,
-  "MD025": true,
+  "MD025": { "front_matter_title": "" },
   "MD026": false,
   "MD027": true,
   "MD028": true,
@@ -57,6 +57,24 @@
   },
   "MD034": true,
   "MD035": { "style": "---" },
+  "MD060": false,
+  "// MD060 - table-column-style: OFF. It enforces padded/aligned table columns, which is exactly what the DVW table rules forbid. Alignment padding is diff noise with zero rendering effect. Do not enable. See also the retired MD060A custom rule.": "",
+
+  "// DVW CUSTOM RULES": "",
+  "// Loaded from config/rules/ via the index.cjs registry. Structural rules are enforced; the three prose rewriters are opt-in.": "",
+  "DVW001": true,
+  "DVW002": true,
+  "DVW003": true,
+  "DVW004": true,
+  "DVW009": true,
+
+  "// DVW005/006/007 rewrite prose, not structure. They are correct and idempotent, but enabling them makes pre-commit and the nightly cron rewrite hundreds of existing lines unattended. Turn one on, run `npm run lint:fix`, review the diff, then commit the flag with it.": "",
+  "DVW005": false,
+  "DVW006": false,
+  "DVW007": false,
+
+  "// DVW008 is detect-only, but the existing corpus has 184 violations and markdownlint has no warning severity — so enabling it fails `lint-staged` and blocks commits on every file with a stray emoji. Removing an emoji changes meaning, which is why the rule refuses to auto-fix. Clean the corpus first, then enable.": "",
+  "DVW008": false,
 
   "// DISABLED RULES": "",
   "MD002": false,

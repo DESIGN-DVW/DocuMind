@@ -1,0 +1,41 @@
+{
+  "$comment": "Vocabulary expansions and normalisations applied by applyDictionary() in scripts/fix-markdown.mjs. Matching is word-boundary and case-preserving. Nothing is applied inside fenced code, inline code, URLs, file paths, link targets, or frontmatter.",
+  "version": "1.0.0",
+  "updated": "2026-07-28",
+
+  "$comment_enabled": "Off by default, on the same terms as the DVW005/006/007 prose rules: pre-commit and the nightly cron both run --fix, so enabling this rewrites prose across the corpus unattended. Turn on, run `npm run lint:fix`, review the diff, commit the flag with it.",
+  "enabled": false,
+
+  "$comment_scope": "Keep this list SMALL and unambiguous. Every entry rewrites prose across 620+ files on the next --fix, so a term that is sometimes meant literally (docs, config, dev, markdown) does not belong here. Add an entry only when the shorthand has exactly one expansion in every context.",
+
+  "$comment_expansions": "Shorthand a writer types that should always be written out. Keys match whole words only, so 'maj' does not touch 'majority' or 'majeur'.",
+  "expansions": {
+    "fr": {
+      "maj": "mise à jour",
+      "màj": "mise à jour",
+      "cad": "c'est-à-dire",
+      "càd": "c'est-à-dire"
+    },
+    "en": {
+      "asap": "as soon as possible"
+    }
+  },
+
+  "$comment_normalisations": "Canonical spelling of product and technology names, applied in every locale. Only names with a single correct casing.",
+  "normalisations": {
+    "javascript": "JavaScript",
+    "typescript": "TypeScript",
+    "nodejs": "Node.js",
+    "github": "GitHub",
+    "gitlab": "GitLab",
+    "sqlite": "SQLite",
+    "postgresql": "PostgreSQL",
+    "figjam": "FigJam",
+    "documind": "DocuMind",
+    "rootdispatcher": "RootDispatcher",
+    "agenthub": "AgentHub"
+  },
+
+  "$comment_protected": "Substrings that veto a rewrite anywhere they appear on the line. Case-sensitive.",
+  "protected": ["node_modules", ".env", "env.mjs"]
+}

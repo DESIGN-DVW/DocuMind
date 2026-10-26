@@ -59,10 +59,14 @@
     "graphify:update": "graphify . --update",
     "graphify:deep": "graphify . --mode deep",
     "graphify:query": "graphify query",
-    "slides:build": "node scripts/publish-slides.mjs --render-only"
+    "slides:build": "node scripts/publish-slides.mjs --render-only",
+    "test:rules": "node test/rules.test.mjs",
+    "test:rules:update": "node test/rules.test.mjs --update",
+    "docs:rules": "node scripts/generate-rules-doc.mjs",
+    "docs:rules:check": "node scripts/generate-rules-doc.mjs --check"
   },
   "lint-staged": {
-    "!(.planning|.claude)/**/*.md": [
+    "!(.planning|.claude|test)/**/*.md": [
       "markdownlint-cli2 --fix"
     ],
     "**/*.{js,mjs,json}": [

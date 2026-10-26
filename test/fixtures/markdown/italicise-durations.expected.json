@@ -1,0 +1,52 @@
+[
+  {
+    "line": 1,
+    "detail": "Italicise the duration: 2 weeks → *2 weeks*",
+    "fixable": true
+  },
+  {
+    "line": 3,
+    "detail": "Italicise the duration: 15 minutes → *15 minutes*",
+    "fixable": true
+  },
+  {
+    "line": 3,
+    "detail": "Italicise the duration: 2 hours → *2 hours*",
+    "fixable": true
+  },
+  {
+    "line": 5,
+    "detail": "Italicise the duration: 2 années → *2 années*",
+    "fixable": true
+  },
+  {
+    "line": 5,
+    "detail": "Italicise the duration: 3 semaines → *3 semaines*",
+    "fixable": true
+  },
+  {
+    "line": 5,
+    "detail": "Italicise the duration: 18 mois → *18 mois*",
+    "fixable": true
+  },
+  {
+    "line": 5,
+    "detail": "Italicise the duration: H1 → *H1*",
+    "fixable": true
+  },
+  {
+    "line": 5,
+    "detail": "Italicise the duration: Q3 → *Q3*",
+    "fixable": true
+  },
+  {
+    "line": 9,
+    "detail": "Italicise the duration: 1.5 days → *1.5 days*",
+    "fixable": true
+  },
+  {
+    "line": 9,
+    "detail": "Italicise the duration: 3-4 weeks → *3-4 weeks*",
+    "fixable": true
+  }
+]
