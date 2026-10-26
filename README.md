@@ -213,9 +213,9 @@ npm run cron:stop         # Remove cron jobs
 
 - **Index:** Every hour at :05 (`npm run index`)
 
-- **Validate:** Daily at 9:00 AM (`npm run validate`)
+- **Validate:** Daily at 09:00 (`npm run validate`)
 
-- **Lint:** Daily at 10:00 AM (`npm run lint`)
+- **Lint:** Daily at 10:00 (`npm run lint`)
 
 **Logs:** All cron output goes to `logs/cron-*.log`
 
