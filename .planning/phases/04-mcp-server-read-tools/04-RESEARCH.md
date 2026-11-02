@@ -23,23 +23,14 @@ The phase also requires adding an `mcp-server` entry to `ecosystem.config.cjs` s
 ## Phase Requirements
 
 | ID | Description | Research Support |
-
 | --- | --- | --- |
-
 | MCPR-01 | `daemon/mcp-server.mjs` as separate entry point with stderr-only logging | Separate entry point required by MCP SDK stdio transport design; stdout redirect pattern documented in PITFALLS.md |
-
 | MCPR-02 | `search_docs` tool — full-text search with repo/category/classification filters | Query pattern exists in `server.mjs` `/search` endpoint (lines 131–157); needs classification filter added |
-
 | MCPR-03 | `get_related` tool — graph traversal (doc ID + hops, returns paths and relationship types) | `findRelated(db, docId, maxDepth)` already exported from `graph/relations.mjs` — direct call with hop parameter |
-
 | MCPR-04 | `get_keywords` tool — keyword cloud for a repo with TF-IDF scores | Query pattern exists in `server.mjs` `/keywords` endpoint (lines 260–287) |
-
 | MCPR-05 | `get_tree` tool — folder hierarchy for a repo | Query pattern exists in `server.mjs` `/tree/:repo` endpoint (lines 200–213) |
-
 | MCPR-06 | `check_existing` tool — "does a doc covering X already exist?" (search + scoring) | Requires FTS5 search + scoring heuristic; no existing endpoint but SQL is subset of `search_docs` |
-
 | MCPR-07 | `get_diagrams` tool — diagram registry with stale status | Query pattern exists in `server.mjs` `/diagrams` endpoint (lines 299–330) |
-
 | MCPR-08 | stdio transport for Claude Code integration | `StdioServerTransport` from `@modelcontextprotocol/sdk/server/stdio.js`; verified in STACK.md |
 
 </phase_requirements>
@@ -51,31 +42,22 @@ The phase also requires adding an `mcp-server` entry to `ecosystem.config.cjs` s
 ### Core
 
 | Library | Version | Purpose | Why Standard |
-
 | --- | --- | --- | --- |
-
 | `@modelcontextprotocol/sdk` | `^1.27.1` | MCP server + stdio transport | Official Anthropic SDK; only spec-compliant implementation; 33K+ npm dependents; current stable at 1.27.1 (verified via npm) |
-
 | `zod` (bump) | `^3.25.0` | Tool schema validation | SDK requires zod `>=3.25.0` as peer dep; current DocuMind pin `^3.22.4` must be bumped |
-
 | `better-sqlite3` | `^12.6.2` (existing) | DB queries in tool handlers | Synchronous API fits perfectly in MCP tool handlers; no async DB wrangling needed |
 
 ### Supporting
 
 | Library | Version | Purpose | When to Use |
-
 | --- | --- | --- | --- |
-
 | `@modelcontextprotocol/inspector` | via `npx` | Dev tool for interactive tool testing | Run during development before wiring into Claude Code; add as `mcp:inspect` npm script |
 
 ### Alternatives Considered
 
 | Instead of | Could Use | Tradeoff |
-
 | --- | --- | --- |
-
 | Separate `mcp-server.mjs` entry point | Embed stdio transport in `server.mjs` | Embedding risks stdout pollution from Express internals and existing `console.log` calls; separate entry point allows clean stdout isolation |
-
 | `StdioServerTransport` only | `StreamableHTTPServerTransport` on Express | HTTP transport is for Phase 5+ (SAAS-06) — stdio is the Claude Code integration target for Phase 4 |
 
 #### Installation:
@@ -274,19 +256,12 @@ module.exports = {
 Every query the MCP tools need is already written in `daemon/server.mjs`. Extract, don't invent:
 
 | MCP Tool | Source Endpoint | SQL Pattern Location |
-
 | --- | --- | --- |
-
 | `search_docs` | `GET /search` | `server.mjs` lines 131–157 |
-
 | `get_related` | `GET /graph` (partial) | `graph/relations.mjs` `findRelated()` — recursive CTE already written |
-
 | `get_keywords` | `GET /keywords` | `server.mjs` lines 260–287 |
-
 | `get_tree` | `GET /tree/:repo` | `server.mjs` lines 200–213 |
-
 | `check_existing` | N/A (new) | Subset of search_docs SQL + score heuristic |
-
 | `get_diagrams` | `GET /diagrams` | `server.mjs` lines 299–330 |
 
 The `findRelated(db, docId, maxDepth)` function in `graph/relations.mjs` is the direct implementation for `get_related` — import and call it directly.
@@ -554,25 +529,17 @@ server.tool(
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
-
 | --- | --- | --- | --- |
-
 | Graph traversal with hop depth | Recursive JS loop over DB results | `findRelated()` in `graph/relations.mjs` | Already written, tested, capped; recursive CTE is 10x faster than JS traversal for graph data |
-
 | Input validation for tool parameters | Manual type checks | Zod schema in `server.tool()` call | SDK enforces Zod schema before calling handler; no manual validation needed |
-
 | MCP protocol framing | Custom JSON-RPC serializer | `@modelcontextprotocol/sdk` | Protocol is complex (streaming, batching, error codes); SDK handles it all |
-
 | FTS5 ranking | Custom scoring | SQLite `rank` column from FTS5 query | FTS5 BM25 rank is provided automatically in ORDER BY rank; more accurate than hand-rolled scoring |
 
 ## State of the Art
 
 | Old Approach | Current Approach | When Changed | Impact |
-
 | --- | --- | --- | --- |
-
 | SSE transport (deprecated) | `StdioServerTransport` + `StreamableHTTPServerTransport` | MCP spec 2025-11-25 | SSE is removed from spec; do not use `SSEServerTransport` |
-
 | `Server` class from SDK | `McpServer` high-level class | SDK v1.x | `McpServer` is the recommended API; `Server` is lower-level and requires more boilerplate |
 
 ## Open Questions

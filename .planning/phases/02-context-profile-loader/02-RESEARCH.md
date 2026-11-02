@@ -23,17 +23,11 @@ The existing `repository-registry.json` (owned by RootDispatcher) already define
 ## Phase Requirements
 
 | ID | Description | Research Support |
-
 | ---- | ------------- | ----------------- |
-
 | PROF-01 | Context profile JSON schema validated by Zod at startup | Zod already in package.json at `^3.22.4`; needs bump to `^3.25.0` for MCP SDK compatibility (Phase 4), but validation works at current version. Schema covers: repositories/registryPath, classificationRules, keywordTaxonomy, lintRules, relationshipTypes. |
-
 | PROF-02 | `context/loader.mjs` loads active profile and exposes `ctx` object (repo paths, classification tree, relationship types, keyword taxonomies, lint rules) | Pure async module pattern; `DOCUMIND_PROFILE` env var → file path → `fs.readFile` → `JSON.parse` → Zod validate → freeze → export. No external libraries needed beyond Zod. |
-
 | PROF-03 | `dvwdesign.json` reference profile that reproduces current hardcoded behavior | All three hardcoded sources mapped (see Code Examples section). Profile shape defined in Architecture Patterns. |
-
 | PROF-04 | Classification tree defined in profile, not in database schema | `CLASSIFICATION_RULES` array in `backfill-classifications.mjs` moves to `profile.classificationRules[]`. The array shape (pattern as string + classification as materialized path) is already the right unit — just needs to be in JSON. |
-
 | PROF-05 | Keyword taxonomies defined in profile, not hardcoded in processor | `TECH_KEYWORDS` and `ACTION_KEYWORDS` Sets in `keyword-processor.mjs` move to `profile.keywordTaxonomy.technology[]` and `profile.keywordTaxonomy.action[]`. `STOP_WORDS` stays hardcoded — it is language-universal, not DVWDesign-specific. |
 
 </phase_requirements>
@@ -45,33 +39,23 @@ The existing `repository-registry.json` (owned by RootDispatcher) already define
 ### Core
 
 | Library | Version | Purpose | Why Standard |
-
 | ------- | ------- | ------- | ------------ |
-
 | `zod` | `^3.22.4` (current), `^3.25.0` (target) | Profile JSON schema validation | Already in package.json. Crash-on-invalid behavior is native to `schema.parse()` which throws `ZodError`. Standard for Node.js config validation. |
 
 ### Supporting
 
 | Library | Version | Purpose | When to Use |
-
 | ------- | ------- | ------- | ----------- |
-
 | Node.js `fs/promises` | built-in | Read profile JSON from disk | All profile file I/O. No external library needed. |
-
 | Node.js `process.env` | built-in | Read `DOCUMIND_PROFILE` env var | Profile path resolution at startup. |
-
 | `Object.freeze()` | built-in | Prevent runtime mutation of `ctx` | Applied after validation so consumers cannot accidentally mutate shared config. |
 
 ### Alternatives Considered
 
 | Instead of | Could Use | Tradeoff |
-
 | ---------- | --------- | -------- |
-
 | Zod schema validation | JSON Schema + `ajv` | Zod already present; AJV adds a new dependency; Zod provides better TypeScript-style error messages |
-
 | File-based profile only | DB-stored profile (`context_profiles` table, as sketched in STACK.md) | File-based is simpler and works without the daemon DB running; DB storage is a Phase 3+ concern for profile switching via API |
-
 | Plain `JSON.parse` + manual checks | Zod | Manual checks do not produce structured errors; Zod gives field-level messages useful for the crash log |
 
 **Installation:** No new packages needed. Zod is already installed. No version bump required for Phase 2 (version bump to `^3.25.0` is a Phase 4 prerequisite).
@@ -300,13 +284,9 @@ async function buildCtx(validated, profilePath) {
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
-
 | ------- | ----------- | ----------- | --- |
-
 | Schema validation with useful error messages | Custom type-check function | Zod `schema.parse()` | ZodError includes path to failing field, expected type, received value — all needed for crash log |
-
 |  Env var fallback chain  |  Custom env resolution  |  `process.env.DOCUMIND_PROFILE \ | \ |
-
 |   Profile freezing / immutability   |   Deep clone on every read   |   `Object.freeze(ctx)`   |   Shallow freeze prevents accidental mutation of the `ctx` object; deep freeze of nested arrays is not needed since processors only read, not write   |   |   |
 
 **Key insight:** The profile loader is intentionally thin. Its only job is read-validate-freeze. Complexity belongs in the schema definition and the subsystems that consume `ctx`, not in the loader itself.
@@ -426,19 +406,12 @@ env: {
 ### Files That Need Modification (Inventory)
 
 | File | What Changes | Hardcoded Values Removed |
-
 | ---- | ------------ | ------------------------ |
-
 | `processors/keyword-processor.mjs` | `TECH_KEYWORDS` and `ACTION_KEYWORDS` Sets removed from module scope; `extractKeywords` and `indexKeywords` accept `ctx` parameter | `TECH_KEYWORDS` Set (68 items), `ACTION_KEYWORDS` Set (17 items) |
-
 | `scripts/db/backfill/backfill-classifications.mjs` | `CLASSIFICATION_RULES` array removed; `backfillClassifications` accepts `ctx` parameter | `CLASSIFICATION_RULES` array (12 rules) |
-
 | `daemon/watcher.mjs` | `REPOS_ROOT` string literal removed; watcher patterns built from `ctx.repoRoots` | `'/Users/Shared/htdocs/github/DVWDesign'` |
-
 | `daemon/server.mjs` | `loadProfile()` call added at top; `ctx` threaded to `initWatcher()` and `initScheduler()` | None (server already reads registry externally) |
-
 | `graph/relations.mjs` | `buildRelationships()` accepts `ctx` for relationship type validation | Hardcoded type strings `'imports'`, `'dispatched_to'`, `'supersedes'`, `'related_to'` — these can remain as string literals since they match `ctx.relationshipTypes`; or validate against `ctx.relationshipTypes` for strictness |
-
 | `config/constants.mjs` | No change for Phase 2 (it is not imported by daemon or processors); keep for CLI scripts | N/A |
 
 ### Startup Integration Pattern (server.mjs)
@@ -475,15 +448,10 @@ initScheduler(db, ctx);
 ## State of the Art
 
 | Old Approach | Current Approach | When Changed | Impact |
-
 | ------------ | ---------------- | ------------ | ------ |
-
 | Hardcoded constants in module scope | Startup-loaded validated JSON profile | Phase 2 | Portability to non-DVWDesign deployments; test isolation |
-
 | Repository paths in `config/constants.mjs` | `repository-registry.json` (already in place) + profile reference | Existing (v2.0) | Already solved; Phase 2 just wires `ctx.repoRoots` from the registry |
-
 | `TECH_KEYWORDS` Set hardcoded in processor | `ctx.keywordTaxonomy.technology` array from profile | Phase 2 | Keyword vocabulary tunable per deployment without code change |
-
 | `CLASSIFICATION_RULES` array in backfill script | `ctx.classificationRules` from profile | Phase 2 | Classification behavior changes by swapping profile, not editing code |
 
 ## Open Questions

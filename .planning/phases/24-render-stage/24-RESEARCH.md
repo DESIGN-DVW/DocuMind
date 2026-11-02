@@ -17,7 +17,7 @@ The most important *new* finding from direct investigation, not present in any 2
 ## Phase Requirements
 
 | ID | Description | Research Support |
-|----|-------------|-----------------|
+| ---- | ------------- | ----------------- |
 | RNDR-01 | User can render any EN deck to HTML, PDF, and PPTX with a single `npm run slides:build` | Architecture Pattern 1 gives the exact `renderDeck()` three-call structure; Code Examples give the `scripts/publish-slides.mjs --render-only` CLI wrapper and the `package.json` script line that together make `npm run slides:build` a single command producing all three formats against both fixture decks. |
 | RNDR-02 | Editable PPTX produced via `--pptx-editable` when `SOFFICE_PATH` resolves; explicit warning (never silent image-based fallback) when it doesn't | Pitfall 1 confirms LibreOffice is genuinely absent on this dev machine today, so the "unresolved" branch is exercised by default, not a rare edge case. Architecture Pattern 1 / Code Examples give the exact `fs.access(SOFFICE_PATH, X_OK)` pre-flight pattern plus the `console.warn` + `warnings[]` array design that satisfies "explicit warning, never silent." |
 | RNDR-03 | Renders succeed under the PM2 daemon environment (browser + soffice resolution verified daemon-side, not just interactive shell) | Pitfall 2 is the key finding here — `pm2 env <id>` is not a valid verification method for this codebase (it doesn't reflect `.env`-loaded vars), and gives the corrected verification method: an ephemeral `pm2 start` test process. Also documents that `HOME` (which drives `puppeteer.executablePath()` resolution) is confirmed identical between PM2 and the interactive shell on this machine, de-risking browser resolution specifically. |
@@ -29,7 +29,7 @@ The most important *new* finding from direct investigation, not present in any 2
 ### Core
 
 | Library | Version | Purpose | Why Standard |
-|---------|---------|---------|--------------|
+| --------- | --------- | --------- | -------------- |
 | `@marp-team/marp-cli` | `^4.4.1` (current on npm; Node `>=18`, repo requires `>=20` — satisfied) | Renders Marp Markdown to HTML/PDF/PPTX via a real headless browser | Official, only actively-maintained Marp renderer; **confirmed NOT YET in this repo's `package.json`** (`grep -n "marp" package.json` returns no matches) — must be added as a `devDependency` this phase, shelled out via `execFile`, never imported as a library, matching the existing `markdownlint-cli2`/`@mermaid-js/mermaid-cli` pattern |
 | `puppeteer` (existing devDependency) | `^24.30.0` declared, **`24.43.1` actually resolved** in `package-lock.json` (generated during Phase 23's Docker-lockfile fix) | Supplies the browser marp-cli needs for PDF/PPTX/image conversion | Confirmed via direct `node --input-type=module -e "import puppeteer from 'puppeteer'; puppeteer.executablePath()"` — resolves to `/Users/dave/.cache/puppeteer/chrome/mac_arm-148.0.7778.97/.../Google Chrome for Testing`. **Critically, the resolved `puppeteer@24.43.1` is an EXACT match for marp-cli 4.4.1's own `puppeteer-core@^24.43.1` dependency** — this eliminates the CDP-protocol-drift risk STACK.md flagged as "verify with a smoke test," since the same major.minor.patch is already in the tree. No second Chromium download needed. |
 
@@ -40,7 +40,7 @@ No new supporting libraries needed for this phase — `fs/promises`, `child_proc
 ### Alternatives Considered
 
 | Instead of | Could Use | Tradeoff |
-|------------|-----------|----------|
+| ------------ | ----------- | ---------- |
 | `execFileAsync('npx', ['marp', ...])` per format | A single `marp.config.mjs` with `pdf: true, pptx: true` hoping for one multi-format call | Rejected for this phase — see Summary; the config-file-driven single-call behavior is undocumented/unconfirmed for simultaneous multi-format output, while three explicit CLI invocations are unambiguously documented and match the existing `execFileAsync` convention in this repo. Revisit only if a future spike (outside this phase) proves otherwise. |
 | `fs.access(SOFFICE_PATH, X_OK)` pre-flight | `execFileAsync(SOFFICE_PATH, ['--version'])` | The `--version` spawn is a stronger correctness check (confirms the binary actually runs, not just that a file exists with the execute bit) but costs an extra subprocess spawn on every render. Recommend `fs.access` as the fast primary gate (this phase's actual state: file doesn't exist at all, so `fs.access` alone already correctly triggers the warning branch) with the `--version` spawn as an optional stronger check if the planner wants belt-and-suspenders. |
 
@@ -194,7 +194,7 @@ main().catch(err => {
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
-|---------|-------------|-------------|-----|
+| --------- | ------------- | ------------- | ----- |
 | Browser binary resolution | A custom Chrome-finder that searches common install paths | `puppeteer.executablePath()` (already a devDependency, already resolved to an exact-version match for marp-cli's own `puppeteer-core` dependency) | Confirmed working via direct test this session; avoids a second ~200MB Chromium download and avoids environment-dependent PATH search entirely |
 | Subprocess execution/timeout/error handling | A new subprocess wrapper for marp-cli specifically | `execFileAsync` (`promisify(execFile)`) exactly as `daemon/scheduler.mjs` already does for `markdownlint-cli2` | One established pattern for all daemon-triggered subprocesses in this codebase; reusing it means Phase 25/28's subprocess calls (if any) follow the same convention |
 | "Is soffice available" detection | A platform-specific PATH-search helper | `fs.access(SOFFICE_PATH, fs.constants.X_OK)` against the already-centralized `config/env.mjs` export | `SOFFICE_PATH` already has a sane macOS default (`/Applications/LibreOffice.app/Contents/MacOS/soffice`) wired in Phase 23; marp-cli itself reads the `SOFFICE_PATH` env var directly (confirmed via WebSearch — a community-documented workaround for its own Scoop/non-standard-install detection gap, referenced from the official `marp-team/marp-cli` issue tracker, issue #631) — DocuMind doesn't need to pass it explicitly to the child process either, since Node's `execFile` inherits `process.env` (which already contains `SOFFICE_PATH` from `config/env.mjs`'s `process.loadEnvFile()` call) by default when no `env` override is given |
@@ -271,7 +271,7 @@ ls -la /tmp/spike-output.* 2>&1
 ## State of the Art
 
 | Old Approach (assumed going into research) | Current Approach (this phase's finding) | When Changed | Impact |
-|--------------------------------------------|------------------------------------------|---------------|--------|
+| -------------------------------------------- | ------------------------------------------ | --------------- | -------- |
 | Hope one config-driven `marp` invocation with `pdf: true, pptx: true` emits all three formats | Three explicit `execFileAsync` calls, one per format, each with its own `--browser-path` | Resolved 2026-07-11 via WebFetch + WebSearch cross-verification (not yet a hands-on spike — see Code Examples "Confirming the multi-format spike") | `renderDeck()`'s control flow is a simple loop/sequence, not a single subprocess call — slightly more code, but each format's failure is independently catchable/retryable |
 | `pm2 env <id>` as the RNDR-03 verification method | Ephemeral `pm2 start ... --no-autorestart` test process, inspect logs | Discovered 2026-07-11, directly contradicts 2026-07-10 milestone research (PITFALLS.md/ARCHITECTURE.md both recommended `pm2 env`) | Verification steps in the Phase 24 plan must use the functional method, not the introspective one |
 

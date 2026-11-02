@@ -99,21 +99,13 @@ None — plan executed exactly as written.
 ## Success Criteria Verification
 
 | Criterion | Status |
-
 | --------- | ------ |
-
 | schema_migrations table exists with migration 001 recorded | PASS |
-
 | migrate.mjs is idempotent (second run skips) | PASS |
-
 | Backup file exists in data/ after migration | PASS (9 backup files present) |
-
 | db:reset without --force exits code 1 with warning | PASS |
-
 | package.json db:migrate points to migrate.mjs | PASS |
-
 | package.json db:reset points to reset-database.mjs | PASS |
-
 | All 8,172 existing document rows untouched | PASS |
 
 ## Self-Check: PASSED

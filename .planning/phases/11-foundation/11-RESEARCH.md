@@ -54,15 +54,10 @@ None — discussion stayed within phase scope
 ## Phase Requirements
 
 | ID | Description | Research Support |
-
-|----|-------------|-----------------|
-
+| ---- | ------------- | ----------------- |
 | FNDTN-01 | All hardcoded macOS paths replaced with configurable env vars | Audit complete — 3 production files + config/constants.mjs contain paths; centralized env loading pattern identified |
-
 | FNDTN-02 | Repository paths resolved from DOCUMIND_REPOS_DIR env var | Auto-discover pattern via fs.readdir + .git detection identified; explicit override via DOCUMIND_REPOS env var |
-
 | FNDTN-03 | Port, DB path, and cron schedules configurable via env vars | PORT and DOCUMIND_DB already env-var-driven; cron schedules hardcoded in scheduler.mjs — externalization approach documented |
-
 | FNDTN-04 | .env file with documented defaults for local development | Node 22 has process.loadEnvFile() built-in; no third-party dependency needed; .gitignore already excludes *.db and data/ but not .env — must add |
 
 </phase_requirements>
@@ -86,13 +81,9 @@ For `.env` loading, Node 22's built-in `process.loadEnvFile()` (available since 
 ### Core
 
 | Library | Version | Purpose | Why Standard |
-
-|---------|---------|---------|--------------|
-
+| --------- | --------- | --------- | -------------- |
 | Node.js built-in `process.loadEnvFile()` | Node 20.12+ / 22.x | Load `.env` file into process.env | Zero dependency, already available on Node 22 |
-
 | Node.js `fs.readdir` | built-in | Auto-discover repos by scanning parent dir for `.git` | No extra deps |
-
 | `path.resolve` | built-in | Normalize all paths from env vars | Handles relative paths safely |
 
 ### No New Dependencies Required
@@ -253,55 +244,36 @@ Complete inventory of files requiring changes:
 ### Production Code (in-scope per CONTEXT.md)
 
 | File | Line | Current Value | Fix |
-
-|------|------|---------------|-----|
-
+| ------ | ------ | --------------- | ----- |
 | `config/constants.mjs` | 42 | `'/Users/Shared/htdocs/github/DVWDesign'` | Read from `REPOS_DIR` env, fallback to current value |
-
 | `processors/tree-processor.mjs` | 12 | `const REPOS_ROOT = '/Users/Shared/htdocs/github/DVWDesign'` | Import `REPOS_DIR` from `config/env.mjs` |
-
 | `daemon/server.mjs` | 50 | Fallback `|| '/Users/Shared/htdocs/github/DVWDesign'` | Replace with `REPOS_DIR` from env |
-
 | `config/profiles/dvwdesign.json` | (uses `repositoryRegistryPath`) | Points to RootDispatcher at `../../../RootDispatcher/config/...` | Relative path — this works as-is; the registry itself contains absolute paths |
 
 ### Registry File (path-bearing, read at runtime)
 
 | File | Issue | Fix |
-
-|------|-------|-----|
-
+| ------ | ------- | ----- |
 | `config/repo-schema.json` | Line 5: `"/Users/Shared/htdocs/github/DVWDesign/DocuMind"` | This is a JSON schema example/template, not runtime code — verify if it's used at runtime |
 
 ### Scripts (in-scope per CONTEXT.md decisions)
 
 | File | Issue | Fix |
-
-|------|-------|-----|
-
+| ------ | ------- | ----- |
 | `scripts/scan-all-repos.mjs` | `BASE_PATH` hardcoded | Import `LOCAL_BASE_PATH` from `config/constants.mjs` |
-
 | `scripts/fix-markdown.mjs` | `basePath` hardcoded | Import `LOCAL_BASE_PATH` |
-
 | `scripts/fix-custom-errors.mjs` | `basePath` hardcoded | Import `LOCAL_BASE_PATH` |
-
 | `scripts/watch-and-index.mjs` | `BASE_PATH` hardcoded | Import `LOCAL_BASE_PATH` |
-
 | `scripts/propagate-lint-rules.mjs` | `BASE_PATH` hardcoded | Import `LOCAL_BASE_PATH` |
-
 | `scripts/propagate-org-fixes.mjs` | `BASE_PATH` hardcoded | Import `LOCAL_BASE_PATH` |
-
 | `scripts/fix-github-org-references.mjs` | `BASE_PATH` hardcoded | Import `LOCAL_BASE_PATH` |
-
 | `scripts/scan/enhanced-scanner.mjs` | 8 hardcoded repo paths | Build from `LOCAL_BASE_PATH` + repo names |
 
 ### CLAUDE.md (in-scope per CONTEXT.md)
 
 | Location | Current | Fix |
-
-|----------|---------|-----|
-
+| ---------- | --------- | ----- |
 | Line 30: Absolute path note | `/Users/Shared/htdocs/github/DVWDesign/DocuMind/` | Document as `$DOCUMIND_REPOS_DIR/DocuMind/` (or note it's machine-specific) |
-
 | Line 490: Memory file path | `/Users/Shared/htdocs/github/DVWDesign/RootDispatcher/memory/repos/DocuMind.md` | Document with env var context |
 
 ---
@@ -309,15 +281,10 @@ Complete inventory of files requiring changes:
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
-
-|---------|-------------|-------------|-----|
-
+| --------- | ------------- | ------------- | ----- |
 | .env file loading | Custom file parser | `process.loadEnvFile()` (Node 20.12+) | Built-in, handles quoting/escaping, respects already-set vars |
-
 | .git directory detection | Recursive walk | `fs.access(path.join(dir, '.git'))` inside a shallow `fs.readdir` | Simple, fast, no deps |
-
 | env var type coercion | Ad-hoc string parsing | Explicit coercions in `config/env.mjs` (Number(), split(',')) | Centralized, testable |
-
 | Optional .env (no error if missing) | try/catch around `loadEnvFile` | Exactly a try/catch — Node throws ENOENT if file missing | That's the correct pattern |
 
 **Key insight:** The entire `config/env.mjs` module is 30-40 lines. Any "config library" (dotenv, env-var, convict, etc.) adds dependency weight for no benefit when Node 22 handles it natively.
@@ -522,13 +489,9 @@ if (REPOS_DIR) {
 ## State of the Art
 
 | Old Approach | Current Approach | When Changed | Impact |
-
-|--------------|------------------|--------------|--------|
-
+| -------------- | ------------------ | -------------- | -------- |
 | dotenv npm package | `process.loadEnvFile()` built-in | Node 20.12 (2024) | Zero dependency env loading |
-
 | `--env-file` CLI flag only | `process.loadEnvFile()` programmatic API | Node 20.12 | Can be called anywhere in code |
-
 | Hardcode all paths | Centralized `config/env.mjs` shim | This phase | One edit point per env var |
 
 ### Deprecated/outdated:

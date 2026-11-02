@@ -23,21 +23,13 @@ The current `daemon/server.mjs` has zero SIGTERM handlers. It calls `app.listen(
 ## Phase Requirements
 
 | ID | Description | Research Support |
-
-|----|-------------|-----------------|
-
+| ---- | ------------- | ----------------- |
 | DOCK-01 | Multi-stage Dockerfile using node:22-bookworm-slim base | Multi-stage pattern documented in STACK.md; bookworm-slim required for better-sqlite3 glibc dependency — confirmed by upstream issues and PITFALLS.md |
-
 | DOCK-02 | .dockerignore excludes node_modules, .git, data/, .planning/ | Standard Docker build hygiene; without it the build context includes data/documind.db (potentially hundreds of MB) — PITFALLS.md performance traps |
-
 | DOCK-03 | Container runs as non-root user | Security requirement; groupadd/useradd pattern confirmed in STACK.md Dockerfile example |
-
 | DOCK-04 | SIGTERM/SIGINT triggers graceful shutdown (close DB, drain requests) | server.mjs confirmed to have ZERO signal handlers currently; must add before Docker stop will complete cleanly in < 5 seconds; WAL checkpoint required |
-
 | DOCK-05 | /health endpoint returns container status for Docker HEALTHCHECK | `/health` endpoint exists in server.mjs (line 59); needs DB liveness probe added; curl-based HEALTHCHECK pattern confirmed in STACK.md |
-
 | DOCK-06 | Named volume for SQLite DB persists across container restarts | Named Docker volume (not bind mount) required for WAL mode correctness on Docker Desktop for Mac — PITFALLS.md Pitfall 2 |
-
 | DOCK-07 | docker-compose.yml starts daemon with volume-mount mode | docker-compose.yml pattern with named volume + env vars documented in STACK.md and ARCHITECTURE.md |
 
 </phase_requirements>
@@ -49,15 +41,10 @@ The current `daemon/server.mjs` has zero SIGTERM handlers. It calls `app.listen(
 ### Core
 
 | Library/Tool | Version | Purpose | Why Standard |
-
-|---|---|---|---|
-
+| --- | --- | --- | --- |
 | `node:22-bookworm-slim` | Docker tag `22-bookworm-slim` | Base image for builder and runtime stages | Active LTS; bookworm = Debian 12 with glibc; `better-sqlite3` prebuilt N-API 131 binaries work without build tools in runtime stage |
-
 | `dumb-init` | via apt: `dumb-init` | PID 1 signal forwarder | Node.js as PID 1 does not correctly handle signals; dumb-init receives SIGTERM from Docker, forwards to Node (PID 2), reaps zombies |
-
 | `curl` | via apt (runtime stage) | HEALTHCHECK probe | Docker HEALTHCHECK runs `curl -f http://localhost:9000/health`; must be installed in the runtime image |
-
 | `python3 make g++` | via apt (builder stage only) | Native addon compilation | `better-sqlite3` requires node-gyp build tools in the builder stage; not needed in runtime stage |
 
 ### No New npm Dependencies Required
@@ -65,11 +52,8 @@ The current `daemon/server.mjs` has zero SIGTERM handlers. It calls `app.listen(
 Phase 12 is infrastructure-only. All runtime code changes (SIGTERM handler, DB liveness probe) use only Node.js built-ins and existing `better-sqlite3` / `express` APIs. The milestone STACK.md listed `@godaddy/terminus` as a graceful shutdown option, but the simpler `process.on('SIGTERM', ...)` pattern is sufficient for Phase 12's scope — terminus is a Phase 14 concern if MCP HTTP transport needs full drain semantics.
 
 | Decision | Rationale |
-
-|---|---|
-
+| --- | --- |
 | No `@godaddy/terminus` in Phase 12 | Phase 12 scope is Dockerfile + compose; manual SIGTERM handler + `server.close()` + `db.close()` is sufficient and keeps this phase focused. Terminus can be added in Phase 14 when MCP HTTP drain semantics are needed. |
-
 | No `dotenv` in Phase 12 | Phase 11 already ships `process.loadEnvFile()` via `config/env.mjs`. Docker injects env vars directly; no dotenv import needed. |
 
 ---
@@ -299,17 +283,11 @@ dashboard/diagrams.html
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
-
-|---|---|---|---|
-
+| --- | --- | --- | --- |
 | PID 1 signal handling | Custom PID 1 shell script that catches signals | `dumb-init` via apt | Node as PID 1 silently ignores unregistered signals; dumb-init is the established, tested solution |
-
 | HTTP server drain on shutdown | Manual request counting + timer loops | `server.close(callback)` | Node's built-in `http.Server.close()` stops accepting new connections and calls callback when all in-flight requests complete |
-
 | SQLite WAL checkpoint on shutdown | Custom WAL file detection + checkpoint logic | `db.pragma('wal_checkpoint(TRUNCATE)')` then `db.close()` | better-sqlite3's built-in pragmas handle WAL state correctly |
-
 | Health check endpoint | Custom health framework | The existing `/health` endpoint + `SELECT 1` probe | Already exists; just needs DB liveness added |
-
 | Build context exclusions | Manual `COPY` of each included directory | `.dockerignore` | Industry standard; avoids sending node_modules + .git + data to Docker daemon |
 
 **Key insight:** Every problem in this phase has a one-line or built-in solution. The instinct to write a custom `docker-entrypoint.sh` or a health check library is wrong for Phase 12's scope — entrypoint scripting is Phase 13 (git-clone mode).
@@ -471,19 +449,12 @@ docker inspect documind --format='{{.State.ExitCode}}'
 ## State of the Art
 
 | Old Approach | Current Approach | Impact on Phase 12 |
-
-|---|---|---|
-
+| --- | --- | --- |
 | `pm2-runtime` in Docker | `node` directly + `dumb-init` | CMD is `["dumb-init", "--", "node", "daemon/server.mjs"]`; ecosystem.config.cjs is irrelevant inside container |
-
 | `node:alpine` for small images | `node:22-bookworm-slim` | +30MB vs Alpine but eliminates entire class of native module failures; non-negotiable for better-sqlite3 |
-
 | `CMD ["npm", "start"]` | `CMD ["node", "daemon/server.mjs"]` | npm swallows SIGTERM; direct node exec is the documented correct pattern |
-
 | No SIGTERM handler | `process.on('SIGTERM', ...)` with WAL checkpoint | Required for `docker stop` < 5s success criterion and WAL integrity |
-
 | bind mount `./data:/app/data` | Named Docker volume `documind_data:/app/data` | WAL mode safety on Docker Desktop for Mac |
-
 | Single-stage Dockerfile | Multi-stage (builder + runtime) | build tools excluded from final image; smaller + more secure image |
 
 ### Deprecated/outdated:

@@ -44,29 +44,19 @@ A self-contained MCP stdio server (`daemon/mcp-server.mjs`, ~275 lines) that exp
 ## Tasks Completed
 
 | Task | Name | Commit | Files |
-
 | ---- | ---- | ------ | ----- |
-
 | 1 | Install MCP SDK and bump zod | 950f482 | package.json |
-
 | 2 | Create mcp-server.mjs with 6 tools + PM2 config | 621e96c | daemon/mcp-server.mjs, ecosystem.config.cjs |
 
 ## Tools Implemented
 
 | Tool | Requirement | Description |
-
 | ---- | ----------- | ----------- |
-
 | search_docs | MCPR-02 | FTS5 full-text search with repo/category/classification filters |
-
 | get_related | MCPR-03 | Recursive relationship graph traversal via findRelated(), capped at 200 results |
-
 | get_keywords | MCPR-04 | TF-IDF keyword cloud with repo and category filters |
-
 | get_tree | MCPR-05 | Folder hierarchy from folder_nodes table |
-
 | check_existing | MCPR-06 | Existence check with FTS5 confidence scoring |
-
 | get_diagrams | MCPR-07 | Diagram registry with stale filter and active_url computed field |
 
 ## Decisions Made

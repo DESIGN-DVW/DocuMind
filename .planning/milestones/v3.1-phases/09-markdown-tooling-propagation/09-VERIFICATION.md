@@ -22,13 +22,9 @@ re_verification: false
 ### Observable Truths
 
 | # | Truth | Status | Evidence |
-
 | - | ----- | ------ | -------- |
-
 | 1 | Running the propagation script copies DVW001 and force-align rules to all 16 target repos | VERIFIED | `scripts/propagate-lint-rules.mjs` exists (355 lines), defines all 16 target repos, copies both rule files to `config/rules/` in each; all 16 repos confirmed to have both files on disk |
-
 | 2 | Each target repo gets a `.markdownlint-cli2.jsonc` that references the custom rules | VERIFIED | All 16 repos have `.markdownlint-cli2.jsonc`; content verified in 5 samples — all reference `./config/rules/table-separator-spacing.cjs` and `./config/rules/force-align-table-columns.cjs` |
-
 | 3 | Running markdownlint-cli2 in any target repo applies the custom rules without errors | VERIFIED | Live runs in RootDispatcher, GlossiaApp, and shared-packages produced MD060A violations (confirms rules loaded and active); no "Cannot find module" or config errors in any run |
 
 **Score:** 3/3 truths verified
@@ -38,13 +34,9 @@ re_verification: false
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
-
 | -------- | -------- | ------ | ------- |
-
 | `scripts/propagate-lint-rules.mjs` | Automated propagation of lint rules to all DVWDesign repos | VERIFIED | Exists at 355 lines (min_lines threshold: 80). Implements `--dry-run`, `--repo`, pnpm/pnpm-workspace/npm detection, merge-safe config writing, and a summary table. |
-
 | `config/rules/table-separator-spacing.cjs` (DocuMind source) | DVW001 source rule file | VERIFIED | Exists at 1,294 bytes in DocuMind's `config/rules/`. |
-
 | `config/rules/force-align-table-columns.cjs` (DocuMind source) | MD060A source rule file | VERIFIED | Exists at 165 bytes in DocuMind's `config/rules/`. |
 
 ---
@@ -52,11 +44,8 @@ re_verification: false
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
-
 | ---- | -- | --- | ------ | ------- |
-
 | `scripts/propagate-lint-rules.mjs` | `config/rules/table-separator-spacing.cjs` | file copy to target repos | WIRED | Script contains `table-separator-spacing` in RULE_FILES array; `fs.copyFileSync` copies it to each repo's `config/rules/`; files confirmed present in all 16 repos |
-
 | `scripts/propagate-lint-rules.mjs` | `config/rules/force-align-table-columns.cjs` | file copy to target repos | WIRED | Script contains `force-align-table-columns.cjs` in RULE_FILES array; `fs.copyFileSync` copies it to each repo's `config/rules/`; files confirmed present in all 16 repos |
 
 ---
@@ -64,11 +53,8 @@ re_verification: false
 ### Requirements Coverage
 
 | Requirement | Source Plan | Description | Status | Evidence |
-
 | ----------- | ----------- | ----------- | ------ | -------- |
-
 | PROP-01 | 09-01-PLAN.md | DVW001 (`table-separator-spacing.cjs`) + MD060A (`force-align-table-columns`) installed and configured in all DVWDesign repos that have markdown | SATISFIED | Both rule files present in all 16 target repos; verified by disk check across all 16 dirs |
-
 | PROP-02 | 09-01-PLAN.md | `.markdownlint-cli2.jsonc` with custom rules created in each target repo | SATISFIED | `.markdownlint-cli2.jsonc` present in all 16 target repos; content verified to reference both custom rules in 5 sampled repos |
 
 No orphaned requirements — REQUIREMENTS.md maps only PROP-01 and PROP-02 to Phase 9, both claimed and satisfied.
@@ -78,11 +64,8 @@ No orphaned requirements — REQUIREMENTS.md maps only PROP-01 and PROP-02 to Ph
 ### Commit Verification
 
 | Hash | Description | Status |
-
 | ---- | ----------- | ------ |
-
 | `0b51f3d` | feat(09-01): create propagate-lint-rules.mjs | VERIFIED — exists in git log |
-
 | `043708b` | fix(09-01): handle pnpm workspace root in propagation script | VERIFIED — exists in git log |
 
 ---
@@ -92,39 +75,22 @@ No orphaned requirements — REQUIREMENTS.md maps only PROP-01 and PROP-02 to Ph
 All 16 target repos verified to have both rule files and `.markdownlint-cli2.jsonc`:
 
 | Repo | table-separator-spacing.cjs | force-align-table-columns.cjs | .markdownlint-cli2.jsonc |
-
 | ---- | --------------------------- | ----------------------------- | ------------------------ |
-
 | `@figma-agents` | EXISTS | EXISTS | EXISTS |
-
 | `@figma-core` | EXISTS | EXISTS | EXISTS |
-
 | `Aprimo` | EXISTS | EXISTS | EXISTS |
-
 | `CampaignManager` | EXISTS | EXISTS | EXISTS |
-
 | `Contentful` | EXISTS | EXISTS | EXISTS |
-
 | `Figma-Plug-ins` | EXISTS | EXISTS | EXISTS |
-
 | `FigmaDSController` | EXISTS | EXISTS | EXISTS |
-
 | `GlossiaApp` | EXISTS | EXISTS | EXISTS |
-
 | `LibraryAssetManager` | EXISTS | EXISTS | EXISTS |
-
 | `RandD` | EXISTS | EXISTS | EXISTS |
-
 | `RootDispatcher` | EXISTS | EXISTS | EXISTS |
-
 | `any2figma` | EXISTS | EXISTS | EXISTS |
-
 | `mjml-dev-mode-proposal` | EXISTS | EXISTS | EXISTS |
-
 | `mjml-dev-mode` | EXISTS | EXISTS | EXISTS |
-
 | `mjml_mcp` | EXISTS | EXISTS | EXISTS |
-
 | `shared-packages` | EXISTS | EXISTS | EXISTS |
 
 ---
