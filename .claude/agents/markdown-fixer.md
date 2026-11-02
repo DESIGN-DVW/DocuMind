@@ -57,6 +57,12 @@ When **creating or editing** markdown files, you MUST follow these rules:
 
 ```
 
+### Tables (MD055, MD056, MD058) — complex tables render as an HTML iframe
+
+**Complex** or long tables in reports are rendered in an external html file and inserted inside the document as an iframe, to avoid markdownlint errors and ensure proper formatting.
+
+Agent can then use Tables with filters & grouping categories, a summary, legend of the data. Agent ensures html table is properly linked in original markdown file and modified directly if needed.
+
 ### Code blocks — always specify a language
 
 Default hierarchy when no specific language applies: `md` > `diagram` > `text`
