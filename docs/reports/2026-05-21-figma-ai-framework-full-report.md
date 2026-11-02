@@ -27,11 +27,7 @@ audience: all
 
 ### Placeholder
 
-DVWDesign has built an AI-powered operational layer that connects design tools, codebases,
-and documentation — automatically. Teams that previously spent hours keeping design files,
-code, and documentation in sync now have that synchronization happen in the background,
-without human intervention. The arrival of Figma's AI Agent in May 2026 adds a canvas-native
-collaborator that further accelerates the loop between design intent and shipped product.
+DVWDesign has built an AI-powered operational layer that connects design tools, codebases, and documentation — automatically. Teams that previously spent hours keeping design files, code, and documentation in sync now have that synchronization happen in the background, without human intervention. The arrival of Figma's AI Agent in May 2026 adds a canvas-native collaborator that further accelerates the loop between design intent and shipped product.
 
 ---
 
@@ -39,8 +35,7 @@ collaborator that further accelerates the loop between design intent and shipped
 
 ### The Five-Layer Framework
 
-Our Figma AI framework operates across five complementary layers. Each layer adds
-capability without replacing what came before.
+Our Figma AI framework operates across five complementary layers. Each layer adds capability without replacing what came before.
 
 ```text
 
@@ -72,9 +67,7 @@ capability without replacing what came before.
 
 ### Layer 1 — Figma REST API
 
-The foundation. Used for reading file structure, exporting assets, and querying variables.
-Key usage: node PNG export at up to 4× scale via `/v1/images/` — the source of
-high-quality diagram images that replace the lower-resolution Mermaid CLI output.
+The foundation. Used for reading file structure, exporting assets, and querying variables. Key usage: node PNG export at up to 4× scale via `/v1/images/` — the source of high-quality diagram images that replace the lower-resolution Mermaid CLI output.
 
 ```bash
 
@@ -85,9 +78,7 @@ X-Figma-Token: {FIGMA_PAT}
 
 ### Layer 2 — Plugins
 
-Custom Figma plugins (Figma-Plug-ins repo) handle operations that require direct canvas
-access: design system injection, naming convention enforcement, component inspection.
-Plugins run inside Figma's sandboxed environment and complement the MCP server.
+Custom Figma plugins (Figma-Plug-ins repo) handle operations that require direct canvas access: design system injection, naming convention enforcement, component inspection. Plugins run inside Figma's sandboxed environment and complement the MCP server.
 
 ### Layer 3 — Scripts
 
@@ -102,8 +93,7 @@ Node.js automation scripts that bridge the gap between repos:
 
 ### Layer 4 — MCP Server (Figma MCP)
 
-The Model Context Protocol server is the primary integration layer for AI-assisted
-design workflows. Claude Code agents call MCP tools directly — no browser required.
+The Model Context Protocol server is the primary integration layer for AI-assisted design workflows. Claude Code agents call MCP tools directly — no browser required.
 
 | Tool                 | Direction       | Purpose                                         |
 | -------------------- | --------------- | ----------------------------------------------- |
@@ -130,8 +120,7 @@ Slash commands that orchestrate the full workflow for common tasks:
 
 ### Figma Agent (May 2026 — Additive Layer)
 
-Figma's own canvas-native AI, launched in beta May 20 2026. Operates directly inside
-the design file alongside your team. Not a replacement for the MCP server — a complement.
+Figma's own canvas-native AI, launched in beta May 20 2026. Operates directly inside the design file alongside your team. Not a replacement for the MCP server — a complement.
 
 #### Capabilities
 
@@ -169,9 +158,7 @@ Every diagram in the ecosystem produces four artifacts:
 
 ### The Diagram Registry
 
-DocuMind maintains a SQLite database tracking every diagram across all 14+ repos.
-SHA-256 hash comparison detects staleness automatically. One `curate_diagram` call
-propagates URL changes across all repos simultaneously.
+DocuMind maintains a SQLite database tracking every diagram across all 14+ repos. SHA-256 hash comparison detects staleness automatically. One `curate_diagram` call propagates URL changes across all repos simultaneously.
 
 ```text
 
@@ -206,10 +193,7 @@ get_diagrams({ repo }) → check state → generate if needed → register → c
 
 ### Design System Consistency
 
-Figma Agent can audit and update component documentation, standardize naming conventions,
-and document variant states in bulk — operations that previously required manual inspection
-of every component. Combined with `get_variable_defs` (MCP), design tokens flow from
-Figma variables directly into code without copy-paste.
+Figma Agent can audit and update component documentation, standardize naming conventions, and document variant states in bulk — operations that previously required manual inspection of every component. Combined with `get_variable_defs` (MCP), design tokens flow from Figma variables directly into code without copy-paste.
 
 ### Collaboration Quality
 
@@ -263,20 +247,17 @@ integration — it runs in the same environment as your design team.
 - Design system maintenance: naming conventions, component descriptions, variant documentation
 
 **Integration with our stack:** Figma Agent works with the canvas; the MCP server works with
-the code. They are complementary — Agent creates/refines on canvas, MCP reads the result
-into code or writes code back to canvas. Neither replaces the other.
+the code. They are complementary — Agent creates/refines on canvas, MCP reads the result into code or writes code back to canvas. Neither replaces the other.
 
 **Status:** Beta, rolling out May 2026. Free during beta; billing at GA. Professional+
 full seats only (not Dev, Collab, Starter, Education, Government).
 
 **Our assessment:** High value for FigmaDSController (bulk design system updates), FigmailAPP
-(dark mode, layout exploration), and design review workflows. Not scriptable — interactive
-only. Cannot be integrated into CLI dispatches yet.
+(dark mode, layout exploration), and design review workflows. Not scriptable — interactive only. Cannot be integrated into CLI dispatches yet.
 
 ### Figma MCP Server
 
-The programmatic bridge between our AI agents and the Figma canvas. Unlike the Figma Agent,
-the MCP server is fully callable from scripts and agent sessions — no browser required.
+The programmatic bridge between our AI agents and the Figma canvas. Unlike the Figma Agent, the MCP server is fully callable from scripts and agent sessions — no browser required.
 
 Key MCP tools already in production:
 
@@ -305,14 +286,11 @@ Three key endpoints actively used:
 
 ```
 
-The image export endpoint is the backbone of the high-quality PNG workflow: 185kb at
-scale=2 versus 22kb from Mermaid CLI — legible at any document width.
+The image export endpoint is the backbone of the high-quality PNG workflow: 185kb at scale=2 versus 22kb from Mermaid CLI — legible at any document width.
 
 ### Figma Buzz (from RandD existing analysis)
 
-Template-based asset creation for marketing teams. Enables non-designers to generate
-on-brand assets without design expertise. Key integration: CampaignManager orchestrates
-campaigns while Figma Buzz generates assets at scale.
+Template-based asset creation for marketing teams. Enables non-designers to generate on-brand assets without design expertise. Key integration: CampaignManager orchestrates campaigns while Figma Buzz generates assets at scale.
 
 - 311% ROI over 3 years vs building in-house
 
@@ -385,8 +363,7 @@ Quantified improvements observed in production use.
 
 ### Why a Training Program
 
-The framework works. Adoption doesn't. The gap between "the tools exist" and "the team
-uses the tools fluently" is always a training problem, not a technology problem.
+The framework works. Adoption doesn't. The gap between "the tools exist" and "the team uses the tools fluently" is always a training problem, not a technology problem.
 
 Our training program bridges that gap in three structured tiers.
 
