@@ -462,6 +462,41 @@ Enforced by MD040 (markdownlint) + auto-detected by `fix-markdown.mjs`.
 
 See `docs/discoveries/README.md` for the full workflow and the Discovery Policy fan-out table.
 
+## ⚠️ MANDATORY — Shared-Packages FIRST (reuse before you build)
+
+**Before writing ANY component, auth flow, upload/nav/profile/pricing feature, i18n, form, or DB client — check `@design-dvw/*` first.** 38 packages already exist, branded, tested, and accessible. This is the ecosystem's #1 efficiency rule; ignoring it is the single biggest source of wasted time and tokens.
+
+How to check, every time, before deciding to build:
+
+1. Read `RootDispatcher/docs/ecosystem/SHARED-PACKAGES-CATALOG.md` — the full index by capability.
+2. If unsure it exists, Graphify `shared-packages` (`/graphify`) for an explorable map, and/or `mcp__documind__check_existing`.
+3. `RootDispatcher/config/consumer-registry.json` shows which repos already integrate a package — copy a working integration, don't invent one.
+
+Many capabilities are **full-stack families**, not just a component: `auth` = `auth-core` + `auth-server` (Express) + `auth-ui-mui`/`auth-ui-shadcn`. Same for `nav-*`, `upload-*`, `profile-*`, `pricing`(+`pricing-ui`). Do not rebuild either half.
+
+**Non-negotiable:** rebuilding what `@design-dvw/*` already provides is a defect, not a design choice. If a capability is genuinely missing, propose it to `shared-packages` — a repo-local one-off is the exception, justified in the PR.
+
+**What this means here:** DocuMind is a daemon, not an app, so most of the catalog never applies. It does serve UI, though — `dashboard/*.html` (diagrams, obsolete, stats) — and DocuMind is an Express service, so the server-side halves of those families are in scope. Check the catalog before adding any dashboard page or any auth/upload surface to the daemon.
+
+## ⚠️ MANDATORY — Storybook MCP FIRST (check existing UI before building)
+
+**Before building any component, page, or UI variant — check the Storybook MCP first.** Mirrors Shared-Packages FIRST: same failure mode (building UI from scratch that already exists, off-brand and undocumented), same fix.
+
+There are two, and they answer different questions:
+
+1. **Shared/canonical Storybook MCP** (`shared-packages`, port **6014** — the source of truth) — check for anything that could already exist as a `@design-dvw/*` primitive or pattern: Charter, CSS rules, color tokens, primitives, shared and custom components. Same catalog as Shared-Packages FIRST, viewed live and interactive instead of as a doc.
+2. **Your own repo's local Storybook MCP** (its own registered port) — check for repo-specific stories already written for THIS app, before writing one that duplicates an existing variant.
+
+How to check, every time:
+
+1. `mcp__storybook__list-all-documentation` to see what exists — component docs, props, usage examples, stories.
+2. `mcp__storybook__get-documentation` for the specific component you are about to build. Never assume a prop or variant exists without checking; a plausible-sounding prop that isn't documented does not exist.
+3. Only if both MCPs show nothing, build new — and if it is a reusable pattern rather than page-specific, consider whether it belongs in `shared-packages` instead.
+
+**Non-negotiable:** shipping a new component without checking Storybook MCP first is the same class of defect as shipping one without checking `@design-dvw/*` first.
+
+**What this means here:** rule 2 is a no-op — DocuMind registers no local `storybook` MCP and has no stories, because its UI is three static daemon dashboards rather than a component library. Rule 1 still binds: check the canonical 6014 MCP before adding or restyling a dashboard page, so the daemon's UI does not drift off-brand.
+
 ## Dependencies
 
 ### Runtime
