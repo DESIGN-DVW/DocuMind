@@ -13,6 +13,7 @@
     "url": "https://github.com/DESIGN-DVW/DocuMind/issues"
   },
   "scripts": {
+    "test": "node --test test/*.test.mjs",
     "scan": "node scripts/scan-all-repos.mjs",
     "scan:report": "node scripts/scan-all-repos.mjs --report",
     "index": "node scripts/index-markdown.mjs",

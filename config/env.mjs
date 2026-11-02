@@ -104,6 +104,22 @@ export const REPOS_LIST = process.env.DOCUMIND_REPOS
   : null;
 
 /**
+ * Absolute path to the repository registry JSON, overriding the profile's
+ * `repositoryRegistryPath`.
+ *
+ * The profile's value is relative to the profile file, which cannot be correct
+ * in both checkouts at once: the registry sits beside the main checkout
+ * (`DVWDesign/RootDispatcher/...`) but the live worktree is deployed outside
+ * `DVWDesign/`, so the same relative path resolves to different places. Set this
+ * in the worktree's `.env` rather than trying to find one relative path that
+ * works everywhere.
+ * @constant {string|null}
+ */
+export const REGISTRY_PATH = process.env.DOCUMIND_REGISTRY
+  ? path.resolve(process.env.DOCUMIND_REGISTRY)
+  : null;
+
+/**
  * Repository ingestion mode.
  * 'mount' — repos are provided via host bind mount (default, macOS dev).
  * 'clone' — repos are cloned from GitHub on startup (Docker production).

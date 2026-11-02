@@ -129,7 +129,7 @@ MCP clients cache the tool list at connection time — restart the client to pic
 
 ### Two rules that matter
 
-1. **Keep the worktree OUTSIDE `DOCUMIND_REPOS_DIR`.** `context/loader.mjs` `discoverRepos()` treats every directory under the repos dir containing `.git` as a repository — and a worktree has one. Placing it inside makes DocuMind index itself twice (a phantom `DocuMind-live` repo) and lets the scheduled markdown auto-fix rewrite the deployment checkout, which then conflicts on the next `pull`.
+1. **Keep the worktree OUTSIDE `DOCUMIND_REPOS_DIR`.** `context/loader.mjs` `discoverRepos()` treats every directory under the repos dir containing `.git` as a repository — and a worktree has one. Placing it inside makes DocuMind index itself twice (a phantom `DocuMind-live` repo) and lets the scheduled markdown auto-fix rewrite the deployment checkout, which then conflicts on the next `pull`. Since DISPATCH-150 discovery also descends one level into directories that have no `.git` of their own, a worktree parked one level deep is reachable too; `worktrees` and dot-directories are skipped on that descent, so a worktree under `worktrees/` or `.claude/worktrees/` is safe, but any other nesting under the repos dir is not.
 
 2. **Runtime state is shared by symlink, not copied.** `.env`, `data/`, and `node_modules` in the live worktree are symlinks into the main checkout, so both point at the same database and the same secrets. `ROOT` is derived from the file's own location (`config/env.mjs`), so without these symlinks the worktree would silently create a second, empty database.
 
@@ -146,6 +146,7 @@ DocuMind loads configuration from environment variables, with optional `.env` fi
 | `DOCUMIND_PROFILE`        | `config/profiles/dvwdesign.json`                 | Active repository profile JSON                                                                    |
 | `DOCUMIND_REPOS_DIR`      | *(unset — uses macOS fallback in constants.mjs)* | Base directory containing all repositories to scan. When set, overrides the hardcoded macOS path. |
 | `DOCUMIND_REPOS`          | *(unset — all repos)*                            | Comma-separated list of repo names to scan (overrides profile)                                    |
+| `DOCUMIND_REGISTRY` | *(unset — uses the profile's `repositoryRegistryPath`)* | Absolute path to RootDispatcher's `repository-registry.json`. Only consulted when `DOCUMIND_REPOS_DIR` is unset. The profile's value is relative to the profile file and so cannot be correct in both the main checkout and the deployment worktree — set this rather than hunting for one path that works in both. |
 | `DOCUMIND_CRON_HEARTBEAT` | `*/15 * * * *`                                   | Cron for file watcher heartbeat check                                                             |
 | `DOCUMIND_CRON_HOURLY`    | `0 * * * *`                                      | Cron for incremental scan                                                                         |
 | `DOCUMIND_CRON_DAILY`     | `0 2 * * *`                                      | Cron for full scan + analysis                                                                     |

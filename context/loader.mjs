@@ -16,18 +16,32 @@ import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { profileSchema } from './schema.mjs';
-import { REPOS_DIR, REPOS_LIST } from '../config/env.mjs';
+import { REPOS_DIR, REPOS_LIST, REGISTRY_PATH } from '../config/env.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_PROFILE_PATH = path.resolve(__dirname, '../config/profiles/dvwdesign.json');
 
+/** Never descend into these looking for nested repos. */
+const DESCENT_SKIP = new Set(['node_modules', 'worktrees']);
+
 /**
  * Discover repositories by scanning a base directory for .git subdirectories.
+ *
+ * Looks one level deeper when a directory is not itself a repo: some repos live
+ * under a grouping directory that has no `.git` of its own (`FigmaAPI/FigmailAPP`,
+ * `FigmaAPI/@figma-core`, `FigmaAPI/@figma-docs`), and a single-level readdir
+ * stops at the group and never reaches them — which left every write tool
+ * rejecting paths in those repos as "not under any known repo root" while search
+ * still returned their documents from an earlier registry-based scan.
+ *
+ * Descent is exactly one level and never recurses.
+ *
+ * Exported for tests; `buildCtx` is the only production caller.
  *
  * @param {string} base - Parent directory to scan
  * @returns {Promise<Array<{ name: string; path: string }>>}
  */
-async function discoverRepos(base) {
+export async function discoverRepos(base) {
   let entries;
   try {
     entries = await fs.readdir(base, { withFileTypes: true });
@@ -36,16 +50,50 @@ async function discoverRepos(base) {
   }
 
   const repos = [];
+  const seen = new Set();
+  const add = (name, repoPath) => {
+    // Top-level wins: a nested copy can never shadow a real repo of the same name.
+    if (seen.has(name)) return;
+    seen.add(name);
+    repos.push({ name, path: repoPath });
+  };
+
+  const groups = [];
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
     const repoPath = path.join(base, entry.name);
     try {
       await fs.access(path.join(repoPath, '.git'));
-      repos.push({ name: entry.name, path: repoPath });
+      add(entry.name, repoPath);
     } catch {
-      // No .git dir — not a repo, skip silently
+      // Not a repo itself — a candidate grouping directory. Deferred to a second
+      // pass so the whole top level is registered before any nested entry is.
+      if (!entry.name.startsWith('.') && !DESCENT_SKIP.has(entry.name)) {
+        groups.push(repoPath);
+      }
     }
   }
+
+  for (const groupPath of groups) {
+    let children;
+    try {
+      children = await fs.readdir(groupPath, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const child of children) {
+      if (!child.isDirectory()) continue;
+      if (child.name.startsWith('.') || DESCENT_SKIP.has(child.name)) continue;
+      const repoPath = path.join(groupPath, child.name);
+      try {
+        await fs.access(path.join(repoPath, '.git'));
+        add(child.name, repoPath);
+      } catch {
+        // Not a repo — and we do not go deeper than one level.
+      }
+    }
+  }
+
   return repos;
 }
 
@@ -131,17 +179,25 @@ async function buildCtx(validated, profileFilePath) {
       .filter(r => r.active !== false)
       .map(r => ({ name: r.name, path: r.path }));
   } else {
-    // External registry file — resolve relative to the profile file's directory
-    const registryPath = path.isAbsolute(validated.repositoryRegistryPath)
-      ? validated.repositoryRegistryPath
-      : path.resolve(path.dirname(profileFilePath), validated.repositoryRegistryPath);
+    // External registry file. DOCUMIND_REGISTRY wins when set; otherwise resolve
+    // the profile's value relative to the profile file's directory. That relative
+    // value is correct from the main checkout but not from the deployment
+    // worktree, which sits outside DVWDesign/ — hence the env override.
+    const registryPath =
+      REGISTRY_PATH ??
+      (path.isAbsolute(validated.repositoryRegistryPath)
+        ? validated.repositoryRegistryPath
+        : path.resolve(path.dirname(profileFilePath), validated.repositoryRegistryPath));
 
     let registryRaw;
     try {
       registryRaw = await fs.readFile(registryPath, 'utf-8');
     } catch (err) {
       throw new Error(
-        `[DocuMind] Cannot read repository registry from "${registryPath}": ${err.message}`
+        `[DocuMind] Cannot read repository registry from "${registryPath}": ${err.message}\n` +
+          `Resolved from profile "${profileFilePath}" ` +
+          `(repositoryRegistryPath: "${validated.repositoryRegistryPath}").\n` +
+          `Set DOCUMIND_REGISTRY to an absolute path if this checkout is not beside the registry.`
       );
     }
 
