@@ -23,15 +23,10 @@ The one meaningful technical risk for this project is `better-sqlite3`: it is a 
 ## Phase Requirements
 
 | ID | Description | Research Support |
-
-|----|-------------|-----------------|
-
+| ---- | ------------- | ----------------- |
 | CICD-01 | Documentation for manual docker build and push to GHCR | `docs/DOCKER-USAGE.md` already exists; add a "Publishing to GHCR" section with `docker buildx build --platform linux/amd64,linux/arm64 --push -t ghcr.io/...` command |
-
 | CICD-02 | GitHub Actions workflow builds and pushes image on release | `.github/workflows/publish.yml` triggered on `push: tags: ['v*.*.*']`; uses docker/build-push-action@v7 + GITHUB_TOKEN |
-
 | CICD-03 | Multi-arch image supports amd64 and arm64 | `platforms: linux/amd64,linux/arm64` in build-push-action; QEMU setup required; bookworm-slim base image already works on both |
-
 | CICD-04 | Image tagged with version and latest | `docker/metadata-action@v6` with `type=semver,pattern={{version}}` + `flavor: latest=auto` outputs both tags automatically |
 
 </phase_requirements>
@@ -43,19 +38,12 @@ The one meaningful technical risk for this project is `better-sqlite3`: it is a 
 ### Core
 
 | Tool / Action | Version | Purpose | Why Standard |
-
-|---|---|---|---|
-
+| --- | --- | --- | --- |
 | `docker/setup-qemu-action` | `v4` | Installs QEMU for cross-arch emulation on amd64 runner | Required to build ARM64 image on GitHub-hosted runner without a native ARM runner |
-
 | `docker/setup-buildx-action` | `v5` | Activates Docker Buildx builder with multi-platform support | Buildx is the only Docker build driver that supports `--platform linux/amd64,linux/arm64` in a single invocation |
-
 | `docker/metadata-action` | `v6` | Generates OCI-compliant image tags and labels from git ref | Eliminates manual tag construction; `type=semver` + `flavor: latest=auto` handles version + latest in one config |
-
 | `docker/build-push-action` | `v7` | Builds and pushes the multi-arch image to GHCR | Official action; handles context, platforms, cache, attestations |
-
 | `actions/checkout` | `v5` | Checks out the repository | Required by build-push for build context |
-
 | GHCR (`ghcr.io`) | — | Container registry | Free for public/private repos; tightly integrated with GitHub Actions via GITHUB_TOKEN; no external registry credentials needed |
 
 ### No Additional npm Packages
@@ -65,13 +53,9 @@ This phase introduces no new Node.js dependencies. It is entirely GitHub Actions
 ### Alternatives Considered
 
 | Instead of | Could Use | Tradeoff |
-
-|------------|-----------|----------|
-
+| ------------ | ----------- | ---------- |
 | QEMU (single runner) | Native ARM runner (`ubuntu-24.04-arm`) split job | Native runner is faster but costs minutes; QEMU is free and acceptable for infrequent releases. The `better-sqlite3` compile-under-QEMU slowness makes native runners worth considering if build times exceed 30 min. |
-
 | `GITHUB_TOKEN` | PAT stored as repo secret | PAT gives more control but introduces rotation burden; `GITHUB_TOKEN` is automatic and scoped per workflow run |
-
 | `docker/metadata-action` | Manual tag construction | Manual tags are error-prone; metadata-action is the ecosystem standard |
 
 ---
@@ -245,15 +229,10 @@ FROM node:22-bookworm-slim AS runtime
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
-
-|---------|-------------|-------------|-----|
-
+| --------- | ------------- | ------------- | ----- |
 | Semver tag extraction | bash `echo $GITHUB_REF \| sed ...` | `docker/metadata-action@v6` | Handles pre-releases, strip `v` prefix, `latest` logic, OCI labels — 20+ edge cases |
-
 | Multi-arch image push | Manual `docker manifest create` | `docker/build-push-action@v7` with `platforms:` | BuildKit handles layer separation, manifest lists, registry push atomically |
-
 | GHCR login | `curl` to registry API | `docker/login-action@v4` with `GITHUB_TOKEN` | Handles credential scoping, refresh, org-level package visibility automatically |
-
 | GitHub Actions cache | Custom cache steps | `cache-from: type=gha` in build-push-action | Native GitHub Actions cache integration, no S3 setup needed |
 
 **Key insight:** The Docker GitHub Actions action suite is the canonical toolchain. Every piece of it handles significant edge-case complexity that custom scripts will miss.
@@ -454,15 +433,10 @@ FROM node:22-bookworm-slim AS runtime
 ## State of the Art
 
 | Old Approach | Current Approach | When Changed | Impact |
-
-|---|---|---|---|
-
+| --- | --- | --- | --- |
 | `docker manifest create` + separate `docker push` per arch | `docker buildx build --platform ... --push` | Docker 19.03 (BuildKit) | Single command builds and pushes multi-arch manifest list |
-
 | `docker push` to GHCR with PAT | `GITHUB_TOKEN` with `permissions: packages: write` | GitHub Actions 2021 | No PAT rotation; credentials auto-expire per workflow run |
-
 | SSE transport for MCP | Streamable HTTP only | MCP spec 2025-03-26 | Out of scope for this phase; noted here for completeness |
-
 | `metadata-action` v4 with `type=semver` | `metadata-action` v6 with `flavor: latest=auto` | 2024 | Cleaner latest tag handling; v5 had a breaking change in tag output format |
 
 ### Deprecated/outdated:

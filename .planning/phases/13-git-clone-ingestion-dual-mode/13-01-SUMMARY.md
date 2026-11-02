@@ -51,11 +51,8 @@ Dual-mode repository ingestion via `REPO_MODE` env variable — mount mode keeps
 ## Tasks Completed
 
 | Task | Name | Commit | Files |
-
 | ---- | ---- | ------ | ----- |
-
 | 1 | Create ingestion module and add REPO_MODE to env.mjs | df692dc | daemon/ingestion.mjs, config/env.mjs |
-
 | 2 | Wire ingestion into server startup and scheduler pull cron | ab474a8 | daemon/server.mjs, daemon/scheduler.mjs |
 
 ## Decisions Made
@@ -83,15 +80,10 @@ The pull cron registers a second job on `CRON_HOURLY` alongside the existing inc
 ## Artifacts
 
 | Path | Description |
-
 | ---- | ----------- |
-
 | `daemon/ingestion.mjs` | Exports `initIngestion()` and `pullAllRepos()` |
-
 | `config/env.mjs` | Added `REPO_MODE` export (defaults to `'mount'`) |
-
 | `daemon/server.mjs` | Calls `await initIngestion()` before `loadProfile()` |
-
 | `daemon/scheduler.mjs` | Imports `pullAllRepos` and `REPO_MODE`; registers pull cron when `REPO_MODE=clone` |
 
 ## Key Links
@@ -109,17 +101,10 @@ None — plan executed exactly as written.
 ## Self-Check: PASSED
 
 | Item | Status |
-
 | ---- | ------ |
-
 | daemon/ingestion.mjs exists | FOUND |
-
 | config/env.mjs exists | FOUND |
-
 | daemon/server.mjs exists | FOUND |
-
 | daemon/scheduler.mjs exists | FOUND |
-
 | Commit df692dc exists | FOUND |
-
 | Commit ab474a8 exists | FOUND |

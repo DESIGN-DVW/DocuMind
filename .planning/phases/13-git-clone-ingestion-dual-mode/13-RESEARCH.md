@@ -23,17 +23,11 @@ Credential security is the only non-trivial constraint: `GIT_TOKEN` (or equivale
 ## Phase Requirements
 
 | ID | Description | Research Support |
-
-|----|-------------|-----------------|
-
+| ---- | ------------- | ----------------- |
 | INGEST-01 | Volume mount mode scans mounted repo directories | Existing `discoverRepos()` in `context/loader.mjs` already handles this; `DOCUMIND_REPOS_DIR=/repos` + bind mount in docker-compose.yml is all that is needed. The docker-compose.yml bind mount is currently commented out — this requirement is fulfilled by uncommenting + documenting it. |
-
 | INGEST-02 | Git-clone mode clones configured repos on container start | New `daemon/ingestion.mjs` module: reads `REPO_MODE=clone` and `DOCUMIND_REPOS` (comma-separated `org/repo` slugs), clones each to `/app/repos/<name>` via `git clone` with token-embedded URL, sets `DOCUMIND_REPOS_DIR=/app/repos` so `discoverRepos()` picks them up. |
-
 | INGEST-03 | Git-clone mode pulls repos on cron schedule | New cron job in `daemon/scheduler.mjs` (or ingestion module): `git pull --ff-only` per cloned repo on `CRON_HOURLY` schedule, triggers `runScan()` per repo after successful pull. |
-
 | INGEST-04 | `REPO_MODE` env var switches between mount and clone modes | New export in `config/env.mjs`: `export const REPO_MODE = process.env.REPO_MODE ?? 'mount'`. Validated to be either `'mount'` or `'clone'` at startup; invalid value → `process.exit(1)` with clear message. |
-
 | INGEST-05 | Git credentials accepted via env vars, not visible in `docker history --no-trunc` | `GIT_TOKEN` env var injected at runtime via `docker-compose.yml` `environment:` block (never `ARG`/`ENV` in Dockerfile). URL pattern: `https://${GIT_TOKEN}@github.com/${org}/${repo}.git`. Verified safe: env vars set at `docker run` or `docker-compose up` time are not captured in image history layers. |
 
 </phase_requirements>
@@ -45,13 +39,9 @@ Credential security is the only non-trivial constraint: `GIT_TOKEN` (or equivale
 ### Core
 
 | Library/Tool | Version | Purpose | Why Standard |
-
-|---|---|---|---|
-
+| --- | --- | --- | --- |
 | `node:child_process` (built-in) | Node 22 built-in | Spawn git commands | No additional dependency; `execFile()` avoids shell injection; git is already in the node:22-bookworm-slim base image |
-
 | `git` (system) | Pre-installed in node:22-bookworm-slim | Clone and pull repositories | Part of Debian bookworm base; verified present in node:22-bookworm-slim |
-
 | `node-cron` | Already in package.json | Schedule periodic pulls | Already imported in `daemon/scheduler.mjs`; no new dependency |
 
 ### No New npm Dependencies Required
@@ -73,13 +63,9 @@ This should succeed. If it fails, add `git` to the runtime stage `apt-get instal
 ### Alternatives Considered
 
 | Instead of | Could Use | Tradeoff |
-
-|---|---|---|
-
+| --- | --- | --- |
 | `child_process.execFile('git', ...)` | `simple-git` npm package | simple-git is a well-maintained wrapper but adds a dependency. `execFile` is sufficient for `clone` + `pull --ff-only`; stick with built-in. |
-
 | Token-embedded HTTPS URL | SSH deploy keys | SSH requires key generation, volume-mounting the key file, and known_hosts setup. Token URL is simpler and aligns with GitHub Actions standard pattern. Acceptable for single-user use case. |
-
 | `GIT_ASKPASS` script | Token in URL | `GIT_ASKPASS` is cleaner (token not in URL) but requires writing a temp script file and managing permissions. Token URL is simpler and equally secure for containers where the env var is runtime-injected. |
 
 ---
@@ -334,15 +320,10 @@ docker history --no-trunc $(docker compose images -q documind) | grep -i token
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
-
-|---|---|---|---|
-
+| --- | --- | --- | --- |
 | Git operations | Custom HTTP calls to GitHub API to download files | `git clone` + `git pull` via `child_process.execFile` | Git handles delta updates, file permissions, and .git metadata correctly; re-implementing is thousands of lines |
-
 | Credential passing | Custom credential store | Token-embedded HTTPS URL or `GIT_ASKPASS` env var | Git's built-in credential mechanisms are tested and audited |
-
 | Shallow clones | Full history download to find markdown files | `git clone --depth=1` | DocuMind only needs current file contents; full history wastes 10-100x more storage |
-
 | Periodic pull logic | Custom file diff / polling of GitHub API | `git pull --ff-only` | Git handles merge detection, fast-forward safety, and error cases |
 
 **Key insight:** Git already solves the hard parts (credential auth, delta sync, file permissions). The implementation is a thin wrapper: clone on startup, pull on schedule.
@@ -533,15 +514,10 @@ The docker-compose.yml bind mount is currently commented out. Uncomment it and d
 ## State of the Art
 
 | Old Approach | Current Approach | Impact on Phase 13 |
-
-|---|---|---|
-
+| --- | --- | --- |
 | SSH keys for Docker clone | HTTPS token URL | Token URL is the GitHub Actions standard pattern; SSH requires key generation and known_hosts management |
-
 | `git clone` full history | `git clone --depth=1` | Shallow clone is standard for CI/CD and documentation pipelines; saves 10-100x storage |
-
 | Custom entrypoint.sh script | Node.js `ingestion.mjs` module | Keeps the tech stack uniform (Node.js throughout); no bash parsing edge cases |
-
 | PM2 process manager | Direct node execution | Already decided in Phase 12; clone mode has no impact on this decision |
 
 ---

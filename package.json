@@ -19,6 +19,8 @@
     "index:update": "node scripts/index-markdown.mjs --update",
     "lint": "markdownlint-cli2 '**/*.md'",
     "lint:fix": "markdownlint-cli2 --fix '**/*.md'",
+    "lint:tables": "node scripts/fix-tables.mjs . --check",
+    "fix:tables": "node scripts/fix-tables.mjs .",
     "fix": "node scripts/fix-markdown.mjs",
     "fix:all": "node scripts/fix-markdown.mjs --all",
     "validate": "node scripts/validate-timestamps.mjs",
@@ -64,6 +66,9 @@
   "lint-staged": {
     "!(.planning|.claude)/**/*.md": [
       "markdownlint-cli2 --fix"
+    ],
+    "{.planning,.claude}/**/*.md": [
+      "node scripts/fix-tables.mjs"
     ],
     "**/*.{js,mjs,json}": [
       "prettier --write"

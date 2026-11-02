@@ -199,9 +199,7 @@
 ## Ports & Services
 
 | Service | Port | Purpose |
-
 | ------- | ---- | ------- |
-
 | Express API | 9000 | REST endpoints (search, graph, scan, diagrams, webhooks) |
 
 ## Database Engine Details

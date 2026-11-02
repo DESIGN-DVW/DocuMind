@@ -62,37 +62,23 @@ Four SQL migration files applied successfully to the live DocuMind database:
 ## Verification Results
 
 | Check | Result |
-
 | ----- | ------ |
-
 | schema_migrations rows | 5 (001-005) |
-
 | documents.summary column exists | Yes (column 15, TEXT) |
-
 | documents.classification column exists | Yes (column 16, TEXT) |
-
 | document_tags table exists | Yes |
-
 | document_tags_fts virtual table | Yes |
-
 | doc_relationships CHECK constraint count | 0 |
-
 | Document count preserved | 8,172 |
-
 | FTS5 MATCH 'README' results | 5,835 |
-
 | All existing docs have NULL summary | Yes (8,172/8,172) |
 
 ## Decisions Made
 
 | Decision | Rationale |
-
 | -------- | --------- |
-
 | Omit `PRAGMA foreign_keys` from migration 005 SQL | migrate.mjs already sets `foreign_keys=ON` at startup; doc_relationships has 0 rows so no FK checks fire; avoids the SQLite restriction that PRAGMA cannot run inside a transaction |
-
 | Drop and recreate `document_graph` view in migration 005 | SQLite validates all dependent views when a table is dropped; dropping the view first prevents `error in view document_graph: no such table: main.doc_relationships` |
-
 | document_tags placed in schema.sql after keywords section | Logical grouping: both are enrichment/intelligence tables added in v3.0 |
 
 ## Deviations from Plan

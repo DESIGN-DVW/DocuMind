@@ -131,21 +131,12 @@
 ## Cross-Milestone Trends
 
 | Metric          | v3.0                     | v3.1                     |
-
 | --------------- | ------------------------ | ------------------------ |
-
 | Phases          | 5                        | 5                        |
-
 | Plans           | 14                       | 7                        |
-
 | Timeline        | 6 days                   | 1 day                    |
-
 | Avg plan time   | ~4 min                   | ~8 min                   |
-
 | Requirements    | 36/36 satisfied          | 12/12 satisfied          |
-
 | Tech debt items | 6 (non-blocking)         | 0                        |
-
 | Verification    | 4/5 phases have VERIF.md | 5/5 phases have VERIF.md |
-
 | Audit gaps      | N/A                      | 3 found, 3 resolved      |
