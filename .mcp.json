@@ -1,8 +1,20 @@
 {
   "mcpServers": {
-    "figma-desktop": {
-      "type": "http",
-      "url": "http://127.0.0.1:3845/mcp"
+    "agenthub": {
+      "command": "npx",
+      "args": ["tsx", "/Users/Shared/htdocs/github/DVWDesign/AgentHub/src/mcp-server.ts"],
+      "env": {
+        "SUPABASE_URL": "${AGENTHUB_SUPABASE_URL}",
+        "SUPABASE_SERVICE_ROLE_KEY": "${SUPABASE_SERVICE_ROLE_KEY}"
+      }
+    },
+    "aikido": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@aikidosec/mcp"],
+      "env": {
+        "AIKIDO_API_KEY": "${AIKIDO_TOKEN}"
+      }
     },
     "documind": {
       "command": "node",
@@ -12,20 +24,29 @@
         "DOCUMIND_PROFILE": "/Users/Shared/htdocs/github/DVWDesign/DocuMind/config/profiles/dvwdesign.json"
       }
     },
-    "agenthub": {
+    "github-mcp": {
+      "type": "stdio",
       "command": "npx",
-      "args": ["tsx", "/Users/Shared/htdocs/github/DVWDesign/AgentHub/src/mcp-server.ts"],
+      "args": ["-y", "@modelcontextprotocol/server-github"],
       "env": {
-        "SUPABASE_URL": "https://enfkrofkqfgxkequgcpi.supabase.co",
-        "SUPABASE_SERVICE_ROLE_KEY": "${SUPABASE_SERVICE_ROLE_KEY}"
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PAT}"
       }
     },
-    "productmarketing": {
+    "langflow": {
+      "type": "stdio",
       "command": "npx",
-      "args": ["tsx", "/Users/Shared/htdocs/github/DVWDesign/ProductMarketing/src/mcp-server.ts"],
+      "args": ["-y", "langflow-mcp-server"],
       "env": {
-        "SUPABASE_URL": "https://enfkrofkqfgxkequgcpi.supabase.co",
-        "SUPABASE_SERVICE_ROLE_KEY": "${SUPABASE_SERVICE_ROLE_KEY}"
+        "LANGFLOW_URL": "http://localhost:7860"
+      }
+    },
+    "n8n": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "n8n-mcp"],
+      "env": {
+        "N8N_API_URL": "http://localhost:5678",
+        "N8N_API_KEY": ""
       }
     }
   }
