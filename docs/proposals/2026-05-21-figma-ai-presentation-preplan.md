@@ -21,8 +21,7 @@ stakeholders: "ProductMarketing, RandD, FigmaDSController, Figma-Plug-ins, Figma
 
 ## Objective
 
-Produce a full report and two-track presentation deck showcasing DVWDesign's Figma AI
-framework. The deliverables serve two audiences simultaneously:
+Produce a full report and two-track presentation deck showcasing DVWDesign's Figma AI framework. The deliverables serve two audiences simultaneously:
 
 | Track        | Audience                      | Framing                                          |
 | ------------ | ----------------------------- | ------------------------------------------------ |
@@ -60,27 +59,23 @@ Ten chapters. All audiences. Maximum depth. Source of truth for all other delive
 
 `DocuMind/docs/reports/2026-05-21-figma-ai-framework-exec-summary.md`
 
-Plain language. No code. No jargon. Explains what the framework does for people who have
-never used Figma, AI agents, or design systems. 4-page equivalent.
+Plain language. No code. No jargon. Explains what the framework does for people who have never used Figma, AI agents, or design systems. 4-page equivalent.
 
 ### 3. Internal Strategy Deck
 
 `DocuMind/docs/slides/internal/2026-05-21-figma-ai-internal-deck.md`
 
-Markdown → web (Marp). Covers full capability inventory, team workflow changes, roadmap,
-P&L. 20–30 slides.
+Markdown → web (Marp). Covers full capability inventory, team workflow changes, roadmap, P&L. 20–30 slides.
 
 ### 4. External Pitch Deck
 
 `DocuMind/docs/slides/external/2026-05-21-figma-ai-pitch-deck.md`
 
-Markdown → web (Marp). Simplified. ROI-centric. Pricing packages. CTA. 12–15 slides.
-Exports: PDF, PPTX, Keynote-compatible, .odp.
+Markdown → web (Marp). Simplified. ROI-centric. Pricing packages. CTA. 12–15 slides. Exports: PDF, PPTX, Keynote-compatible, .odp.
 
 ### 5. Figma Slides Version (stretch goal, Day 4)
 
-Figma Slides file generated from the external pitch deck content. Requires `use_figma` MCP.
-Used for live presentation; PDF export for stakeholders without Figma access.
+Figma Slides file generated from the external pitch deck content. Requires `use_figma` MCP. Used for live presentation; PDF export for stakeholders without Figma access.
 
 ### 6. Dispatches (DISPATCH-066 series)
 
@@ -119,8 +114,7 @@ Three recurring agent sessions configured via CronCreate:
 
 ### Chapter 1 — Executive Overview
 
-What the Figma AI framework is in 3 sentences. Who benefits. What is different now
-versus 12 months ago.
+What the Figma AI framework is in 3 sentences. Who benefits. What is different now versus 12 months ago.
 
 ### Chapter 2 — What We Built
 
@@ -134,8 +128,7 @@ REST API → Plugins → Scripts → MCP Server → Skills / Commands
 
 Plus: Figma Agent (canvas-native, launched May 2026, complements MCP).
 
-Key tools per layer: `generate_diagram`, `get_design_context`, `export-figma-png.mjs`,
-`figma-diagram` command, `figma-curate` command.
+Key tools per layer: `generate_diagram`, `get_design_context`, `export-figma-png.mjs`, `figma-diagram` command, `figma-curate` command.
 
 ### Chapter 3 — What It Solves
 
@@ -196,8 +189,7 @@ Three tiers (at scale):
 | T2 — User | Designers, PMs | Hands-on workshop + playbook | 1 day | Can use the framework |
 | T3 — Admin | Devs, agents | Deep-dive + CLAUDE.md | 2 days | Can extend the framework |
 
-Delivery: live sessions, recorded playback, Figma Slides walkthrough, PDF workbook.
-Maintenance: quarterly update cycle (tools evolve fast).
+Delivery: live sessions, recorded playback, Figma Slides walkthrough, PDF workbook. Maintenance: quarterly update cycle (tools evolve fast).
 
 ### Chapter 8 — Pricing Model
 
@@ -231,8 +223,7 @@ Draw from `PRICING-INVOICING-STRATEGY.md` 7-layer model. Proposed packages:
 
 ### Chapter 9 — UX Review
 
-Current team workflow pain points the framework addresses. Open questions for next
-iteration (what users still find friction-heavy). Status of adoption across DVW repos.
+Current team workflow pain points the framework addresses. Open questions for next iteration (what users still find friction-heavy). Status of adoption across DVW repos.
 
 ### Chapter 10 — Roadmap
 
@@ -280,8 +271,7 @@ Short (this month), medium (Q3), long (H2):
 
 ### Internal Strategy (20–25 slides)
 
-All of the above + framework layer deep-dives, team assignment map, CRON meeting
-schedule, per-repo capability inventory, P&L breakdown, open R&D questions.
+All of the above + framework layer deep-dives, team assignment map, CRON meeting schedule, per-repo capability inventory, P&L breakdown, open R&D questions.
 
 ---
 
@@ -299,8 +289,7 @@ schedule, per-repo capability inventory, P&L breakdown, open R&D questions.
 
 ### Stretch: Figma Slides
 
-After Marp decks are final, push to Figma Slides via `use_figma` MCP for live
-presentation quality. Figma Slides exports PDF natively.
+After Marp decks are final, push to Figma Slides via `use_figma` MCP for live presentation quality. Figma Slides exports PDF natively.
 
 ---
 
@@ -342,8 +331,7 @@ Each CRON fires a DocuMind/RootDispatcher agent that:
 
 5. Posts a summary to AgentHub (`publish_discovery`)
 
-Duration tracked via timestamp diff between start and report write.
-Decisions logged as `decisions.jsonl` entries in RootDispatcher.
+Duration tracked via timestamp diff between start and report write. Decisions logged as `decisions.jsonl` entries in RootDispatcher.
 
 ---
 

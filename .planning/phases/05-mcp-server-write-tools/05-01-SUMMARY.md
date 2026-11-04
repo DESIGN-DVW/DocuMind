@@ -52,29 +52,17 @@ Added 5 write tools to `daemon/mcp-server.mjs` alongside the existing 6 read too
 ### Tool Inventory (6 read + 5 write = 11 total)
 
 | # | Tool | Type | Purpose |
-
 | -- | ---- | ---- | ------- |
-
 | 1 | search_docs | read | FTS5 full-text search |
-
 | 2 | get_related | read | Graph traversal N hops |
-
 | 3 | get_keywords | read | TF-IDF keyword cloud |
-
 | 4 | get_tree | read | Folder hierarchy |
-
 | 5 | check_existing | read | Duplication check |
-
 | 6 | get_diagrams | read | Diagram registry |
-
 | 7 | index_file | write | Re-index single file + FTS5 rebuild |
-
 | 8 | lint_file | read-intent | markdownlint + custom rules, returns issues |
-
 | 9 | fix_file | write | Two-pass fix + re-index |
-
 | 10 | trigger_scan | write | runScan with mode/repo |
-
 | 11 | curate_diagram | write | relinkDiagram + propagate + snapshot |
 
 ### Key Implementation Details
@@ -98,11 +86,8 @@ Added 5 write tools to `daemon/mcp-server.mjs` alongside the existing 6 read too
 ## Commits
 
 | Hash | Task | Description |
-
 | ---- | ---- | ----------- |
-
 | 2253262 | Task 1 | export 4 fix functions from fix-markdown.mjs |
-
 | df49787 | Task 2 | add 5 write tools to MCP server with read-write DB |
 
 ## Deviations from Plan
@@ -112,19 +97,12 @@ None — plan executed exactly as written.
 ## Verification Results
 
 | Check | Result |
-
 | ----- | ------ |
-
 | `grep -c 'server.tool' daemon/mcp-server.mjs` | 11 |
-
 | `grep 'readonly' daemon/mcp-server.mjs` | no matches |
-
 | `grep 'journal_mode = WAL' daemon/mcp-server.mjs` | match found |
-
 | `grep -c 'validatePath' daemon/mcp-server.mjs` | 4 (definition + 3 tool usages) |
-
 | 4 fix functions importable from fix-markdown.mjs | pass |
-
 | All dependency imports resolve (markdownlint, orchestrator, relink-processor, markdown-processor) | pass |
 
 ## Self-Check: PASSED

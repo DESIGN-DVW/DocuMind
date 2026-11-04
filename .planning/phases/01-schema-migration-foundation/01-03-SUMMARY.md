@@ -130,21 +130,13 @@ Each task was committed atomically:
 ## Classification Distribution (actual results)
 
 | Classification | Count |
-
 | --- | --- |
-
 | references/readme | 5021 |
-
 | uncategorized | 1699 |
-
 | operations/changelog | 853 |
-
 | guides/documentation | 490 |
-
 | engineering/api-docs | 100 |
-
 | engineering/architecture | 7 |
-
 | engineering/tests | 2 |
 
 The high `references/readme` count reflects the node_modules corpus (thousands of package READMEs). `uncategorized` at 1699 is the catch-all for docs not matching any rule — will be refined in Phase 2 context profiles.

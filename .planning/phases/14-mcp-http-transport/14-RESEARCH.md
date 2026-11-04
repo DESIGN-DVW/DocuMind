@@ -56,15 +56,10 @@ None — discussion stayed within phase scope
 ## Phase Requirements
 
 | ID | Description | Research Support |
-
-|----|-------------|-----------------|
-
+| ---- | ------------- | ----------------- |
 | MCPT-01 | MCP HTTP endpoint on POST /mcp using StreamableHTTPServerTransport | SDK class confirmed, Express integration pattern established |
-
 | MCPT-02 | Bearer token auth protects MCP HTTP endpoint | Custom `OAuthTokenVerifier` pattern or manual Express middleware; `requireBearerAuth` from SDK requires `expiresAt` — not suitable for static tokens |
-
 | MCPT-03 | MCP stdio mode continues to work for local Claude Code | Existing `StdioServerTransport` path unchanged; mode switch via env var |
-
 | MCPT-04 | MCP mode (stdio/http) selectable via env var | `DOCUMIND_MCP_MODE` env var read at startup in `mcp-server.mjs` |
 
 </phase_requirements>
@@ -84,33 +79,23 @@ The existing `mcp-server.mjs` already uses `StdioServerTransport`. This phase ex
 ### Core
 
 | Library | Version | Purpose | Why Standard |
-
-|---------|---------|---------|--------------|
-
+| --------- | --------- | --------- | -------------- |
 | `@modelcontextprotocol/sdk` | `^1.27.1` (already installed) | `StreamableHTTPServerTransport`, `McpServer` | Official MCP SDK — no new dep needed |
-
 | `express` | `^5.2.1` (already installed) | HTTP routing, middleware | Already used for port 9000 REST API |
 
 ### Supporting
 
 | Library | Version | Purpose | When to Use |
-
-|---------|---------|---------|-------------|
-
+| --------- | --------- | --------- | ------------- |
 | `cors` npm package | — | CORS headers | NOT needed — CORS is 4 lines of Express middleware; adding a dep is overkill here |
-
 | `crypto` (Node built-in) | built-in | `randomUUID()` for stateful session IDs | Only if stateful mode is chosen |
 
 ### Alternatives Considered
 
 | Instead of | Could Use | Tradeoff |
-
-|------------|-----------|----------|
-
+| ------------ | ----------- | ---------- |
 | `StreamableHTTPServerTransport` | Custom JSON-RPC REST wrapper | Would require reimplementing MCP protocol framing — always worse |
-
 | Hand-written bearer middleware | SDK `requireBearerAuth` | SDK requires OAuth-style `expiresAt` on tokens — unusable for static tokens without workarounds |
-
 | Same port 9000 | Separate MCP port | Same port is simpler: one listener, one Docker port mapping, existing Express app extended |
 
 **Installation:** No new packages required — SDK and Express already installed.
@@ -291,11 +276,8 @@ res.json({
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
-
-|---------|-------------|-------------|-----|
-
+| --------- | ------------- | ------------- | ----- |
 | MCP protocol framing (JSON-RPC over HTTP, SSE streaming, session headers) | Custom REST-to-MCP adapter | `StreamableHTTPServerTransport.handleRequest()` | Handles POST/GET/DELETE, SSE vs JSON response negotiation, `Mcp-Session-Id`, `MCP-Protocol-Version` header validation |
-
 | HTTP server for MCP | New Express app | Extend existing Express app in `server.mjs` | STATE.md already notes server was exported for this purpose |
 
 **Key insight:** The transport does all protocol work. The only custom code needed is the auth middleware and the mode switch.
@@ -424,11 +406,8 @@ No additional port exposure is needed — MCP HTTP runs on existing port 9000.
 ## State of the Art
 
 | Old Approach | Current Approach | When Changed | Impact |
-
-|--------------|------------------|--------------|--------|
-
+| -------------- | ------------------ | -------------- | -------- |
 | HTTP+SSE transport (separate GET /sse + POST /messages endpoints) | Streamable HTTP (single `/mcp` endpoint, POST+GET+DELETE) | MCP spec 2025-03-26 | REQUIREMENTS.md explicitly forbids SSE transport |
-
 | Full OAuth 2.0 with `requireBearerAuth` | Custom static token verifier for API-key use cases | Always — SDK auth was designed for OAuth | Static bearer tokens are the right fit for server-to-server use |
 
 ### Deprecated/outdated:

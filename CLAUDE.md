@@ -313,10 +313,7 @@ npm run fix:custom:all      # Fix custom errors across all repos
 
 ### Analysis
 
-Similarity and deviation detection are no longer standalone scripts. They run
-inside `orchestrator.mjs` as part of the daily 2 AM scan, writing to
-`content_similarities` and `deviations`. There is nothing to invoke by hand —
-trigger a scan instead:
+Similarity and deviation detection are no longer standalone scripts. They run inside `orchestrator.mjs` as part of the daily 2 AM scan, writing to `content_similarities` and `deviations`. There is nothing to invoke by hand — trigger a scan instead:
 
 ```bash
 
@@ -324,14 +321,11 @@ curl -X POST -H "Authorization: Bearer $DOCUMIND_API_TOKEN" http://localhost:900
 
 ```
 
-Read the results via the `get_similarities` / `get_deviations` MCP tools, or the
-`/diagrams` and `/obsolete` dashboards.
+Read the results via the `get_similarities` / `get_deviations` MCP tools, or the `/diagrams` and `/obsolete` dashboards.
 
 ### Reports
 
-The deviation and canonical report scripts were removed along with the
-standalone analysis scripts. Use the dashboards at
-`http://localhost:9000/dashboard/` for the same data.
+The deviation and canonical report scripts were removed along with the standalone analysis scripts. Use the dashboards at `http://localhost:9000/dashboard/` for the same data.
 
 ### Tree & Diagrams
 
@@ -643,8 +637,7 @@ graphify update .
 
 ## MCP servers available in this repo
 
-Assigned by `RootDispatcher/config/mcp-registry.json`. This section is generated —
-change the registry, not this file. A server absent here is absent by decision.
+Assigned by `RootDispatcher/config/mcp-registry.json`. This section is generated — change the registry, not this file. A server absent here is absent by decision.
 
 | Server | Access | When to use it |
 | --- | --- | --- |

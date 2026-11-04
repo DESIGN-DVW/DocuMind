@@ -83,19 +83,12 @@
 ## Phase Requirements
 
 | ID | Description | Research Support |
-
 | --- | --- | --- |
-
 | MCPW-01 | `index_file` tool — re-index a single file after edit | `indexMarkdown(db, filePath, repository, ctx)` already exported from `processors/markdown-processor.mjs`; MCP tool wraps it with path validation + FTS5 rebuild |
-
 | MCPW-02 | `lint_file` tool — lint a file and return issues | `markdownlint` 0.36.1 (already installed) provides `sync()` API; issues have `ruleNames`, `lineNumber`, `fixInfo` (null = not auto-fixable); config loaded from `config/.markdownlint.json` |
-
 | MCPW-03 | `fix_file` tool — auto-fix a file's markdown issues | `markdownlint.applyFixes(content, issues)` applies all auto-fixable issues; `fix-markdown.mjs` covers non-auto-fixable patterns (code block language detection, bold-italic conversion); write file, re-index |
-
 | MCPW-04 | `trigger_scan` tool — trigger incremental or full scan via orchestrator | `runScan(db, ctx, { mode, repo })` exported from `orchestrator.mjs`; supports 'incremental', 'full', 'deep'; MCP server must open DB read-write (remove `readonly: true`) |
-
 | MCPW-05 | `relink_diagram` (folded into `curate_diagram`) — set curated FigJam URL and propagate | `relinkDiagram()` + `propagateRelinkAllRepos()` already exported from `processors/relink-processor.mjs`; wraps in one MCP tool; leaves changes unstaged |
-
 | MCPW-06 | Path validation against `ctx.repoRoots` for all write operations | `ctx.repoRoots` array (from `loadProfile()`) contains `{ name, path }` entries; validate with `path.startsWith(root.path)` check before any file I/O |
 
 </phase_requirements>
@@ -119,39 +112,26 @@ The registration task requires adding a `documind` entry to 15 repos' `.mcp.json
 ### Core
 
 | Library | Version | Purpose | Why Standard |
-
 | --- | --- | --- | --- |
-
 | `markdownlint` | `0.36.1` (already installed) | Lint API (`sync()`, `applyFixes()`) | Already a transitive dep of `markdownlint-cli2`; confirmed installed at `node_modules/markdownlint/`; exposes CJS `sync`, `applyFixes` API |
-
 | `markdownlint-cli2` | `^0.15.0` (already installed) | Config resolution, custom rule loading | Already installed; provides config merging and custom rule loading pipeline — reuse its config loading rather than re-implementing |
-
 | `better-sqlite3` | `^12.6.2` (existing) | DB writes for index_file, trigger_scan, curate_diagram | Must open read-write (not readonly) in mcp-server.mjs for Phase 5 |
-
 | `@modelcontextprotocol/sdk` | `^1.27.1` (existing) | MCP server + stdio transport | Already installed from Phase 4 |
-
 | `zod` | `^3.25.0` (existing) | Tool schema validation | Already installed |
 
 ### Supporting
 
 | Library | Version | Purpose | When to Use |
-
 | --- | --- | --- | --- |
-
 | `fs/promises` | Node built-in | File read/write for fix_file, curate_diagram propagation | All file I/O for write tools |
-
 | `path` | Node built-in | Path validation against `ctx.repoRoots` | Security boundary enforcement |
 
 ### Alternatives Considered
 
 | Instead of | Could Use | Tradeoff |
-
 | --- | --- | --- |
-
 | `markdownlint` sync API | Shell-exec `markdownlint-cli2` | Subprocess adds latency, parsing overhead, and no fixInfo access; sync API is synchronous and returns structured objects |
-
 | `markdownlint.applyFixes()` | Re-implement fix logic from scratch | `applyFixes()` handles overlapping edits correctly (sorted by line/column, applied in reverse); hand-rolling this is error-prone |
-
 | Reuse functions from `fix-markdown.mjs` | Call `node scripts/fix-markdown.mjs` via subprocess | Import the fix functions directly (`detectLanguage`, `fixCodeBlockLanguages`, `fixBoldItalicToHeadingsOrLists`, `fixLineBreaks`) — no subprocess, no stdout parsing |
 
 **Installation:** No new packages needed. All dependencies are already installed.
@@ -427,17 +407,11 @@ Each existing `.mcp.json` may already have other MCP servers (e.g., figma-deskto
 ## What Already Exists (Don't Rebuild)
 
 | Write Tool | Existing Code | Location | What Remains |
-
 | --- | --- | --- | --- |
-
 | `index_file` | `indexMarkdown(db, filePath, repository, ctx)` | `processors/markdown-processor.mjs:129` | Path validation + FTS5 rebuild + repo name derivation |
-
 | `lint_file` | `markdownlint.sync()` | `node_modules/markdownlint/` | Load config, map result shape to `{ line, rule, message, fixable }` |
-
 | `fix_file` | `applyFixes()` + `fixCodeBlockLanguages()`, `fixBoldItalicToHeadingsOrLists()`, `fixLineBreaks()` | `node_modules/markdownlint/` + `scripts/fix-markdown.mjs` | Import fix functions, two-pass apply, write file, re-index |
-
 | `trigger_scan` | `runScan(db, ctx, { mode, repo })` | `orchestrator.mjs:637` | Thin MCP wrapper with mode validation |
-
 | `curate_diagram` | `relinkDiagram()` + `propagateRelinkAllRepos()` | `processors/relink-processor.mjs:45,87` | Snapshot generation + MCP wrapper |
 
 **Key insight:** The total new code is thin MCP wrappers around already-implemented logic. The bulk of Phase 5 is integration (path validation, DB write-mode, snapshot generation) and registration (15 `.mcp.json` file edits).
@@ -876,13 +850,9 @@ async function generateDiagramSnapshot(db) {
 ## State of the Art
 
 | Old Approach | Current Approach | When Changed | Impact |
-
 | --- | --- | --- | --- |
-
 | Per-repo DIAGRAM-REGISTRY.md as source of truth | DocuMind DB `diagrams` table as single source of truth | Phase 5 decision | Two existing per-repo files (RootDispatcher, any2figma) will be reverse-synced and deleted |
-
 | `relink_diagram` as standalone MCP tool | Folded into `curate_diagram` | Phase 5 decision | One tool sets URL + propagates; no separate relink step |
-
 | DB open as readonly | DB open read-write with WAL | Phase 5 | Required for write tools |
 
 ---

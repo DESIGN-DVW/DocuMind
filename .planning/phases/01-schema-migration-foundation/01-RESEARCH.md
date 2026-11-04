@@ -67,17 +67,11 @@
 ## Phase Requirements
 
 | ID | Description | Research Support |
-
 | ---- | ------------- | ----------------- |
-
 | SCHM-01 | Schema migration system with versioned SQL files and a `schema_migrations` table (protects 8K live docs from destructive db:reset) | See Architecture Patterns: Migration Runner pattern; `schema_migrations` DDL; `db:migrate` wiring |
-
 | SCHM-02 | Add `summary TEXT` column to documents table with FTS5 rebuild | See Code Examples: ALTER TABLE + FTS5 rebuild; Pitfall 2 on FTS5 sync |
-
 | SCHM-03 | Add `classification TEXT` column to documents table (materialized path format) | See Code Examples: ALTER TABLE; backfill pattern using path-based rules; `category` migration note |
-
 | SCHM-04 | Create `document_tags` table (document_id, tag, source, confidence) with FTS5 | See Code Examples: new table + FTS5 virtual table + triggers; tag extraction discretion guidance |
-
 | SCHM-05 | Remove hardcoded CHECK constraints from schema that enumerate DVWDesign-specific values | See Architecture Patterns: CHECK constraint removal approach; live DB impact analysis |
 
 </phase_requirements>
@@ -99,23 +93,14 @@ The `db:reset` guard and the `schema_migrations` table are the two deliverables 
 Confirmed by direct inspection of `/Users/Shared/htdocs/github/DVWDesign/DocuMind/data/documind.db`:
 
 | Fact | Value |
-
 | ------ | ------- |
-
 | Document count | 8,172 rows |
-
 | DB file size | 125 MB |
-
 | `summary` column on `documents` | Does not exist |
-
 | `classification` column on `documents` | Does not exist |
-
 | `document_tags` table | Does not exist |
-
 | `schema_migrations` table | Does not exist |
-
 | `category` column populated | Yes — 5,021 `readme`, 1,926 `other`, 1,203 `documentation`, 7 `claude-instructions`, etc. |
-
 | v2.0 tables (doc_relationships, keywords, folder_nodes, diagrams) | Tables exist, all 0 rows |
 
 The `category` values are DVWDesign-specific string labels, not materialized path format. They come from the markdown-processor's path-detection heuristic (line pattern matching). The new `classification` column is a separate addition — `category` is NOT being renamed; both fields coexist, with `classification` being the canonical new field from Phase 2+ profile rules.
@@ -125,15 +110,10 @@ The `category` values are DVWDesign-specific string labels, not materialized pat
 ### Core (all already installed)
 
 | Library | Version | Purpose | Notes |
-
 | --------- | --------- | --------- | ------- |
-
 | `better-sqlite3` | 12.6.2 | Synchronous SQLite access — ALTER TABLE, transactions, FTS5 rebuild | Already in dependencies |
-
 | Node.js `fs` | built-in | File backup (`fs.copyFileSync`), migration file reading | No new dependency |
-
 | `gray-matter` | 4.0.3 | Parse frontmatter `description:` field for summary extraction | Already in dependencies |
-
 | `chalk` | 5.3.0 | CLI output in migration runner | Already in dependencies |
 
 **No new dependencies required for Phase 1.** All needed libraries are already installed.
@@ -141,13 +121,9 @@ The `category` values are DVWDesign-specific string labels, not materialized pat
 ### Alternatives Considered
 
 | Instead of | Could Use | Why Rejected |
-
 | ------------ | ----------- | -------------- |
-
 | Hand-written migration runner | `db-migrate`, `knex migrations`, `typeorm migrations` | Project is ESM + better-sqlite3 + no ORM; adding a migration framework adds abstraction with no benefit for a single-DB project |
-
 | SQL-only migration files | Node.js migration scripts (`.mjs`) | Backfill requires gray-matter parsing and path logic — pure SQL cannot extract frontmatter `description:` fields |
-
 | `VACUUM INTO 'backup.db'` for backup | `fs.copyFileSync` | VACUUM INTO creates a clean compacted copy but requires opening the DB; pre-migration backup should be file-level copy BEFORE the DB is opened (simpler, faster, no risk of partial write) |
 
 ## Architecture Patterns
@@ -520,13 +496,9 @@ if (!process.argv.includes('--force')) {
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
-
 | --------- | ------------- | ------------- | ----- |
-
 | Gray-matter frontmatter parsing in backfill | Custom YAML parser | `gray-matter` (already installed) | Handles edge cases: multi-line values, colons in strings, nested objects |
-
 | Batch transaction pattern | Ad-hoc loop with individual commits | `db.transaction(fn)` from better-sqlite3 | Atomic, auto-rollback, dramatically faster than per-row commits (100x+ on 8K rows) |
-
 | File-level backup | Custom copy logic | `fs.copyFileSync()` | WAL mode files need all three files copied (.db, .db-shm, .db-wal) if WAL is active; but for a pre-migration backup, opening the DB first (which checkpoints WAL) then copying is also valid |
 
 ## Common Pitfalls
@@ -668,15 +640,10 @@ ALTER TABLE documents ADD COLUMN classification TEXT;
 ## State of the Art
 
 | Old Approach | Current Approach | Impact for Phase 1 |
-
 | -------------- | ------------------ | ------------------- |
-
 | `db.exec(schema)` on every init | Numbered migration files + `schema_migrations` | Phase 1 builds the new approach |
-
 | `rm -f data/documind.db` for reset | `--force` flag guard + loud warning | Phase 1 adds the guard |
-
 | Single `schema.sql` with all DDL | `schema.sql` + `migrations/` directory | Both maintained: schema.sql reflects target state; migrations are the diffs |
-
 | `init-database.mjs` handles both init and migrate | `init-database.mjs` (fresh DB) + `migrate.mjs` (evolve existing DB) | Phase 1 separates these concerns |
 
 ## Open Questions
