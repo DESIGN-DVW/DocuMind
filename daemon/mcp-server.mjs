@@ -8,7 +8,6 @@ import path from 'path';
 import { z } from 'zod';
 import { loadProfile } from '../context/loader.mjs';
 import { findRelated } from '../graph/sqlite-traversal.mjs';
-import { createRequire } from 'module';
 import fs from 'fs/promises';
 import { indexMarkdown } from '../processors/markdown-processor.mjs';
 import { analyzeRepo } from '../processors/tree-processor.mjs';
@@ -17,16 +16,14 @@ import { createBearerAuth, parseTokens } from './bearer-auth.mjs';
 import { runScan, generateDiagramSnapshot as _generateDiagramSnapshot } from '../orchestrator.mjs';
 import { relinkDiagram, propagateRelinkAllRepos } from '../processors/relink-processor.mjs';
 import {
-  fixCodeBlockLanguages,
-  fixBoldItalicToHeadingsOrLists,
-  fixLineBreaks,
-} from '../scripts/fix-markdown.mjs';
+  lintContent,
+  fixContent,
+  countChangedLines,
+  persistLintIssues,
+} from '../processors/lint-processor.mjs';
+import { translateFile } from '../processors/translate-processor.mjs';
+import { buildRestyleBrief, writeDraft, availableStyles } from '../processors/style-processor.mjs';
 import { writingNow } from './registry-lock.mjs';
-
-const require = createRequire(import.meta.url);
-// markdownlint >= 0.35 moved the sync API to the 'markdownlint/sync' subpath
-const { lint: markdownlintSync } = require('markdownlint/sync');
-const { applyFixes } = require('markdownlint');
 
 import {
   ROOT,
@@ -41,9 +38,6 @@ db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
 const ctx = await loadProfile();
-
-const MARKDOWNLINT_CONFIG_PATH = path.join(ROOT, 'config/.markdownlint.json');
-const RULES_DIR = path.join(ROOT, 'config/rules');
 
 // Derive registryPath for curate_diagram from profile JSON
 const profileFilePath = PROFILE_PATH;
@@ -826,31 +820,10 @@ server.registerTool(
       if (!valid) return pathError(file, ctx, startMs);
 
       const content = await fs.readFile(file, 'utf-8');
-      const config = JSON.parse(await fs.readFile(MARKDOWNLINT_CONFIG_PATH, 'utf-8'));
-
-      const customRules = [];
-      try {
-        customRules.push(require(path.join(RULES_DIR, 'no-blank-lines-in-tables.cjs')));
-        customRules.push(require(path.join(RULES_DIR, 'table-separator-spacing.cjs')));
-      } catch {
-        /* custom rules optional */
-      }
-
-      const rawResults = markdownlintSync({
-        strings: { [file]: content },
-        config,
-        customRules,
-      });
-
-      const issues = (rawResults[file] || []).map(issue => ({
-        line: issue.lineNumber,
-        rule: issue.ruleNames[0],
-        message: issue.ruleDescription,
-        detail: issue.errorDetail,
-        fixable: issue.fixInfo !== null,
-      }));
-
+      const issues = await lintContent(file, content);
       const fixableCount = issues.filter(i => i.fixable).length;
+
+      persistLintIssues(db, file, issues);
 
       return {
         content: [
@@ -859,7 +832,7 @@ server.registerTool(
             text: JSON.stringify({
               success: true,
               summary: `${issues.length} issues found (${fixableCount} auto-fixable)`,
-              issues,
+              issues: issues.map(({ ruleNames: _ruleNames, ...issue }) => issue),
               total: issues.length,
               fixable_count: fixableCount,
               duration_ms: Date.now() - startMs,
@@ -905,69 +878,44 @@ server.registerTool(
       if (!valid) return pathError(file, ctx, startMs);
 
       const content = await fs.readFile(file, 'utf-8');
-      const config = JSON.parse(await fs.readFile(MARKDOWNLINT_CONFIG_PATH, 'utf-8'));
 
-      const customRules = [];
-      try {
-        customRules.push(require(path.join(RULES_DIR, 'no-blank-lines-in-tables.cjs')));
-        customRules.push(require(path.join(RULES_DIR, 'table-separator-spacing.cjs')));
-      } catch {
-        /* custom rules optional */
-      }
+      // Runs markdownlint auto-fixes and the regex passes to convergence, so a
+      // pass that undoes an earlier pass gets corrected rather than shipped.
+      const result = await fixContent(file, content);
+      const linesChanged = countChangedLines(content, result.content);
 
-      // Pass 1 — markdownlint auto-fixes
-      const issues =
-        markdownlintSync({ strings: { [file]: content }, config, customRules })[file] || [];
-      const pass1 = applyFixes(content, issues);
-      const fixedRules = [
-        ...new Set(issues.filter(i => i.fixInfo !== null).map(i => i.ruleNames[0])),
-      ];
-
-      // Pass 2 — custom fixes from fix-markdown.mjs
-      let lines = pass1.split('\n');
-      const beforeCustom = lines.join('\n');
-      lines = fixCodeBlockLanguages(lines);
-      const afterCodeBlock = lines.join('\n');
-      lines = fixBoldItalicToHeadingsOrLists(lines);
-      lines = fixLineBreaks(lines);
-      const finalContent = lines.join('\n');
-
-      // Track which custom fix passes changed content
-      const customFixes = [];
-      if (afterCodeBlock !== beforeCustom) customFixes.push('code-block-language-detection');
-      if (finalContent !== afterCodeBlock) customFixes.push('custom-formatting-fixes');
-
-      // Count differing lines
-      const originalLines = content.split('\n');
-      const finalLines = finalContent.split('\n');
-      const maxLen = Math.max(originalLines.length, finalLines.length);
-      let linesChanged = 0;
-      for (let i = 0; i < maxLen; i++) {
-        if (originalLines[i] !== finalLines[i]) linesChanged++;
-      }
-
-      const changed = finalContent !== content;
-
-      if (changed) {
-        await fs.writeFile(file, finalContent, 'utf-8');
+      if (result.changed) {
+        await fs.writeFile(file, result.content, 'utf-8');
         await indexMarkdown(db, file, repoName, ctx);
         db.prepare("INSERT INTO documents_fts(documents_fts) VALUES('rebuild')").run();
       }
 
-      const allFixes = [...fixedRules, ...customFixes];
+      // Record what survived the fixer — these are the issues needing a human.
+      persistLintIssues(db, file, result.residualIssues, result.fixesApplied.join(', ') || null);
+
+      const residualFixable = result.residualIssues.filter(i => i.fixable);
 
       return {
         content: [
           {
             type: 'text',
             text: JSON.stringify(
-              changed
+              result.changed
                 ? {
                     success: true,
-                    summary: `Fixed ${path.basename(file)} — ${allFixes.length} fix type(s) applied`,
-                    fixes_applied: allFixes,
+                    summary: `Fixed ${path.basename(file)} — ${result.fixesApplied.length} fix type(s) applied in ${result.iterations} pass(es)`,
+                    fixes_applied: result.fixesApplied,
                     file,
                     lines_changed: linesChanged,
+                    iterations: result.iterations,
+                    converged: result.converged,
+                    residual_issues: result.residualIssues.length,
+                    residual_fixable: residualFixable.length,
+                    ...(result.converged
+                      ? {}
+                      : {
+                          warning: `Did not converge after ${result.iterations} passes — fix rules may be in conflict`,
+                        }),
                     duration_ms: Date.now() - startMs,
                   }
                 : {
@@ -976,6 +924,9 @@ server.registerTool(
                     fixes_applied: [],
                     file,
                     lines_changed: 0,
+                    iterations: result.iterations,
+                    converged: result.converged,
+                    residual_issues: result.residualIssues.length,
                     duration_ms: Date.now() - startMs,
                   }
             ),
@@ -1268,6 +1219,184 @@ server.registerTool(
             text: JSON.stringify({
               success: false,
               error: err.message,
+            }),
+          },
+        ],
+        isError: true,
+      };
+    }
+  }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tool 16: translate_file — EN↔FR translation via DeepL (MD-04)
+// ─────────────────────────────────────────────────────────────────────────────
+server.registerTool(
+  'translate_file',
+  {
+    description:
+      'Translate a markdown file into a sibling <name>.<lang>.md via DeepL. Opt-in: the source must carry `translate: fr` in its frontmatter unless force is set. Code blocks, inline code, URLs, file paths, and wikilinks are preserved byte-for-byte. Re-running is a no-op until the source changes.',
+    inputSchema: {
+      file: z.string().describe('Absolute path to the source markdown file'),
+      lang: z
+        .string()
+        .optional()
+        .describe(
+          'Target language code, e.g. "fr". Defaults to the frontmatter `translate` value.'
+        ),
+      force: z
+        .boolean()
+        .optional()
+        .describe(
+          'Translate even without a frontmatter opt-in, and re-translate an unchanged source'
+        ),
+      dry_run: z.boolean().optional().describe('Report what would happen without writing the file'),
+    },
+  },
+  async ({ file, lang, force, dry_run }) => {
+    const startMs = Date.now();
+    try {
+      const { valid, repoName } = validatePath(file, ctx);
+      if (!valid) return pathError(file, ctx, startMs);
+
+      const result = await translateFile(file, { lang, force, dryRun: dry_run });
+
+      // Index the translation so it is searchable alongside its source
+      if (result.status === 'translated' && !dry_run) {
+        await indexMarkdown(db, result.target, repoName, ctx);
+        db.prepare("INSERT INTO documents_fts(documents_fts) VALUES('rebuild')").run();
+      }
+
+      const summaries = {
+        translated: `Translated to ${path.basename(result.target ?? '')} (${result.chars} chars)`,
+        unchanged: 'Already up to date — source unchanged since last translation',
+        skipped: result.reason,
+        unavailable: result.reason,
+      };
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: result.status !== 'unavailable',
+              summary: summaries[result.status],
+              ...result,
+              duration_ms: Date.now() - startMs,
+            }),
+          },
+        ],
+      };
+    } catch (err) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: false,
+              summary: err.message,
+              suggested_action:
+                'Check DEEPL_API_KEY is set and the file has valid frontmatter. Never paste the key into a document.',
+              duration_ms: Date.now() - startMs,
+            }),
+          },
+        ],
+        isError: true,
+      };
+    }
+  }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tool 17: restyle_draft — Tier 2 opt-in prose restyling (MD-05)
+// ─────────────────────────────────────────────────────────────────────────────
+server.registerTool(
+  'restyle_draft',
+  {
+    description:
+      "Restyle a document's prose into a target voice. Two-step and never automatic: call without `restyled` to get the style brief and source, then call again with the rewritten markdown to save it. Always writes to a <name>.draft.md sibling — the source is never modified — and lints the draft before accepting it.",
+    inputSchema: {
+      file: z.string().describe('Absolute path to the source markdown file'),
+      style: z
+        .string()
+        .describe(
+          'Target style: casual, marketing, didactic, tutorial, short, series, expert, newbie'
+        ),
+      humour: z.enum(['none', 'light']).optional().describe('Humour level. Defaults to none.'),
+      restyled: z
+        .string()
+        .optional()
+        .describe('The rewritten markdown. Omit on the first call to receive the brief.'),
+    },
+  },
+  async ({ file, style, humour, restyled }) => {
+    const startMs = Date.now();
+    try {
+      const { valid } = validatePath(file, ctx);
+      if (!valid) return pathError(file, ctx, startMs);
+
+      if (restyled != null) {
+        const saved = await writeDraft(file, restyled);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                success: true,
+                summary: saved.clean
+                  ? `Draft written to ${path.basename(saved.draft)} — lint clean`
+                  : `Draft written to ${path.basename(saved.draft)} — ${saved.issues.length} lint issue(s) to resolve`,
+                ...saved,
+                source_unchanged: true,
+                duration_ms: Date.now() - startMs,
+              }),
+            },
+          ],
+        };
+      }
+
+      const brief = await buildRestyleBrief(file, { style, humour });
+      if (!brief.ok) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                success: false,
+                summary: brief.reason,
+                available_styles: availableStyles(),
+                duration_ms: Date.now() - startMs,
+              }),
+            },
+          ],
+          isError: true,
+        };
+      }
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: true,
+              summary: `Restyle brief for ${path.basename(file)} → ${style}. Rewrite the prose, then call again with \`restyled\`.`,
+              ...brief,
+              next_step:
+                'Rewrite `content` following `instruction`, `constraints`, and `humour`. Then call restyle_draft again with the same file and style plus the rewritten markdown in `restyled`.',
+              duration_ms: Date.now() - startMs,
+            }),
+          },
+        ],
+      };
+    } catch (err) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: false,
+              summary: err.message,
+              duration_ms: Date.now() - startMs,
             }),
           },
         ],

@@ -105,9 +105,9 @@ Automated scheduled tasks:
 
 - **Hourly:** Scan and index (at :00 and :05)
 
-- **Daily:** Validate timestamps (9:00 AM)
+- **Daily:** Validate timestamps (09:00)
 
-- **Daily:** Lint files (10:00 AM)
+- **Daily:** Lint files (10:00)
 
 All logs go to `logs/cron-*.log`
 

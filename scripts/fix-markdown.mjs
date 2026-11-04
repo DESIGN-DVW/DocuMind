@@ -10,6 +10,7 @@
  */
 
 import fs from 'fs/promises';
+import { readFileSync } from 'fs';
 import path from 'path';
 import { pathToFileURL } from 'url';
 import { LOCAL_BASE_PATH } from '../config/constants.mjs';
@@ -343,6 +344,161 @@ export function fixBoldItalicToHeadingsOrLists(lines) {
   }
 
   return fixed;
+}
+
+// ============================================================================
+// Dictionary
+// ============================================================================
+
+/**
+ * Expand shorthand and normalise product-name casing from config/dictionary.json.
+ *
+ * Same `lines[] → lines[]` shape as the other passes, so it drops straight
+ * into the convergence loop in processors/lint-processor.mjs.
+ *
+ * Rewrites are word-boundary matched and case-preserving: a lowercase key
+ * matches `Maj` and `MAJ`, and the replacement adopts the same casing. Nothing
+ * is touched inside frontmatter, fenced code, inline code, link targets, or
+ * URLs — the pass masks those regions, rewrites the remainder, then splices
+ * the masked spans back so offsets never shift under it.
+ *
+ * Disabled by default via `enabled: false` in the dictionary file; pass
+ * `{ force: true }` to run it regardless (used by tests and by an explicit
+ * slash-command invocation).
+ *
+ * @param {string[]} lines
+ * @param {{locale?: 'en'|'fr', force?: boolean}} [options]
+ * @returns {string[]}
+ */
+export function applyDictionary(lines, options = {}) {
+  const dict = loadDictionary();
+  if (!dict) return lines;
+  if (dict.enabled === false && !options.force) return lines;
+
+  const locale = options.locale ?? detectDictionaryLocale(lines);
+  const entries = [
+    ...Object.entries(dict.expansions?.[locale] ?? {}),
+    ...Object.entries(dict.normalisations ?? {}),
+  ];
+  if (entries.length === 0) return lines;
+
+  const protectedTerms = dict.protected ?? [];
+
+  // Longest keys first so a longer phrase wins over a prefix of it
+  const rules = entries
+    .sort((a, b) => b[0].length - a[0].length)
+    .map(([from, to]) => ({
+      re: new RegExp(`(?<![\\p{L}\\p{N}_-])${escapeRegExp(from)}(?![\\p{L}\\p{N}_-])`, 'giu'),
+      to,
+    }));
+
+  const out = [];
+  let inFence = false;
+  let inFrontmatter = lines[0]?.trim() === '---';
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (inFrontmatter) {
+      out.push(line);
+      if (i > 0 && /^(---|\.\.\.)\s*$/.test(line.trim())) inFrontmatter = false;
+      continue;
+    }
+    if (/^\s*(```|~~~)/.test(line)) {
+      inFence = !inFence;
+      out.push(line);
+      continue;
+    }
+    if (inFence || protectedTerms.some(t => line.includes(t))) {
+      out.push(line);
+      continue;
+    }
+
+    out.push(rewriteLine(line, rules));
+  }
+
+  return out;
+}
+
+/** Spans that must survive a dictionary rewrite untouched. */
+const DICT_SKIP = /`+[^`]*`+|!?\[[^\]]*\]\([^)]*\)|\b[a-z][a-z0-9+.-]*:\/\/\S+|\S*\/\S*\.\w+/gi;
+
+/**
+ * Apply the rules to the prose portions of a line, leaving code, links, and
+ * URLs byte-identical.
+ *
+ * @param {string} line
+ * @param {{re: RegExp, to: string}[]} rules
+ * @returns {string}
+ */
+function rewriteLine(line, rules) {
+  const parts = [];
+  let cursor = 0;
+
+  for (const m of line.matchAll(DICT_SKIP)) {
+    parts.push({ text: line.slice(cursor, m.index), rewrite: true });
+    parts.push({ text: m[0], rewrite: false });
+    cursor = m.index + m[0].length;
+  }
+  parts.push({ text: line.slice(cursor), rewrite: true });
+
+  return parts
+    .map(part => {
+      if (!part.rewrite) return part.text;
+      let text = part.text;
+      for (const { re, to } of rules) {
+        text = text.replace(re, match => matchCase(match, to));
+      }
+      return text;
+    })
+    .join('');
+}
+
+/**
+ * Apply the casing of the matched text to the replacement, so `Maj` expands to
+ * `Mise à jour` and `MAJ` to `MISE À JOUR`.
+ *
+ * @param {string} match
+ * @param {string} replacement
+ * @returns {string}
+ */
+function matchCase(match, replacement) {
+  if (match === match.toUpperCase() && match !== match.toLowerCase()) {
+    return replacement.toUpperCase();
+  }
+  if (match[0] === match[0].toUpperCase() && match.slice(1) === match.slice(1).toLowerCase()) {
+    return replacement[0].toUpperCase() + replacement.slice(1);
+  }
+  return replacement;
+}
+
+/** Read `lang:` out of frontmatter; default English. */
+function detectDictionaryLocale(lines) {
+  if (lines[0]?.trim() !== '---') return 'en';
+  for (let i = 1; i < lines.length; i++) {
+    if (/^(---|\.\.\.)\s*$/.test(lines[i].trim())) break;
+    const m = lines[i].match(/^lang\s*:\s*["']?([a-z]{2})/i);
+    if (m) return m[1].toLowerCase() === 'fr' ? 'fr' : 'en';
+  }
+  return 'en';
+}
+
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+let dictionaryCache;
+
+/** Load config/dictionary.json once. Returns null when absent or malformed. */
+function loadDictionary() {
+  if (dictionaryCache !== undefined) return dictionaryCache;
+  try {
+    const dictPath = new URL('../config/dictionary.json', import.meta.url);
+    dictionaryCache = JSON.parse(readFileSync(dictPath, 'utf-8'));
+  } catch {
+    dictionaryCache = null;
+  }
+  return dictionaryCache;
 }
 
 // ============================================================================

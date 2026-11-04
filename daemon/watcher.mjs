@@ -16,6 +16,7 @@ import {
 } from '../processors/relink-processor.mjs';
 import { commonDir } from '../context/utils.mjs';
 import { indexMarkdown } from '../processors/markdown-processor.mjs';
+import { lintFile, persistLintIssues } from '../processors/lint-processor.mjs';
 
 const IGNORE_PATTERNS = [
   '**/node_modules/**',
@@ -204,6 +205,19 @@ async function processPendingChanges(db) {
               console.log(`[watcher] Indexed: ${change.path} (repo: ${repoMatch})`);
             } catch (err) {
               console.error(`[watcher] Index error for ${change.path}:`, err.message);
+            }
+
+            // Lint and record. Read-only on purpose — the watcher must never
+            // write to a file the author is still editing. Indexing happens
+            // first so persistLintIssues can resolve the document id.
+            try {
+              const issues = await lintFile(change.path);
+              persistLintIssues(db, change.path, issues);
+              if (issues.length > 0) {
+                console.log(`[watcher] Lint: ${change.path} — ${issues.length} issue(s)`);
+              }
+            } catch (err) {
+              console.error(`[watcher] Lint error for ${change.path}:`, err.message);
             }
           }
           break;

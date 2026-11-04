@@ -1,0 +1,37 @@
+[
+  {
+    "line": 3,
+    "detail": "Use ISO 8601: July 28, 2026 → 2026-07-28",
+    "fixable": true
+  },
+  {
+    "line": 3,
+    "detail": "Use ISO 8601: 3 August 2026 → 2026-08-03",
+    "fixable": true
+  },
+  {
+    "line": 5,
+    "detail": "Use hyphens in ISO dates: 2026/07/28 → 2026-07-28",
+    "fixable": true
+  },
+  {
+    "line": 5,
+    "detail": "Use 24-hour time: 2:30 PM → 14:30",
+    "fixable": true
+  },
+  {
+    "line": 7,
+    "detail": "Ambiguous date \"03/04/2026\" — cannot tell day from month. Rewrite as YYYY-MM-DD by hand",
+    "fixable": false
+  },
+  {
+    "line": 15,
+    "detail": "Use ISO 8601: 15 janvier 2026 → 2026-01-15",
+    "fixable": true
+  },
+  {
+    "line": 15,
+    "detail": "Use hyphens in ISO dates: 2026.01.15 → 2026-01-15",
+    "fixable": true
+  }
+]

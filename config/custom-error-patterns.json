@@ -84,7 +84,8 @@
       "flags": "g",
       "fixStrategy": "ai-assisted",
       "fixDescription": "Need to find or create URL for reference",
-      "validation": "check-definition-exists"
+      "validation": "check-definition-exists",
+      "skipCode": true
     },
     {
       "id": "link-ref-2",
@@ -96,7 +97,8 @@
       "flags": "g",
       "fixStrategy": "automated",
       "fixDescription": "Validate file existence",
-      "validation": "file-system-check"
+      "validation": "file-system-check",
+      "skipCode": true
     },
     {
       "id": "table-1",
@@ -191,7 +193,8 @@
       "regex": "^\\*\\*[A-Z][^*]+\\*\\*:",
       "flags": "gm",
       "fixStrategy": "ai-assisted",
-      "fixDescription": "Semantic decision - should be heading or keep as emphasis"
+      "fixDescription": "Semantic decision - should be heading or keep as emphasis",
+      "skipCode": true
     },
     {
       "id": "ai-issue-2",

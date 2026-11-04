@@ -120,7 +120,8 @@ Slash commands that orchestrate the full workflow for common tasks:
 
 ### Figma Agent (May 2026 — Additive Layer)
 
-Figma's own canvas-native AI, launched in beta May 20 2026. Operates directly inside the design file alongside your team. Not a replacement for the MCP server — a complement.
+Figma's own canvas-native AI, launched in beta 2026-05-20. Operates directly inside
+the design file alongside your team. Not a replacement for the MCP server — a complement.
 
 #### Capabilities
 

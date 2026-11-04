@@ -1,0 +1,22 @@
+[
+  {
+    "line": 1,
+    "detail": "Italicise the aside: (with an aside here) → *(with an aside here)*",
+    "fixable": true
+  },
+  {
+    "line": 3,
+    "detail": "Italicise the aside: (usually within a second) → *(usually within a second)*",
+    "fixable": true
+  },
+  {
+    "line": 15,
+    "detail": "Italicise the aside: (second one) → *(second one)*",
+    "fixable": true
+  },
+  {
+    "line": 15,
+    "detail": "Italicise the aside: (first one) → *(first one)*",
+    "fixable": true
+  }
+]

@@ -1,0 +1,69 @@
+{
+  "$comment": "Tier 2 writing styles for the restyle_draft MCP tool and the /restyle slash command. These are instructions for a language model, not deterministic rules — nothing here ever runs on cron, on save, or on pre-commit, and restyling always writes to a .draft.md sibling rather than the source.",
+  "version": "1.0.0",
+  "updated": "2026-07-28",
+
+  "$comment_constraints": "Applied to every style. These exist because a rewrite that breaks the document is worse than no rewrite.",
+  "constraints": [
+    "Never change the meaning of a technical statement — commands, flags, paths, versions, and API names are facts, not prose.",
+    "Never alter code blocks, inline code, URLs, file paths, frontmatter, or link targets.",
+    "Preserve the heading hierarchy and the order of sections.",
+    "Preserve every table's columns and rows; only cell prose may change.",
+    "Keep the document's language — do not translate as a side effect of restyling.",
+    "Obey the DVW markdown rules: single-asterisk italics, ISO dates, approved emoji only, no block elements inside list items."
+  ],
+
+  "styles": {
+    "casual": {
+      "label": "Casual",
+      "audience": "Internal notes, changelogs, handovers",
+      "instruction": "Write as a colleague explaining to a colleague. Contractions are fine. Short sentences. Say what happened and why it matters. No corporate throat-clearing."
+    },
+    "marketing": {
+      "label": "Marketing",
+      "audience": "Public-facing product copy",
+      "instruction": "Lead with the benefit, not the mechanism. Concrete over abstract. Active voice. Cut hedges and qualifiers. Never invent capabilities the source does not claim."
+    },
+    "didactic": {
+      "label": "Didactic",
+      "audience": "Explanatory documentation",
+      "instruction": "Explain the why before the how. Introduce one idea per paragraph. Define a term the first time it appears. Prefer a worked example to an abstract description."
+    },
+    "tutorial": {
+      "label": "Tutorial",
+      "audience": "Step-by-step walkthroughs",
+      "instruction": "Numbered steps, one action per step, written in the imperative. State the expected result after each step so the reader can tell whether it worked. Put prerequisites at the top."
+    },
+    "short": {
+      "label": "Short",
+      "audience": "Summaries and abstracts",
+      "instruction": "Cut to roughly half the length without losing a fact. Remove restatement, throat-clearing, and transitional filler. Keep every number, name, and command."
+    },
+    "series": {
+      "label": "Series",
+      "audience": "Multi-part articles",
+      "instruction": "Write as one instalment of a sequence. Open by situating this part relative to the last, close by pointing at the next. Keep terminology identical across parts."
+    },
+    "expert": {
+      "label": "Expert",
+      "audience": "Readers fluent in the domain",
+      "instruction": "Assume domain fluency. Drop basic definitions and analogies. Use precise technical vocabulary. Lead with the non-obvious; state the interesting constraint first."
+    },
+    "newbie": {
+      "label": "Newbie",
+      "audience": "Readers new to the domain",
+      "instruction": "Assume no prior knowledge. Expand every acronym on first use. Explain why a step exists, not only what it is. Flag the mistakes a newcomer is likely to make."
+    }
+  },
+
+  "$comment_humour": "Opt-in and never a default. Excluded from reference, API, and security documentation regardless of the flag.",
+  "humour": {
+    "none": {
+      "instruction": "No humour. Straight prose."
+    },
+    "light": {
+      "instruction": "At most one dry aside per major section, and only where it genuinely lands. Never at the reader's expense, never in a warning or an error-handling passage, never a joke that a non-native reader would have to decode. If nothing is funny, write it straight — forced humour reads worse than none.",
+      "excludedCategories": ["reference", "api", "security", "compliance", "runbook"]
+    }
+  }
+}

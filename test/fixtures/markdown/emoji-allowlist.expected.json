@@ -1,0 +1,27 @@
+[
+  {
+    "line": 5,
+    "detail": "\"🎉\" is not in an approved set. Allowed: footnote (¹²³⁴⁵), severity (🔴🟠🟡🟢), state (✓✅❌🚧⚠️), flow (←→↔⇆⇒🔀)",
+    "fixable": false
+  },
+  {
+    "line": 5,
+    "detail": "\"🚀\" is not in an approved set. Allowed: footnote (¹²³⁴⁵), severity (🔴🟠🟡🟢), state (✓✅❌🚧⚠️), flow (←→↔⇆⇒🔀)",
+    "fixable": false
+  },
+  {
+    "line": 5,
+    "detail": "\"💡\" is not in an approved set. Allowed: footnote (¹²³⁴⁵), severity (🔴🟠🟡🟢), state (✓✅❌🚧⚠️), flow (←→↔⇆⇒🔀)",
+    "fixable": false
+  },
+  {
+    "line": 5,
+    "detail": "\"😀\" is not in an approved set. Allowed: footnote (¹²³⁴⁵), severity (🔴🟠🟡🟢), state (✓✅❌🚧⚠️), flow (←→↔⇆⇒🔀)",
+    "fixable": false
+  },
+  {
+    "line": 5,
+    "detail": "\"🔥\" is not in an approved set. Allowed: footnote (¹²³⁴⁵), severity (🔴🟠🟡🟢), state (✓✅❌🚧⚠️), flow (←→↔⇆⇒🔀)",
+    "fixable": false
+  }
+]

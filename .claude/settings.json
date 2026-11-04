@@ -20,6 +20,12 @@
             "command": "npx eslint --fix \"$CLAUDE_FILE_PATH\" 2>/dev/null || true",
             "timeout": 30,
             "statusMessage": "Auto-fixing ESLint issues..."
+          },
+          {
+            "type": "command",
+            "command": "case \"$CLAUDE_FILE_PATH\" in *.md) npx markdownlint-cli2 --fix \"$CLAUDE_FILE_PATH\" 2>/dev/null || true ;; esac",
+            "timeout": 30,
+            "statusMessage": "Auto-fixing markdown..."
           }
         ]
       },
@@ -31,6 +37,12 @@
             "command": "npx eslint --fix \"$CLAUDE_FILE_PATH\" 2>/dev/null || true",
             "timeout": 30,
             "statusMessage": "Auto-fixing ESLint issues..."
+          },
+          {
+            "type": "command",
+            "command": "case \"$CLAUDE_FILE_PATH\" in *.md) npx markdownlint-cli2 --fix \"$CLAUDE_FILE_PATH\" 2>/dev/null || true ;; esac",
+            "timeout": 30,
+            "statusMessage": "Auto-fixing markdown..."
           }
         ]
       }

@@ -16,6 +16,7 @@ import { resolve, dirname, join } from 'path';
 import { globSync } from 'glob';
 import chalk from 'chalk';
 import { fileURLToPath } from 'url';
+import { resolveLink, headingSlugs, slugify } from '../processors/link-resolver.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -72,8 +73,14 @@ function validateFile(filePath, options = {}) {
 
   try {
     const content = readFileSync(filePath, 'utf8');
-    const lines = content.split('\\n');
+    const lines = content.split('\n');
     const fileDir = dirname(filePath);
+
+    // Prose-oriented patterns (links, emphasis) must not match inside code —
+    // a documented example like `[filename.pdf](path/to/filename.pdf)` is not
+    // a broken link. Patterns that deliberately target code blocks or tables
+    // still see the raw content.
+    const proseOnly = maskCode(content);
 
     // Run each pattern against the content
     for (const pattern of PATTERNS.patterns) {
@@ -81,11 +88,12 @@ function validateFile(filePath, options = {}) {
       if (options.category && pattern.category !== options.category) continue;
       if (options.severity && pattern.severity !== options.severity) continue;
 
+      const haystack = pattern.skipCode ? proseOnly : content;
       const regex = new RegExp(pattern.regex, pattern.flags || 'g');
 
       // Standard regex matching
       let match;
-      while ((match = regex.exec(content)) !== null) {
+      while ((match = regex.exec(haystack)) !== null) {
         const lineNumber = getLineNumber(content, match.index);
 
         // Additional validation based on pattern type
@@ -124,27 +132,55 @@ function validateFile(filePath, options = {}) {
 }
 
 /**
+ * Blank out fenced code blocks and inline code spans, replacing their contents
+ * with spaces so every byte offset (and therefore every reported line and
+ * column) is preserved.
+ *
+ * @param {string} content
+ * @returns {string}
+ */
+function maskCode(content) {
+  const blank = m => m.replace(/[^\n]/g, ' ');
+
+  return content
+    .replace(/^(```|~~~)[^\n]*\n[\s\S]*?^\1[^\n]*$/gm, blank) // fenced blocks
+    .replace(/`+[^`\n]*`+/g, blank); // inline code spans
+}
+
+/**
  * Run special validation logic based on validation type
  */
 function runValidation(validationType, match, content, filePath, fileDir, lines) {
   switch (validationType) {
-    case 'file-system-check':
-      // Check if linked file exists
-      const linkPath = match[0].match(/\\(([^)]+)\\)/)?.[1];
-      if (linkPath && !linkPath.startsWith('http')) {
-        const fullPath = resolve(fileDir, linkPath);
-        return existsSync(fullPath);
+    case 'file-system-check': {
+      // Only relative paths are checkable. Anchors, external URLs, other URI
+      // schemes, and root-relative paths are not this validator's business —
+      // treating them as filesystem paths is what produced 500+ false
+      // positives once the regex escaping in this file was repaired.
+      const target = match[0].match(/\(([^)]*)\)\s*$/)?.[1];
+      if (target == null) return true;
+
+      const link = resolveLink(target, fileDir);
+      if (link.kind !== 'relative') return true;
+      if (!link.exists) return false;
+
+      // The file exists — if the link carries a fragment, the heading must too
+      if (!link.fragment) return true;
+      try {
+        return headingSlugs(readFileSync(link.resolvedPath, 'utf8')).has(slugify(link.fragment));
+      } catch {
+        return true; // unreadable or non-markdown target: existence is enough
       }
-      return true;
+    }
 
     case 'yaml-parse':
       // Validate YAML frontmatter
       try {
-        const yamlContent = match[0].replace(/^---\\n|---$/g, '');
+        const yamlContent = match[0].replace(/^---\n|---$/g, '');
         // Simple YAML validation (could use yaml parser library)
         return yamlContent
-          .split('\\n')
-          .every(line => line.trim() === '' || line.match(/^\\w+:\\s*.+$/));
+          .split('\n')
+          .every(line => line.trim() === '' || line.match(/^\w+:\s*.+$/));
       } catch {
         return false;
       }
@@ -167,15 +203,15 @@ function runValidation(validationType, match, content, filePath, fileDir, lines)
  */
 function validateMixedListTypes(content, filePath) {
   const errors = [];
-  const lines = content.split('\\n');
+  const lines = content.split('\n');
 
   let prevType = null;
   let prevIndent = 0;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    const numberedMatch = line.match(/^(\\s*)(\\d+\\.\\s+)/);
-    const bulletMatch = line.match(/^(\\s*)([-*]\\s+)/);
+    const numberedMatch = line.match(/^(\s*)(\d+\.\s+)/);
+    const bulletMatch = line.match(/^(\s*)([-*]\s+)/);
 
     if (numberedMatch || bulletMatch) {
       const indent = (numberedMatch || bulletMatch)[1].length;
@@ -214,17 +250,29 @@ function validateMixedListTypes(content, filePath) {
  */
 function validateTableConsistency(content, filePath) {
   const errors = [];
-  const lines = content.split('\\n');
+  const lines = content.split('\n');
 
   let inTable = false;
+  let inFence = false;
   let expectedColumns = 0;
   let tableStartLine = 0;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    if (line.match(/^\\|(.+\\|)+$/)) {
-      const columnCount = (line.match(/\\|/g) || []).length - 1;
+    // Table-shaped lines inside a code fence are code, not tables
+    if (/^\s*(```|~~~)/.test(line)) {
+      inFence = !inFence;
+      inTable = false;
+      continue;
+    }
+    if (inFence) continue;
+
+    if (line.match(/^\|(.+\|)+$/)) {
+      // Escaped pipes (\|) and pipes inside code spans are cell content, not
+      // column separators — counting them reports correct tables as broken
+      const separators = line.replace(/`[^`]*`/g, m => ' '.repeat(m.length)).replace(/\\\|/g, '  ');
+      const columnCount = (separators.match(/\|/g) || []).length - 1;
 
       if (!inTable) {
         // First row of table
@@ -266,7 +314,7 @@ function validateReferenceLinks(content, filePath) {
 
   // Extract reference usages
   const refUsages = [];
-  const refRegex = /\\[.+?\\]\\[(\\w+)\\]/g;
+  const refRegex = /\[.+?\]\[(\w+)\]/g;
   let match;
   while ((match = refRegex.exec(content)) !== null) {
     refUsages.push({
@@ -278,7 +326,7 @@ function validateReferenceLinks(content, filePath) {
 
   // Extract reference definitions
   const refDefinitions = new Set();
-  const defRegex = /^\\[(\\w+)\\]:/gm;
+  const defRegex = /^\[(\w+)\]:/gm;
   while ((match = defRegex.exec(content)) !== null) {
     refDefinitions.add(match[1]);
   }
@@ -310,7 +358,7 @@ function validateReferenceLinks(content, filePath) {
  */
 function validateMultipleH1(content, filePath) {
   const errors = [];
-  const h1Regex = /^#\\s+.+$/gm;
+  const h1Regex = /^#\s+.+$/gm;
   const matches = [];
   let match;
 
@@ -347,11 +395,11 @@ function validateMultipleH1(content, filePath) {
 // ============================================================================
 
 function getLineNumber(content, index) {
-  return content.substring(0, index).split('\\n').length;
+  return content.substring(0, index).split('\n').length;
 }
 
 function getColumnNumber(content, index) {
-  const lineStart = content.lastIndexOf('\\n', index) + 1;
+  const lineStart = content.lastIndexOf('\n', index) + 1;
   return index - lineStart + 1;
 }
 
@@ -360,10 +408,10 @@ function getColumnNumber(content, index) {
 // ============================================================================
 
 function generateReport(allErrors, options = {}) {
-  console.log(chalk.bold.cyan('\\n📋 Custom Markdown Validation Report\\n'));
+  console.log(chalk.bold.cyan('\n📋 Custom Markdown Validation Report\n'));
 
   if (allErrors.length === 0) {
-    console.log(chalk.green('✅ No custom errors found!\\n'));
+    console.log(chalk.green('✅ No custom errors found!\n'));
     return;
   }
 
@@ -383,11 +431,11 @@ function generateReport(allErrors, options = {}) {
   console.log(chalk.bold('📊 Summary:'));
   console.log(`   Total Issues: ${chalk.yellow(allErrors.length)}`);
   console.log(`   Errors: ${chalk.red(errorCount)}`);
-  console.log(`   Warnings: ${chalk.yellow(warningCount)}\\n`);
+  console.log(`   Warnings: ${chalk.yellow(warningCount)}\n`);
 
   // Print by category
   for (const [category, errors] of Object.entries(byCategory)) {
-    console.log(chalk.bold(`\\n📂 ${category} (${errors.length} issues)\\n`));
+    console.log(chalk.bold(`\n📂 ${category} (${errors.length} issues)\n`));
 
     // Group by file
     const byFile = {};
@@ -410,7 +458,7 @@ function generateReport(allErrors, options = {}) {
   }
 
   // Fix strategy summary
-  console.log(chalk.bold('\\n🔧 Fix Strategy Summary:\\n'));
+  console.log(chalk.bold('\n🔧 Fix Strategy Summary:\n'));
   const byStrategy = {};
   for (const error of allErrors) {
     if (!byStrategy[error.fixStrategy]) byStrategy[error.fixStrategy] = 0;
@@ -420,7 +468,7 @@ function generateReport(allErrors, options = {}) {
     console.log(`   ${strategy}: ${chalk.yellow(count)} issues`);
   }
 
-  console.log('\\n');
+  console.log('\n');
 }
 
 // ============================================================================
@@ -436,7 +484,7 @@ async function main() {
     allRepos: args.includes('--all'),
   };
 
-  console.log(chalk.bold.cyan('\\n🔍 Custom Markdown Error Validation\\n'));
+  console.log(chalk.bold.cyan('\n🔍 Custom Markdown Error Validation\n'));
 
   const reposToScan = options.allRepos ? REPOSITORIES : ['.'];
   const allErrors = [];
@@ -486,6 +534,6 @@ async function main() {
 // ============================================================================
 
 main().catch(error => {
-  console.error(chalk.red('\\n❌ Error:'), error.message);
+  console.error(chalk.red('\n❌ Error:'), error.message);
   process.exit(1);
 });

@@ -1,0 +1,27 @@
+[
+  {
+    "line": 7,
+    "detail": "Link target does not exist: ./nope.md",
+    "fixable": false
+  },
+  {
+    "line": 9,
+    "detail": "No heading in ./link-target.md matches \"#no-such-heading\"",
+    "fixable": false
+  },
+  {
+    "line": 11,
+    "detail": "No heading in this document matches \"#nonexistent\"",
+    "fixable": false
+  },
+  {
+    "line": 13,
+    "detail": "Leading-slash link \"/no/such/path/x.json\" resolves to nothing — it is neither an existing absolute path nor relative to this file",
+    "fixable": false
+  },
+  {
+    "line": 15,
+    "detail": "Link has no target",
+    "fixable": false
+  }
+]

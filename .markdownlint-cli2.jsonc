@@ -1,14 +1,18 @@
-// markdownlint-cli2 configuration — canonical source in RootDispatcher
-// Deployed to every repo root by: node scripts/sync-markdown-config.mjs
-// DO NOT edit deployed copies directly — edit here and re-run the sync script
+// markdownlint-cli2 configuration
+//
+// Rules and custom rule modules are NOT defined here. Both come from a single
+// source so the CLI, the MCP tools (lint_file / fix_file), and the VS Code
+// extension all see one identical rule set:
+//
+//   config/.markdownlint.json  → rule configuration
+//   config/rules/index.cjs     → custom rule registry (auto-discovers *.cjs)
+//
+// This file only carries what is genuinely CLI-specific: which paths to skip.
+// Deployed to other repos by: node scripts/propagate-lint-rules.mjs
 {
-  "customRules": [
-    "./config/rules/table-separator-spacing.cjs",
-    "./config/rules/no-blank-lines-in-tables.cjs"
-  ],
+  "customRules": ["./config/rules/index.cjs"],
   "config": {
-    "MD013": false,
-    "MD060": false
+    "extends": "./config/.markdownlint.json"
   },
   "ignores": [
     "node_modules",
@@ -25,7 +29,10 @@
     "_archive",
     "archives",
     "docs/slides",
-    "config/markdownlint"
+    "config/markdownlint",
+    "graphify-out",
+    "index",
+    "test/fixtures"
   ],
   "overrides": [
     {

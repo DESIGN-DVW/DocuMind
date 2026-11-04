@@ -129,16 +129,14 @@
     }
   },
 
-  // Markdownlint configuration (rules loaded from .markdownlint-cli2.jsonc)
+  // Markdownlint configuration — same single source as the CLI and MCP tools
   "markdownlint.config": {
     "extends": "./config/.markdownlint.json"
   },
 
-  // Custom rules with inline auto-fix support
-  "markdownlint.customRules": [
-    "./config/rules/table-separator-spacing.cjs",
-    "./config/rules/force-align-table-columns.cjs"
-  ],
+  // Custom rules via the auto-discovery registry, so the editor can never
+  // drift from config/rules/ the way it did with the deleted MD060A rule
+  "markdownlint.customRules": ["./config/rules/index.cjs"],
 
   // ============================================================================
   // JavaScript/Node.js Configuration
