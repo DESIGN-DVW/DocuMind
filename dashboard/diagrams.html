@@ -107,12 +107,13 @@
       height: 28px;
     }
 
-    .btn-curate {
-      background: #6366f1;
-      color: #fff;
+    .curate-hint {
+      font-size: 0.78rem;
+      color: #6366f1;
+      border-bottom: 1px dotted #a5b4fc;
+      cursor: help;
+      white-space: nowrap;
     }
-
-    .btn-curate:hover { background: #4f46e5; }
 
     .btn-delete {
       background: #f1f5f9;
@@ -540,7 +541,7 @@
           '<td>' + pngCell + '</td>' +
           sourceCell +
           '<td class="actions">' +
-            '<button class="btn btn-sm btn-curate" onclick="curate(\'' + escapeHtml(row.name) + '\')">Curate</button>' +
+            '<span class="curate-hint" title="Curation is registry-only: the diagram already sits in its board section when it was generated with a nodeId. Run the curate_diagram MCP tool (or /figma-curate) to record the node-level URL and propagate it across the repo markdown.">via curate_diagram</span>' +
             '<button class="btn btn-sm btn-delete" onclick="markDeleted(\'' + escapeHtml(row.name) + '\')">Mark deleted</button>' +
           '</td>';
 
@@ -580,53 +581,6 @@
     // ----------------------------------------------------------------
     // Actions
     // ----------------------------------------------------------------
-
-    async function curate(name) {
-      var url = prompt('Enter curated URL for "' + name + '":');
-      if (!url || !url.trim()) return;
-      url = url.trim();
-
-      try {
-        var res = await fetch('/diagrams/relink', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: name, curatedUrl: url })
-        });
-
-        if (res.ok) {
-          // Update in-memory data — confirmed server success only (no optimistic update)
-          var row = allRows.find(function(r) { return r.name === name; });
-          if (row) {
-            row.curated_url = url;
-            row.status = 'curated';
-          }
-          // Update badge
-          var badge = document.getElementById('badge-' + name);
-          if (badge) {
-            badge.className = 'badge badge-curated';
-            badge.textContent = 'curated';
-          }
-          // Update curated cell
-          var curatedCell = document.getElementById('curated-' + name);
-          if (curatedCell) {
-            curatedCell.innerHTML = '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener">Link</a>';
-          }
-          showError('');
-
-          // Notify DocuMind to re-scan the repo so propagated files are re-indexed
-          fetch('/hook', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ event: 'scan', repo: row && row.repository })
-          }).catch(function() {}); // fire-and-forget
-        } else {
-          var errData = await res.json().catch(function() { return { error: 'Unknown error' }; });
-          showError('Curate failed for "' + name + '": ' + (errData.error || 'HTTP ' + res.status));
-        }
-      } catch (err) {
-        showError('Network error during curate: ' + err.message);
-      }
-    }
 
     async function markDeleted(name) {
       if (!confirm('Mark "' + name + '" standalone as deleted? This action cannot be undone.')) return;
