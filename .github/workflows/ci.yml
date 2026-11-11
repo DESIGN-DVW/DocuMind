@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+# Read-only: nothing here writes, publishes or comments. No @design-dvw/* dependencies,
+# so no registry token is needed.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      HUSKY: '0'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22.x'
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Rule tests
+        run: npm run test:rules
+      - name: Unit tests
+        run: node --test test/daemon-auth.test.mjs test/relink-url-safe.test.mjs test/repo-resolution.test.mjs
+      - name: Rules doc is current
+        run: npm run docs:rules:check
+      - name: Markdown tables
+        run: npm run lint:tables
+
+  # The org CiCheck ruleset requires a check named exactly "CI". This job aggregates the
+  # others so new jobs only need adding to `needs`, never to the ruleset.
+  ci:
+    name: CI
+    runs-on: ubuntu-latest
+    needs: [checks]
+    if: always()
+    steps:
+      - name: Gate result
+        run: |
+          echo "checks: ${{ needs.checks.result }}"
+          test "${{ needs.checks.result }}" = "success"
