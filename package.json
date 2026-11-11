@@ -89,7 +89,7 @@
   "author": "DESIGN-DVW",
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.27.1",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "better-sqlite3": "^12.6.2",
     "chalk": "^5.3.0",
     "chokidar": "^4.0.3",
@@ -103,7 +103,7 @@
     "helmet": "^8.1.0",
     "ignore": "^5.3.0",
     "mammoth": "^1.11.0",
-    "markdown-it": "^14.0.0",
+    "markdown-it": "^14.3.3",
     "natural": "^8.1.1",
     "node-cron": "^3.0.3",
     "ora": "^8.0.1",
@@ -134,6 +134,12 @@
     "@xmldom/xmldom": ">=0.8.13",
     "axios": ">=1.15.1",
     "fast-uri": ">=3.1.2",
-    "basic-ftp": ">=5.3.0"
+    "basic-ftp": ">=5.3.0",
+    "gray-matter": {
+      "js-yaml": "^3.15.2"
+    },
+    "markdownlint-cli2": {
+      "markdown-it": "^15.0.3"
+    }
   }
 }
