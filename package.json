@@ -65,7 +65,10 @@
     "test:rules": "node test/rules.test.mjs",
     "test:rules:update": "node test/rules.test.mjs --update",
     "docs:rules": "node scripts/generate-rules-doc.mjs",
-    "docs:rules:check": "node scripts/generate-rules-doc.mjs --check"
+    "docs:rules:check": "node scripts/generate-rules-doc.mjs --check",
+    "obsolete:archive": "node scripts/obsolete-admin.mjs archive",
+    "obsolete:dismiss": "node scripts/obsolete-admin.mjs dismiss",
+    "obsolete:delete": "node scripts/obsolete-admin.mjs delete"
   },
   "lint-staged": {
     "!(.planning|.claude|test)/**/*.md": [
