@@ -80,7 +80,8 @@ async function sofficeResolvable(sofficePath) {
  * @returns {Promise<{html: string, pdf: string, pptx: string, pptxEditable: boolean, warnings: string[]}>}
  */
 export async function renderDeck(mdPath, { cwd = process.cwd() } = {}) {
-  const browserPath = puppeteer.executablePath();
+  // puppeteer >=25 returns a Promise here (a string before); await covers both.
+  const browserPath = await puppeteer.executablePath();
   const base = mdPath.replace(/\.md$/, '');
   const outputs = { html: `${base}.html`, pdf: `${base}.pdf`, pptx: `${base}.pptx` };
   const warnings = [];
