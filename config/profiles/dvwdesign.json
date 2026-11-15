@@ -182,5 +182,14 @@
       "active": true
     }
   ],
-  "scanIgnore": ["**/vendor/**", "**/SpiritOf_Sources/**", "**/.DS_Store"]
+  "scanIgnore": [
+    "**/vendor/**",
+    "**/SpiritOf_Sources/**",
+    "**/.DS_Store",
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/.backups/**",
+    "**/docs/07-api/jsdoc/**"
+  ]
 }

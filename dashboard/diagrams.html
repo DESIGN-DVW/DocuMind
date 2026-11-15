@@ -115,14 +115,6 @@
       white-space: nowrap;
     }
 
-    .btn-delete {
-      background: #f1f5f9;
-      color: #64748b;
-      border: 1px solid #cbd5e1;
-    }
-
-    .btn-delete:hover { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
-
     .row-count {
       margin-left: auto;
       font-size: 0.8rem;
@@ -542,7 +534,7 @@
           sourceCell +
           '<td class="actions">' +
             '<span class="curate-hint" title="Curation is registry-only: the diagram already sits in its board section when it was generated with a nodeId. Run the curate_diagram MCP tool (or /figma-curate) to record the node-level URL and propagate it across the repo markdown.">via curate_diagram</span>' +
-            '<button class="btn btn-sm btn-delete" onclick="markDeleted(\'' + escapeHtml(row.name) + '\')">Mark deleted</button>' +
+            '<span class="curate-hint" title="Admin operation, intentionally not available from the dashboard: marking a diagram deleted is destructive and the page cannot authenticate against the API. Use the registry or an MCP tool.">delete: admin only</span>' +
           '</td>';
 
         tbody.appendChild(tr);
@@ -581,29 +573,6 @@
     // ----------------------------------------------------------------
     // Actions
     // ----------------------------------------------------------------
-
-    async function markDeleted(name) {
-      if (!confirm('Mark "' + name + '" standalone as deleted? This action cannot be undone.')) return;
-
-      try {
-        var res = await fetch('/diagrams/mark-standalone-deleted', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: name })
-        });
-
-        if (res.ok) {
-          showError('');
-          var tr = document.getElementById('row-' + name);
-          if (tr) tr.style.opacity = '0.4';
-        } else {
-          var errData = await res.json().catch(function() { return { error: 'Endpoint not yet available (Phase 5)' }; });
-          showError('Mark deleted failed for "' + name + '": ' + (errData.error || 'HTTP ' + res.status));
-        }
-      } catch (err) {
-        showError('Network error during mark-deleted: ' + err.message);
-      }
-    }
 
     // ----------------------------------------------------------------
     // UI helpers
