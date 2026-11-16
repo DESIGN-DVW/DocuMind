@@ -623,7 +623,16 @@ app.post('/obsolete/:id/archive', async (req, res) => {
       const repoRoot = ctx.repoRoots.find(r => r.name === signal.repository)?.path;
       if (repoRoot) {
         const gitignorePath = path.join(repoRoot, '.gitignore');
-        const relPath = path.relative(repoRoot, signal.path);
+        // documents.path is stored in both forms (see
+        // scripts/db/normalise-document-paths.mjs). Passing a repo-relative
+        // value straight to path.relative resolves it against process.cwd()
+        // and yields a ../../.. entry, so .gitignore got a path that matched
+        // nothing. Resolve against the repo root first.
+        const absPath = path.isAbsolute(signal.path)
+          ? signal.path
+          : path.join(repoRoot, signal.path);
+        const relPath = path.relative(repoRoot, absPath);
+        if (!relPath || relPath.startsWith('..')) throw new Error('path outside repo root');
         let existing = '';
         try {
           existing = await fs.readFile(gitignorePath, 'utf-8');
